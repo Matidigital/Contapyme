@@ -14,7 +14,9 @@
       "Bash(where psql)",
       "Bash(pg_config:*)",
       "Bash(mkdir:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)"
     ],
     "deny": []
   }

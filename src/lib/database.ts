@@ -3,14 +3,29 @@
 // No requiere PostgreSQL - funciona inmediatamente
 // ==========================================
 
-import { Database } from 'sqlite3';
-import { open } from 'sqlite';
-import path from 'path';
+// Importaciones opcionales para SQLite - solo en desarrollo
+let Database: any = null;
+let open: any = null;
+let path: any = null;
+
+try {
+  const sqlite3 = require('sqlite3');
+  const sqlite = require('sqlite');
+  Database = sqlite3.Database;
+  open = sqlite.open;
+  path = require('path');
+} catch (error) {
+  console.warn('⚠️ SQLite no disponible en este entorno');
+}
 
 let db: any = null;
 
 export async function getDatabase() {
   if (db) return db;
+
+  if (!Database || !open || !path) {
+    throw new Error('SQLite no disponible en este entorno');
+  }
 
   try {
     // Usar SQLite en el directorio del proyecto

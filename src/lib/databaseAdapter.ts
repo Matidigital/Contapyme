@@ -17,7 +17,7 @@ async function initializeDatabase() {
     supabaseDB = { insertF29FormSupabase, getF29FormsSupabase, upsertAnalysisSupabase };
     console.log('🌐 Usando Supabase en producción');
   } else {
-    // Local: usar SQLite
+    // Local: intentar SQLite, fallback a Supabase
     try {
       const { insertF29Form, getF29Forms, upsertAnalysis } = await import('./database');
       localDB = { insertF29Form, getF29Forms, upsertAnalysis };

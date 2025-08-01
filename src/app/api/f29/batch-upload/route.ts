@@ -4,7 +4,7 @@
 // ==========================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { parseF29WithSuperParser } from '@/lib/f29SuperParser';
+import { parseF29SuperParser } from '@/lib/f29SuperParser';
 import { validateF29Data } from '@/lib/f29Validator';
 import { insertF29FormAdapter } from '@/lib/databaseAdapter';
 
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
           console.log(`📄 Procesando: ${file.name} (${Math.round(file.size/1024)}KB)`);
 
           // 1. Extraer datos con super parser
-          const extracted = await parseF29WithSuperParser(file);
+          const extracted = await parseF29SuperParser(file);
           
           if (!extracted || Object.keys(extracted).length === 0) {
             throw new Error('No se pudieron extraer datos del PDF');
