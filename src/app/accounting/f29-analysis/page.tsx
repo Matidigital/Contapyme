@@ -1,5 +1,8 @@
 'use client'
 
+// Prevent SSR for this page due to PDF.js browser dependencies
+export const dynamic = 'force-dynamic'
+
 import { useState } from 'react'
 import Link from 'next/link'
 import { extractTextFromPDF, extractF29CodesFromText } from '@/lib/pdfParser'
@@ -236,9 +239,7 @@ export default function F29AnalysisPage() {
       console.log('Datos extraídos:', extractedData)
 
       // Validación mejorada del contenido extraído
-      const hasValidData = validateExtractedData(extractedData, file, rawContent)
-      
-      function validateExtractedData(data: any, file: File, content: string): boolean {
+      const validateExtractedData = (data: any, file: File, content: string): boolean => {
         if (!data || typeof data !== 'object') {
           console.log('❌ Datos extraídos no válidos: no es un objeto')
           return false
@@ -343,6 +344,8 @@ export default function F29AnalysisPage() {
         
         return false
       }
+      
+      const hasValidData = validateExtractedData(extractedData, file, rawContent)
 
       if (!hasValidData) {
         console.error('No se encontraron códigos F29 válidos en el archivo')
@@ -624,7 +627,7 @@ export default function F29AnalysisPage() {
       }
       
       // Verificar qué códigos se detectaron
-      const detectedCodes = []
+      const detectedCodes: string[] = []
       if (codes.codigo538 > 0) detectedCodes.push('538')
       if (codes.codigo511 > 0) detectedCodes.push('511')
       if (codes.codigo062 > 0) detectedCodes.push('062')
