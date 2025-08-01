@@ -10,7 +10,14 @@ const nextConfig = {
   eslint: {
     // Temporarily ignore ESLint errors on build  
     ignoreDuringBuilds: true,
-  }
+  },
+  // Disable static generation for problematic pages
+  experimental: {
+    missingSuspenseWithCSRBailout: false,
+  },
+  // Export as SPA to avoid SSR issues with PDF.js
+  trailingSlash: true,
+  output: 'export'
 }
 
 module.exports = nextConfig
