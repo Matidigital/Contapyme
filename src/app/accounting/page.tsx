@@ -186,20 +186,20 @@ export default function AccountingPage() {
                     <div className="space-y-4">
                       <div className="bg-white rounded-lg p-4">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-gray-700">IVA Débito Fiscal</span>
-                          <span className="text-sm font-bold text-green-600">$2.850.000</span>
+                          <span className="text-sm font-medium text-gray-700">Ventas Totales</span>
+                          <span className="text-sm font-bold text-green-600">$17.950.795</span>
                         </div>
                       </div>
                       <div className="bg-white rounded-lg p-4">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-gray-700">IVA Crédito Fiscal</span>
-                          <span className="text-sm font-bold text-blue-600">$1.650.000</span>
+                          <span className="text-sm font-medium text-gray-700">Compras Totales</span>
+                          <span className="text-sm font-bold text-blue-600">$12.850.000</span>
                         </div>
                       </div>
                       <div className="bg-white rounded-lg p-4 border-2 border-indigo-200">
                         <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-gray-700">IVA a Pagar</span>
-                          <span className="text-sm font-bold text-indigo-600">$1.200.000</span>
+                          <span className="text-sm font-medium text-gray-700">Margen Bruto</span>
+                          <span className="text-sm font-bold text-indigo-600">$5.100.795</span>
                         </div>
                       </div>
                     </div>
