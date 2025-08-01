@@ -209,16 +209,22 @@ export default function AccountingPage() {
                 {/* Action Buttons */}
                 <div className="mt-6 flex justify-center space-x-4">
                   <Link 
-                    href="/accounting/f29-guide"
-                    className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-medium inline-block"
-                  >
-                    📚 Guía para 100% Confianza
-                  </Link>
-                  <Link 
                     href="/accounting/f29-analysis"
                     className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-medium inline-block"
                   >
-                    Comenzar Análisis F29
+                    📄 Análisis F29 Individual
+                  </Link>
+                  <Link 
+                    href="/accounting/f29-comparative"
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium inline-block"
+                  >
+                    📊 Análisis Comparativo (NUEVO)
+                  </Link>
+                  <Link 
+                    href="/accounting/f29-guide"
+                    className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-medium inline-block"
+                  >
+                    📚 Guía F29
                   </Link>
                 </div>
               </div>

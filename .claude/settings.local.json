@@ -9,7 +9,12 @@
       "Bash(git commit:*)",
       "Bash(npm run build:*)",
       "Bash(rm:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(npx supabase:*)",
+      "Bash(where psql)",
+      "Bash(pg_config:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm run dev:*)"
     ],
     "deny": []
   }
