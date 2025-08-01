@@ -1,0 +1,19 @@
+FORMULARIO F29 - EJEMPLO
+========================
+
+Período: Noviembre 2024
+RUT: 12.345.678-9
+
+CÓDIGOS DE IMPUESTOS
+====================
+
+Código 538 - Débito Fiscal Total: 2.850.000
+Código 511 - Crédito Fiscal: 1.650.000
+Código 062 - PPM (Pago Provisional Mensual): 450.000
+Código 077 - Remanente período anterior: 125.000
+Código 563 - Ventas Netas del mes: 15.000.000
+
+RESUMEN
+=======
+IVA a Pagar (538-511): 1.200.000
+Total a pagar: 1.775.000
