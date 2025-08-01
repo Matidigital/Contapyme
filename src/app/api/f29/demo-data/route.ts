@@ -4,13 +4,13 @@
 // ==========================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { generateDemoDataAdapter } from '@/lib/databaseAdapter';
+import { generateDemoData } from '@/lib/databaseSimple';
 
 export async function POST(request: NextRequest) {
   try {
     console.log('🎭 Generando datos de demostración F29...');
 
-    const result = await generateDemoDataAdapter();
+    const result = await generateDemoData();
 
     return NextResponse.json({
       success: true,

@@ -1,89 +1,111 @@
 // ==========================================
-// ADAPTADOR DE BASE DE DATOS HÍBRIDO
-// SQLite en local, Supabase en producción
+// BASE DE DATOS SIMPLIFICADA - SOLO SUPABASE
+// Para trabajar exclusivamente en Netlify
 // ==========================================
 
-import { isProduction } from './supabaseConfig';
+import { createClient } from '@supabase/supabase-js';
 
-// Importaciones condicionales
-let localDB: any = null;
-let supabaseDB: any = null;
+// Configuración Supabase
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-// Inicializar según entorno
-async function initializeDatabase() {
-  // Forzar Supabase en Netlify/producción o si SQLite no está disponible
-  const useSupabase = isProduction() || process.env.NETLIFY === 'true';
-  
-  if (useSupabase) {
-    // Producción: usar Supabase
-    const { insertF29FormSupabase, getF29FormsSupabase, upsertAnalysisSupabase } = await import('./supabaseConfig');
-    supabaseDB = { insertF29FormSupabase, getF29FormsSupabase, upsertAnalysisSupabase };
-    console.log('🌐 Usando Supabase en producción/Netlify');
-  } else {
-    // Local: intentar SQLite, fallback a Supabase
-    try {
-      const { insertF29Form, getF29Forms, upsertAnalysis } = await import('./database');
-      localDB = { insertF29Form, getF29Forms, upsertAnalysis };
-      console.log('💾 Usando SQLite en desarrollo local');
-    } catch (error) {
-      console.warn('⚠️ SQLite no disponible, usando Supabase como fallback');
-      const { insertF29FormSupabase, getF29FormsSupabase, upsertAnalysisSupabase } = await import('./supabaseConfig');
-      supabaseDB = { insertF29FormSupabase, getF29FormsSupabase, upsertAnalysisSupabase };
-    }
+// Cliente con privilegios para operaciones de servidor
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// Funciones directas para F29
+export async function insertF29Form(data: any) {
+  try {
+    const { data: result, error } = await supabase
+      .from('f29_forms')
+      .insert([{
+        company_id: data.company_id,
+        user_id: data.user_id,
+        period: data.period,
+        file_name: data.file_name,
+        file_size: data.file_size,
+        rut: data.rut,
+        folio: data.folio,
+        raw_data: data.raw_data,
+        calculated_data: data.calculated_data,
+        ventas_netas: data.ventas_netas,
+        compras_netas: data.compras_netas,
+        iva_debito: data.iva_debito,
+        iva_credito: data.iva_credito,
+        iva_determinado: data.iva_determinado,
+        ppm: data.ppm,
+        remanente: data.remanente,
+        margen_bruto: data.margen_bruto,
+        codigo_538: data.codigo_538,
+        codigo_511: data.codigo_511,
+        codigo_563: data.codigo_563,
+        codigo_062: data.codigo_062,
+        codigo_077: data.codigo_077,
+        confidence_score: data.confidence_score,
+        validation_status: data.validation_status,
+        year: data.year,
+        month: data.month
+      }])
+      .select();
+
+    return { data: result, error };
+  } catch (error) {
+    console.error('❌ Error insertando F29:', error);
+    return { data: null, error };
   }
 }
 
-// Funciones adaptativas
-export async function insertF29FormAdapter(data: any) {
-  if (!localDB && !supabaseDB) {
-    await initializeDatabase();
-  }
+export async function getF29Forms(companyId: string, limit = 24) {
+  try {
+    const { data, error } = await supabase
+      .from('f29_forms')
+      .select('*')
+      .eq('company_id', companyId)
+      .order('period', { ascending: true })
+      .limit(limit);
 
-  const useSupabase = isProduction() || process.env.NETLIFY === 'true' || !localDB;
-  
-  if (useSupabase) {
-    return await supabaseDB.insertF29FormSupabase(data);
-  } else {
-    return await localDB.insertF29Form(data);
-  }
-}
-
-export async function getF29FormsAdapter(companyId: string, limit = 24) {
-  if (!localDB && !supabaseDB) {
-    await initializeDatabase();
-  }
-
-  const useSupabase = isProduction() || process.env.NETLIFY === 'true' || !localDB;
-  
-  if (useSupabase) {
-    return await supabaseDB.getF29FormsSupabase(companyId, limit);
-  } else {
-    return await localDB.getF29Forms(companyId, limit);
+    return { data, error };
+  } catch (error) {
+    console.error('❌ Error obteniendo F29s:', error);
+    return { data: null, error };
   }
 }
 
-export async function upsertAnalysisAdapter(data: any) {
-  if (!localDB && !supabaseDB) {
-    await initializeDatabase();
-  }
+export async function upsertAnalysis(data: any) {
+  try {
+    const { error } = await supabase
+      .from('f29_comparative_analysis')
+      .upsert({
+        company_id: data.company_id,
+        period_start: data.period_start,
+        period_end: data.period_end,
+        analysis_data: data.analysis_data,
+        total_periods: data.total_periods,
+        avg_monthly_sales: data.avg_monthly_sales,
+        growth_rate: data.growth_rate,
+        best_month: data.best_month,
+        worst_month: data.worst_month,
+        insights: data.insights,
+        trends: data.trends,
+        seasonality: data.seasonality,
+        anomalies: data.anomalies,
+        generated_at: data.generated_at,
+        expires_at: data.expires_at
+      });
 
-  const useSupabase = isProduction() || process.env.NETLIFY === 'true' || !localDB;
-  
-  if (useSupabase) {
-    return await supabaseDB.upsertAnalysisSupabase(data);
-  } else {
-    return await localDB.upsertAnalysis(data);
+    return { error };
+  } catch (error) {
+    console.error('❌ Error guardando análisis:', error);
+    return { error };
   }
 }
 
-// Función para generar datos demo que funcione en ambos entornos
-export async function generateDemoDataAdapter() {
-  console.log('🎭 Generando datos demo para', isProduction() ? 'producción' : 'desarrollo');
+// Función para generar datos demo
+export async function generateDemoData() {
+  console.log('🎭 Generando datos demo en Supabase...');
 
   const companyId = 'demo-company';
   const userId = 'demo-user';
 
-  // Datos de ejemplo consistentes
   const demoData = [
     { period: '202401', ventas_base: 15800000, variation: 0.95 },
     { period: '202402', ventas_base: 16200000, variation: 0.98 },
@@ -155,13 +177,13 @@ export async function generateDemoDataAdapter() {
     };
 
     try {
-      const { error } = await insertF29FormAdapter(dbRecord);
+      const { error } = await insertF29Form(dbRecord);
       
       if (error) {
         console.error(`❌ Error insertando ${data.period}:`, error);
       } else {
         insertedCount++;
-        console.log(`✅ Insertado: ${data.period} - Ventas: $${ventas_netas.toLocaleString()}`);
+        console.log(`✅ ${data.period}: $${ventas_netas.toLocaleString()}`);
       }
     } catch (error) {
       console.error(`💥 Error procesando ${data.period}:`, error);

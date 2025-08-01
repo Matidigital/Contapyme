@@ -19,21 +19,15 @@ const nextConfig = {
   // Configuración para Netlify (no usar export por las APIs)
   trailingSlash: true,
   
-  // Configuración webpack para excluir SQLite en producción
+  // Configuración webpack para Netlify
   webpack: (config, { isServer, dev }) => {
-    // Excluir SQLite en builds de producción
-    if (!dev) {
-      config.externals = config.externals || []
-      config.externals.push('sqlite3', 'sqlite')
-    }
-    
     // Configuración para pdfjs-dist
     config.resolve.alias = {
       ...config.resolve.alias,
       canvas: false,
     }
     
-    // Evitar problemas con módulos nativos
+    // Evitar problemas con módulos nativos en Netlify
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,

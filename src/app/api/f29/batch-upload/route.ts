@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseF29SuperParser } from '@/lib/f29SuperParser';
 import { validateF29Data } from '@/lib/f29Validator';
-import { insertF29FormAdapter } from '@/lib/databaseAdapter';
+import { insertF29Form } from '@/lib/databaseSimple';
 
 // Configuración para archivos grandes
 export const runtime = 'nodejs';
@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
             month: result.period ? parseInt(result.period.substring(4, 6)) : new Date().getMonth() + 1
           };
 
-          const { error: insertError } = await insertF29FormAdapter(dbRecord);
+          const { error: insertError } = await insertF29Form(dbRecord);
           
           if (insertError) {
             console.error(`❌ Error guardando ${result.file_name}:`, insertError);

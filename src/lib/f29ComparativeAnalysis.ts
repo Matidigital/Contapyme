@@ -3,7 +3,7 @@
 // Genera insights automáticos de múltiples formularios
 // ==========================================
 
-import { getF29FormsAdapter, upsertAnalysisAdapter } from './databaseAdapter';
+import { getF29Forms, upsertAnalysis } from './databaseSimple';
 
 export interface F29FormData {
   id: string;
@@ -60,7 +60,7 @@ export async function generateComparativeAnalysis(companyId: string): Promise<Co
     console.log('📊 Generando análisis comparativo para empresa:', companyId);
 
     // 1. Obtener últimos 24 meses de datos
-    const { data: forms, error } = await getF29FormsAdapter(companyId, 24);
+    const { data: forms, error } = await getF29Forms(companyId, 24);
 
     if (error) {
       console.error('❌ Error obteniendo datos F29:', error);
@@ -418,7 +418,7 @@ async function cacheAnalysis(companyId: string, analysis: ComparativeAnalysis) {
     const periodStart = analysis.periods[0];
     const periodEnd = analysis.periods[analysis.periods.length - 1];
     
-    const { error } = await upsertAnalysisAdapter({
+    const { error } = await upsertAnalysis({
       company_id: companyId,
       period_start: periodStart,
       period_end: periodEnd,
