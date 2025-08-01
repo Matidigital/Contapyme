@@ -2,6 +2,7 @@
 const nextConfig = {
   images: {
     domains: ['localhost'],
+    unoptimized: true
   },
   typescript: {
     // Temporarily ignore TS errors on build to allow deployment
@@ -15,9 +16,34 @@ const nextConfig = {
   experimental: {
     missingSuspenseWithCSRBailout: false,
   },
-  // Export as SPA to avoid SSR issues with PDF.js
+  // Configuración para Netlify (no usar export por las APIs)
   trailingSlash: true,
-  output: 'export'
+  
+  // Configuración webpack para excluir SQLite en producción
+  webpack: (config, { isServer, dev }) => {
+    // Excluir SQLite en builds de producción
+    if (!dev) {
+      config.externals = config.externals || []
+      config.externals.push('sqlite3', 'sqlite')
+    }
+    
+    // Configuración para pdfjs-dist
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      canvas: false,
+    }
+    
+    // Evitar problemas con módulos nativos
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      net: false,
+      tls: false,
+      crypto: false,
+    }
+    
+    return config
+  }
 }
 
 module.exports = nextConfig

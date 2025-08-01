@@ -11,11 +11,14 @@ let supabaseDB: any = null;
 
 // Inicializar según entorno
 async function initializeDatabase() {
-  if (isProduction()) {
+  // Forzar Supabase en Netlify/producción o si SQLite no está disponible
+  const useSupabase = isProduction() || process.env.NETLIFY === 'true';
+  
+  if (useSupabase) {
     // Producción: usar Supabase
     const { insertF29FormSupabase, getF29FormsSupabase, upsertAnalysisSupabase } = await import('./supabaseConfig');
     supabaseDB = { insertF29FormSupabase, getF29FormsSupabase, upsertAnalysisSupabase };
-    console.log('🌐 Usando Supabase en producción');
+    console.log('🌐 Usando Supabase en producción/Netlify');
   } else {
     // Local: intentar SQLite, fallback a Supabase
     try {
@@ -36,7 +39,9 @@ export async function insertF29FormAdapter(data: any) {
     await initializeDatabase();
   }
 
-  if (isProduction() || !localDB) {
+  const useSupabase = isProduction() || process.env.NETLIFY === 'true' || !localDB;
+  
+  if (useSupabase) {
     return await supabaseDB.insertF29FormSupabase(data);
   } else {
     return await localDB.insertF29Form(data);
@@ -48,7 +53,9 @@ export async function getF29FormsAdapter(companyId: string, limit = 24) {
     await initializeDatabase();
   }
 
-  if (isProduction() || !localDB) {
+  const useSupabase = isProduction() || process.env.NETLIFY === 'true' || !localDB;
+  
+  if (useSupabase) {
     return await supabaseDB.getF29FormsSupabase(companyId, limit);
   } else {
     return await localDB.getF29Forms(companyId, limit);
@@ -60,7 +67,9 @@ export async function upsertAnalysisAdapter(data: any) {
     await initializeDatabase();
   }
 
-  if (isProduction() || !localDB) {
+  const useSupabase = isProduction() || process.env.NETLIFY === 'true' || !localDB;
+  
+  if (useSupabase) {
     return await supabaseDB.upsertAnalysisSupabase(data);
   } else {
     return await localDB.upsertAnalysis(data);
