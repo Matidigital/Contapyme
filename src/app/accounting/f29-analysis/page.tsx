@@ -349,6 +349,17 @@ export default function F29AnalysisPage() {
                   <p className="text-xs text-teal-600">Código 077</p>
                 </div>
 
+                {/* Honorarios Retenidos - Solo mostrar si existe */}
+                {result.codigo151 > 0 && (
+                  <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
+                    <h4 className="text-sm font-medium text-amber-700 mb-1">Honorarios Retenidos</h4>
+                    <p className="text-2xl font-bold text-amber-900">
+                      {formatCurrency(result.codigo151)}
+                    </p>
+                    <p className="text-xs text-amber-600">Código 151</p>
+                  </div>
+                )}
+
                 {/* Total a Pagar */}
                 <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-300">
                   <h4 className="text-sm font-medium text-gray-700 mb-1">Total a Pagar</h4>
@@ -356,7 +367,9 @@ export default function F29AnalysisPage() {
                     {formatCurrency(result.totalAPagar)}
                   </p>
                   <p className="text-xs text-gray-600">
-                    {result.ivaDeterminado > 0 ? 'IVA + PPM' : 'Solo PPM (IVA negativo)'}
+                    {result.ivaDeterminado > 0 
+                      ? `IVA + PPM${result.codigo151 > 0 ? ' + Honorarios' : ''}`
+                      : `Solo PPM${result.codigo151 > 0 ? ' + Honorarios' : ''} (IVA negativo)`}
                   </p>
                 </div>
               </div>

@@ -13,6 +13,7 @@ export interface F29UltraData {
   codigo563: number; // BASE IMPONIBLE
   codigo062: number; // PPM
   codigo077: number; // REMANENTE
+  codigo151: number; // HONORARIOS RETENIDOS
   comprasNetas: number;
   ivaDeterminado: number;
   totalAPagar: number;
@@ -43,6 +44,7 @@ export async function parseF29Ultra(file: File): Promise<F29UltraData> {
     codigo563: 0,
     codigo062: 0,
     codigo077: 0,
+    codigo151: 0,
     comprasNetas: 0,
     ivaDeterminado: 0,
     totalAPagar: 0,
@@ -192,6 +194,15 @@ function getKnownF29Patterns() {
         /077[^0-9]*([0-9.,]{5,})/gi,
         /777[\s.]?992/g // Valor específico del PDF real
       ]
+    },
+    {
+      field: 'codigo151',
+      patterns: [
+        /151\s+RET\.?\s*HONORARIOS[^0-9]*([0-9.,]+)/gi,
+        /HONORARIOS\s+RETENIDOS[^0-9]*([0-9.,]+)/gi,
+        /RET\.?\s*HON[^0-9]*([0-9.,]+)/gi,
+        /151[^0-9]*([0-9.,]{1,})/gi
+      ]
     }
   ];
 }
@@ -233,6 +244,7 @@ function applyBruteForceExtraction(text: string, numbers: number[], result: F29U
     { value: 17950795, field: 'codigo563' },
     { value: 359016, field: 'codigo062' },
     { value: 777992, field: 'codigo077' }
+    // El código 151 se busca dinámicamente, no hay valor hardcodeado
   ];
   
   for (const known of knownValues) {
@@ -350,21 +362,24 @@ function extractRazonSocial(text: string): string {
 }
 
 function calculateDerivedValues(result: F29UltraData) {
-  // Compras netas
+  // Compras netas - usando crédito fiscal (código 511)
   if (result.codigo511 > 0) {
     result.comprasNetas = Math.round(result.codigo511 / 0.19);
   }
   
-  // IVA determinado
-  if (result.codigo538 > 0 && result.codigo511 > 0) {
-    result.ivaDeterminado = result.codigo538 - result.codigo511;
+  // IVA determinado = Débito - Crédito (puede ser negativo)
+  result.ivaDeterminado = result.codigo538 - result.codigo511;
+  
+  // Total a pagar - lógica corregida según normativa chilena
+  if (result.ivaDeterminado > 0) {
+    // Si IVA es positivo: IVA + PPM + Honorarios retenidos
+    result.totalAPagar = result.ivaDeterminado + result.codigo062 + result.codigo151;
+  } else {
+    // Si IVA es negativo: solo PPM + Honorarios retenidos (el IVA negativo queda como remanente)
+    result.totalAPagar = result.codigo062 + result.codigo151;
   }
   
-  // Total a pagar
-  const ivaAPagar = Math.max(0, result.ivaDeterminado);
-  result.totalAPagar = ivaAPagar + result.codigo062 + result.codigo077;
-  
-  // Margen bruto
+  // Margen bruto = Ventas - Compras
   if (result.codigo563 > 0 && result.comprasNetas > 0) {
     result.margenBruto = result.codigo563 - result.comprasNetas;
   }

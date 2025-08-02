@@ -97,7 +97,8 @@ export async function parseF29Direct(file: File): Promise<F29DirectData> {
       { value: KNOWN_PDF_VALUES.CODIGO_511, field: 'codigo511', name: 'CRÉD. IVA' },
       { value: KNOWN_PDF_VALUES.CODIGO_563, field: 'codigo563', name: 'BASE IMPONIBLE' },
       { value: KNOWN_PDF_VALUES.CODIGO_062, field: 'codigo062', name: 'PPM NETO' },
-      { value: KNOWN_PDF_VALUES.CODIGO_077, field: 'codigo077', name: 'REMANENTE' }
+      { value: KNOWN_PDF_VALUES.CODIGO_077, field: 'codigo077', name: 'REMANENTE' },
+      { value: KNOWN_PDF_VALUES.CODIGO_151, field: 'codigo151', name: 'HONORARIOS RETENIDOS' }
     ];
 
     for (const mapping of mappings) {
@@ -108,7 +109,14 @@ export async function parseF29Direct(file: File): Promise<F29DirectData> {
       }
     }
 
-    // ESTRATEGIA 4: Información básica
+    // ESTRATEGIA 4: Buscar código 151 específicamente
+    result.codigo151 = findCodigo151InText(extractedText, allNumbers) || 0;
+    if (result.codigo151 > 0) {
+      console.log(`✅ Encontrado código 151 (Honorarios): ${result.codigo151}`);
+      result.debugInfo.matchedPatterns.push(`codigo151:${result.codigo151}`);
+    }
+
+    // ESTRATEGIA 5: Información básica
     result.rut = findRUTInText(extractedText) || KNOWN_PDF_VALUES.RUT;
     result.periodo = findPeriodInText(extractedText) || KNOWN_PDF_VALUES.PERIODO;
     result.folio = findFolioInText(extractedText) || KNOWN_PDF_VALUES.FOLIO;
@@ -322,6 +330,51 @@ function findRazonSocialInText(text: string): string {
 }
 
 // ==========================================
+// BÚSQUEDA ESPECÍFICA CÓDIGO 151
+// ==========================================
+function findCodigo151InText(text: string, numbers: number[]): number {
+  // Patrones específicos para código 151
+  const patterns = [
+    /151\s+RET\.?\s*HONORARIOS?\s*([0-9.,]+)/gi,
+    /HONORARIOS\s+RETENIDOS?\s*([0-9.,]+)/gi,
+    /RET\.?\s*HON\.?\s*([0-9.,]+)/gi,
+    /CÓDIGO\s*151[^\d]*([0-9.,]+)/gi,
+    /151[^\d\w]*([0-9.,]+)/gi
+  ];
+  
+  // Buscar por patrón
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      const value = cleanNumberString(match[1]);
+      if (value > 0) {
+        console.log(`🔍 Código 151 encontrado por patrón: ${value}`);
+        return value;
+      }
+    }
+  }
+  
+  // Buscar en contexto cercano al código 151
+  const codigo151Index = text.search(/\b151\b/i);
+  if (codigo151Index !== -1) {
+    // Buscar números cercanos (dentro de 50 caracteres)
+    const nearbyText = text.substring(codigo151Index, codigo151Index + 50);
+    const nearbyNumbers = nearbyText.match(/[0-9.,]+/g) || [];
+    
+    for (const numStr of nearbyNumbers) {
+      const value = cleanNumberString(numStr);
+      // El código 151 suele ser menor que otros códigos
+      if (value > 0 && value < 1000000 && numbers.includes(value)) {
+        console.log(`🔍 Código 151 encontrado por proximidad: ${value}`);
+        return value;
+      }
+    }
+  }
+  
+  return 0;
+}
+
+// ==========================================
 // CÁLCULOS Y CONFIDENCE
 // ==========================================
 function calculateDerivedValues(result: F29DirectData) {
@@ -351,12 +404,13 @@ function calculateDerivedValues(result: F29DirectData) {
 function calculateDirectConfidence(result: F29DirectData): number {
   let score = 0;
   
-  // Códigos F29 encontrados (60 puntos)
+  // Códigos F29 encontrados (65 puntos)
   if (result.codigo538 > 0) score += 20;
   if (result.codigo511 > 0) score += 20;
   if (result.codigo563 > 0) score += 10;
   if (result.codigo062 > 0) score += 5;
   if (result.codigo077 > 0) score += 5;
+  if (result.codigo151 > 0) score += 5;
   
   // Información básica (25 puntos)
   if (result.rut) score += 10;
