@@ -17,6 +17,7 @@ interface UploadResult {
 interface F29Results {
   rut: string;
   periodo: string;
+  codigo049: number; // Préstamo Solidario
   codigo538: number; // Débito Fiscal
   codigo511: number; // Crédito Fiscal
   codigo062: number; // PPM
@@ -162,6 +163,7 @@ export default function F29AnalysisPage() {
       ['Crédito Fiscal', result.codigo511.toString(), '511'],
       ['PPM', result.codigo062.toString(), '062'],
       ['Remanente', result.codigo077.toString(), '077'],
+      ...(result.codigo049 > 0 ? [['Préstamo Solidario', result.codigo049.toString(), '049']] : []),
       ...(result.codigo151 > 0 ? [['Honorarios Retenidos', result.codigo151.toString(), '151']] : []),
       ['Compras Netas (Calculado)', result.comprasNetas.toString(), 'Calc'],
       ['IVA Determinado', result.ivaDeterminado.toString(), 'Calc'],
@@ -400,6 +402,17 @@ export default function F29AnalysisPage() {
                   <p className="text-xs text-teal-600">Código 077</p>
                 </div>
 
+                {/* Préstamo Solidario - Solo mostrar si existe */}
+                {result.codigo049 > 0 && (
+                  <div className="bg-cyan-50 rounded-lg p-4 border border-cyan-200">
+                    <h4 className="text-sm font-medium text-cyan-700 mb-1">Préstamo Solidario</h4>
+                    <p className="text-2xl font-bold text-cyan-900">
+                      {formatCurrency(result.codigo049)}
+                    </p>
+                    <p className="text-xs text-cyan-600">Código 049 • Ret. 3% Rta 42 N°1</p>
+                  </div>
+                )}
+
                 {/* Honorarios Retenidos - Solo mostrar si existe */}
                 {result.codigo151 > 0 && (
                   <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
@@ -562,6 +575,12 @@ export default function F29AnalysisPage() {
                               <span className="font-medium">{formatCurrency(result.codigo151)}</span>
                             </div>
                           )}
+                          {result.codigo049 > 0 && (
+                            <div className="flex justify-between">
+                              <span>Préstamo solidario:</span>
+                              <span className="font-medium">{formatCurrency(result.codigo049)}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                       
@@ -629,6 +648,17 @@ export default function F29AnalysisPage() {
                           <p className="text-sm text-gray-700">
                             <strong>Honorarios retenidos:</strong> Se detectaron {formatCurrency(result.codigo151)} en retenciones. 
                             Puedes usar este monto como crédito en tu declaración anual.
+                          </p>
+                        </div>
+                      )}
+                      
+                      {result.codigo049 > 0 && (
+                        <div className="flex items-start space-x-3">
+                          <CheckCircle className="w-5 h-5 text-blue-500 mt-0.5" />
+                          <p className="text-sm text-gray-700">
+                            <strong>Préstamo solidario:</strong> Se registraron {formatCurrency(result.codigo049)} correspondientes 
+                            a la retención del 3% sobre rentas del trabajo de tus empleados (Ley 21.133). 
+                            Este monto debe ser enterado al fisco.
                           </p>
                         </div>
                       )}

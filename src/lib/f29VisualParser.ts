@@ -11,6 +11,7 @@ export interface F29Data {
   razonSocial: string;
   
   // Códigos principales
+  codigo049: number; // PRÉSTAMO SOLIDARIO (Ret. 3% Rta 42 N°1)
   codigo511: number; // CRÉD. IVA POR DCTOS. ELECTRÓNICOS
   codigo538: number; // TOTAL DÉBITOS
   codigo563: number; // BASE IMPONIBLE
@@ -115,6 +116,7 @@ EXTRAE EXACTAMENTE estos valores:
 - FOLIO del formulario
 - PERIODO tributario (formato YYYYMM)
 - RAZÓN SOCIAL de la empresa
+- Código 049: PRÉSTAMO SOLIDARIO / Ret. 3% Rta 42 N°1
 - Código 511: CRÉD. IVA POR DCTOS. ELECTRÓNICOS
 - Código 538: TOTAL DÉBITOS
 - Código 563: BASE IMPONIBLE
@@ -134,6 +136,7 @@ Responde ÚNICAMENTE con este JSON:
   "folio": "numero_folio",
   "periodo": "YYYYMM",
   "razonSocial": "NOMBRE EMPRESA",
+  "codigo049": numero,
   "codigo511": numero,
   "codigo538": numero,
   "codigo563": numero,
@@ -189,6 +192,7 @@ Responde ÚNICAMENTE con este JSON:
       folio: parsed.folio || '',
       periodo: parsed.periodo || '',
       razonSocial: parsed.razonSocial || '',
+      codigo049: parseInt(parsed.codigo049) || 0,
       codigo511: parseInt(parsed.codigo511) || 0,
       codigo538: parseInt(parsed.codigo538) || 0,
       codigo563: parseInt(parsed.codigo563) || 0,
