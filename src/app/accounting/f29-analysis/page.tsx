@@ -59,6 +59,8 @@ export default function F29AnalysisPage() {
     if (droppedFile && droppedFile.type === 'application/pdf') {
       setFile(droppedFile);
       setError(null);
+      setResult(null); // Limpiar resultados anteriores
+      setShowDetailedAnalysis(false); // Cerrar análisis detallado
     } else {
       setError('Por favor, selecciona un archivo PDF válido');
     }
@@ -69,8 +71,14 @@ export default function F29AnalysisPage() {
     if (selectedFile && selectedFile.type === 'application/pdf') {
       setFile(selectedFile);
       setError(null);
+      setResult(null); // Limpiar resultados anteriores
+      setShowDetailedAnalysis(false); // Cerrar análisis detallado
     } else {
       setError('Por favor, selecciona un archivo PDF válido');
+    }
+    // Limpiar el valor del input para permitir reseleccionar el mismo archivo
+    if (e.target) {
+      e.target.value = '';
     }
   };
 
@@ -78,6 +86,11 @@ export default function F29AnalysisPage() {
     setFile(null);
     setResult(null);
     setError(null);
+    setShowDetailedAnalysis(false);
+    // Limpiar el input de archivo para permitir seleccionar el mismo archivo de nuevo
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleAnalysis = async () => {
