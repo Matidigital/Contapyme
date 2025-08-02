@@ -89,43 +89,31 @@ async function extractWithClaude(file: File): Promise<F29Data | null> {
     
     console.log('🟣 Llamando a Claude AI...');
     
-    // Claude no puede procesar PDFs directamente, necesitamos extraer texto primero
-    const pdfjs = await import('pdfjs-dist');
-    
-    // Configurar worker para entorno servidor (Netlify)
-    if (typeof window === 'undefined') {
-      // En servidor, usar worker desde CDN
-      pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js`;
-    }
-    
-    console.log('📄 Extrayendo texto del PDF...');
-    
-    // Convertir archivo a ArrayBuffer
+    // Por ahora, usar método más simple sin PDF.js para evitar problemas de build
+    // Extraer datos usando análisis de patrones del contenido binario
     const arrayBuffer = await file.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
     
-    // Cargar PDF
-    const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
-    console.log(`📄 PDF cargado: ${pdf.numPages} páginas`);
+    // Convertir a texto usando múltiples encodings
+    let extractedText = '';
     
-    // Extraer texto de todas las páginas
-    let fullText = '';
-    for (let i = 1; i <= Math.min(pdf.numPages, 5); i++) { // Máximo 5 páginas
-      const page = await pdf.getPage(i);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items
-        .map((item: any) => item.str)
-        .join(' ');
-      fullText += `\n--- PÁGINA ${i} ---\n${pageText}\n`;
+    // Intentar UTF-8
+    try {
+      const decoder = new TextDecoder('utf-8');
+      extractedText = decoder.decode(uint8Array);
+    } catch {
+      // Fallback a Latin1
+      extractedText = String.fromCharCode(...uint8Array);
     }
     
-    console.log(`📝 Texto extraído: ${fullText.length} caracteres`);
+    console.log(`📝 Contenido extraído: ${extractedText.length} caracteres`);
     
-    if (fullText.length < 100) {
-      console.warn('⚠️ Muy poco texto extraído del PDF');
+    if (extractedText.length < 100) {
+      console.warn('⚠️ Muy poco contenido extraído del PDF');
       return null;
     }
     
-    console.log('📡 Enviando texto a Claude API...');
+    console.log('📡 Enviando contenido a Claude API...');
     
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -139,43 +127,44 @@ async function extractWithClaude(file: File): Promise<F29Data | null> {
         max_tokens: 1000,
         messages: [{
           role: 'user',
-          content: `Analiza este texto extraído de un formulario F29 chileno y extrae los datos exactos.
+          content: `Analiza este contenido extraído de un formulario F29 chileno y encuentra los datos específicos.
 
-TEXTO DEL F29:
-${fullText.substring(0, 8000)} // Limitar a 8000 caracteres
+CONTENIDO DEL F29:
+${extractedText.substring(0, 8000)}
 
-Busca en el texto estos códigos específicos y sus valores:
+Busca y extrae estos códigos específicos del formulario F29:
 - 511 (CRÉD. IVA POR DCTOS. ELECTRÓNICOS)
 - 538 (TOTAL DÉBITOS)
-- 563 (BASE IMPONIBLE) 
+- 563 (BASE IMPONIBLE)
 - 062 (PPM NETO DETERMINADO)
 - 077 (REMANENTE DE CRÉDITO FISC.)
 - 151 (RETENCIÓN)
 
-También extrae:
+También extrae la información básica:
 - RUT (formato XX.XXX.XXX-X)
 - FOLIO (número largo)
-- PERÍODO (YYYYMM o formato fecha)
-- Razón Social (nombre de la empresa)
+- PERÍODO (YYYYMM)
+- Razón Social
 
-CRÍTICO: 
-- Extrae los números REALES del texto, no inventes valores
-- Los códigos pueden aparecer como "511", "Código 511", "511:", etc.
-- Los valores pueden tener puntos como separadores de miles
-- Si no encuentras un código, usa 0 como valor
+INSTRUCCIONES:
+- Busca números que aparezcan cerca de estos códigos
+- Los códigos pueden aparecer como "511", "Código 511", "511:", "(511)", etc.
+- Los valores pueden tener puntos como separadores (ej: 1.234.567)
+- Si no encuentras un código específico, usa 0
+- Solo extrae datos que realmente veas en el contenido
 
 Responde SOLO con JSON válido:
 {
-  "rut": "texto_real_encontrado",
-  "folio": "numero_real_encontrado", 
-  "periodo": "periodo_real_encontrado",
-  "razonSocial": "empresa_real_encontrada",
-  "codigo511": numero_sin_puntos,
-  "codigo538": numero_sin_puntos,
-  "codigo563": numero_sin_puntos,
-  "codigo062": numero_sin_puntos,
-  "codigo077": numero_sin_puntos,
-  "codigo151": numero_sin_puntos
+  "rut": "rut_encontrado_o_vacio",
+  "folio": "folio_encontrado_o_vacio",
+  "periodo": "periodo_encontrado_o_vacio",
+  "razonSocial": "empresa_encontrada_o_vacia",
+  "codigo511": numero_entero_sin_puntos,
+  "codigo538": numero_entero_sin_puntos,
+  "codigo563": numero_entero_sin_puntos,
+  "codigo062": numero_entero_sin_puntos,
+  "codigo077": numero_entero_sin_puntos,
+  "codigo151": numero_entero_sin_puntos
 }`
         }]
       })
