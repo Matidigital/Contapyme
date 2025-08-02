@@ -106,7 +106,7 @@ export default function F29AnalysisPage() {
 
       console.log('🚀 Iniciando análisis de F29:', file.name);
 
-      const response = await fetch('/api/parse-f29', {
+      const response = await fetch('/api/test-f29', {
         method: 'POST',
         body: formData,
       });
