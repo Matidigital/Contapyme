@@ -45,17 +45,9 @@ export async function parseF29(file: File): Promise<F29Data> {
     
     console.log('🤖 Iniciando análisis con Claude AI...');
     
-    // Probar primero con extracción PDF.js más precisa
-    console.log('📄 Intentando extracción con PDF.js...');
-    const pdfResult = await extractWithPDFJS(file);
-    
-    if (pdfResult) {
-      console.log(`✅ PDF.js + Claude completó análisis: ${pdfResult.confidence}% confianza`);
-      return pdfResult;
-    }
-    
-    // Si PDF.js falla, usar método texto directo
-    console.log('🔄 Usando extracción de texto directo...');
+    // TEMPORALMENTE DESHABILITAR PDF.js por problemas en Netlify
+    // Ir directo al método texto que funciona
+    console.log('🔄 Usando extracción de texto directo (PDF.js deshabilitado)...');
     const claudeResult = await extractWithClaude(file);
     
     if (claudeResult) {
@@ -86,10 +78,11 @@ async function extractWithPDFJS(file: File): Promise<F29Data | null> {
     
     const pdfjs = await import('pdfjs-dist');
     
-    // Configurar worker solo si estamos en servidor
-    if (typeof window === 'undefined') {
-      pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js`;
-    }
+    // Configurar worker para Netlify - simplificado
+    pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+      'pdfjs-dist/build/pdf.worker.min.js',
+      import.meta.url
+    ).toString();
     
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
@@ -344,7 +337,7 @@ FORMATO RESPUESTA (solo JSON, sin explicaciones):
         console.error('⏰ Rate limit excedido - espera un momento');
       } else if (response.status === 400) {
         console.error('📄 Error en el formato del request o PDF');
-        console.log('🔍 Tamaño del PDF enviado:', pdfImageBase64.length, 'caracteres');
+        console.log('🔍 Tamaño del texto enviado:', extractedText.length, 'caracteres');
       }
       
       return null;
