@@ -299,124 +299,81 @@ async function extractWithClaude(file: File): Promise<F29Data | null> {
       }
     }
     
-    // Si no encontramos suficiente texto, intentar decodificación directa
+    // Si no encontramos suficiente texto, intentar decodificación completa
     if (extractedText.length < 100) {
       console.log('⚠️ Poco texto encontrado, intentando decodificación completa...');
+      
+      // Estrategia 1: Buscar texto en todo el PDF como Latin1
       try {
-        const decoder = new TextDecoder('utf-8', { fatal: false });
-        const fullText = decoder.decode(uint8Array);
+        const latin1Text = Array.from(uint8Array)
+          .map(byte => String.fromCharCode(byte))
+          .join('');
         
-        // Buscar códigos F29 específicos con diferentes formatos
-        const codePatterns = [
-          /511[\s\S]{0,50}?([\d,.\s]+)/,
-          /538[\s\S]{0,50}?([\d,.\s]+)/,
-          /563[\s\S]{0,50}?([\d,.\s]+)/,
-          /062[\s\S]{0,50}?([\d,.\s]+)/,
-          /077[\s\S]{0,50}?([\d,.\s]+)/,
-          /151[\s\S]{0,50}?([\d,.\s]+)/,
-          /\b(\d{1,2}[.-]\d{3}[.-]\d{3}[.-][0-9kK])\b/i, // RUT
-          /PERIODO[\s:]+(\d{6})/i,
-          /FOLIO[\s:]+(\d{8,})/i
+        // Buscar patrones F29 específicos en texto Latin1
+        const f29Markers = [
+          'DECLARACION MENSUAL',
+          'SERVICIO DE IMPUESTOS INTERNOS',
+          'FORMULARIO 29',
+          'IVA',
+          'PPM',
+          'DEBITO',
+          'CREDITO'
         ];
         
-        let foundCodes = 0;
-        for (const pattern of codePatterns) {
-          if (pattern.test(fullText)) {
-            foundCodes++;
+        let hasF29Content = false;
+        for (const marker of f29Markers) {
+          if (latin1Text.toUpperCase().includes(marker)) {
+            hasF29Content = true;
+            console.log(`✅ Encontrado marcador F29: ${marker}`);
+            break;
           }
         }
         
-        if (foundCodes > 3 || extractedText.length > 0) {
-          extractedText = fullText;
-          console.log(`✅ Encontrados ${foundCodes} códigos F29 en decodificación completa`);
+        if (hasF29Content) {
+          extractedText = latin1Text;
+          console.log('✅ Texto Latin1 contiene marcadores F29');
         }
       } catch (e) {
-        console.log('⚠️ Error en decodificación UTF-8:', e);
+        console.log('⚠️ Error en decodificación Latin1:', e);
+      }
+      
+      // Estrategia 2: Buscar números que parezcan códigos F29
+      if (extractedText.length < 100) {
+        try {
+          const textChunks = [];
+          for (let i = 0; i < uint8Array.length - 10; i++) {
+            // Buscar secuencias que parezcan números
+            if (uint8Array[i] >= 48 && uint8Array[i] <= 57) { // ASCII 0-9
+              let number = '';
+              let j = i;
+              while (j < uint8Array.length && 
+                     ((uint8Array[j] >= 48 && uint8Array[j] <= 57) || 
+                      uint8Array[j] === 46 || uint8Array[j] === 44)) { // números, punto, coma
+                number += String.fromCharCode(uint8Array[j]);
+                j++;
+              }
+              if (number.length > 3) {
+                textChunks.push(number);
+              }
+              i = j;
+            }
+          }
+          
+          if (textChunks.length > 0) {
+            extractedText = 'NÚMEROS ENCONTRADOS EN PDF: ' + textChunks.join(' | ');
+            console.log(`✅ Encontrados ${textChunks.length} números en el PDF`);
+          }
+        } catch (e) {
+          console.log('⚠️ Error buscando números:', e);
+        }
       }
     }
     
     console.log(`📝 Texto extraído: ${extractedText.length} caracteres`);
     
-    // NUEVA ESTRATEGIA: Si no hay texto, enviar PDF como imagen
-    if (extractedText.length < 100) {
-      console.log('⚠️ Poco texto extraído, enviando PDF como imagen a Claude...');
-      
-      // Convertir PDF a base64
-      const base64PDF = Buffer.from(uint8Array).toString('base64');
-      console.log(`📸 PDF convertido a base64: ${base64PDF.length} caracteres`);
-      
-      // Limitar tamaño si es muy grande
-      const maxSize = 1000000; // 1MB en base64
-      const pdfData = base64PDF.length > maxSize 
-        ? base64PDF.substring(0, maxSize) 
-        : base64PDF;
-      
-      console.log('🤖 Enviando PDF como imagen a Claude para análisis visual...');
-    
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'content-type': 'application/json'
-        },
-        body: JSON.stringify({
-          model: 'claude-3-5-sonnet-20241022',
-          max_tokens: 1000,
-          messages: [{
-            role: 'user',
-            content: [{
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'application/pdf',
-                data: pdfData
-              }
-            }, {
-              type: 'text',
-              text: `Analiza este formulario F29 chileno y extrae TODOS los datos.
-
-CÓDIGOS F29 PRIORITARIOS:
-- CÓDIGO 511: CRÉD. IVA POR DCTOS. ELECTRÓNICOS
-- CÓDIGO 538: TOTAL DÉBITOS  
-- CÓDIGO 563: BASE IMPONIBLE
-- CÓDIGO 062: PPM NETO DETERMINADO
-- CÓDIGO 077: REMANENTE DE CRÉDITO FISC.
-- CÓDIGO 151: RETENCIÓN
-
-FORMATO RESPUESTA (solo JSON):
-{
-  "rut": "XX.XXX.XXX-X",
-  "folio": "numero_folio",
-  "periodo": "YYYYMM",
-  "razonSocial": "NOMBRE_EMPRESA",
-  "codigo511": numero,
-  "codigo538": numero,
-  "codigo563": numero,
-  "codigo062": numero,
-  "codigo077": numero,
-  "codigo151": numero
-}`
-            }]
-          }]
-        })
-      });
-      
-      // Procesar respuesta de imagen
-      if (response.ok) {
-        const data = await response.json();
-        const content = data.content?.[0]?.text;
-        if (content) {
-          console.log('📝 Claude analizó PDF como imagen:', content.substring(0, 200));
-          const jsonMatch = content.match(/\{[\s\S]*?\}/);
-          if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0]);
-            return createF29Result(parsed, 'claude-visual-analysis');
-          }
-        }
-      }
-      
-      console.log('⚠️ Análisis visual falló, intentando con texto...');
+    // Si tenemos poco texto pero algo, intentar enviar lo que tenemos a Claude
+    if (extractedText.length < 100 && extractedText.length > 0) {
+      console.log('⚠️ Poco texto extraído, pero enviando lo que tenemos a Claude...');
     }
     
     // Si llegamos aquí, tenemos texto para analizar
@@ -435,9 +392,19 @@ FORMATO RESPUESTA (solo JSON):
         max_tokens: 1000,
         messages: [{
           role: 'user',
-          content: `Eres un experto contador chileno. Analiza este texto de F29:
+          content: `Eres un experto contador chileno analizando un formulario F29.
 
-${extractedText.substring(0, 10000)}
+CONTENIDO EXTRAÍDO DEL PDF:
+${extractedText.substring(0, 15000)}
+
+INSTRUCCIONES:
+- Este texto puede estar incompleto o contener caracteres extraños
+- Busca CUALQUIER número que pueda corresponder a los códigos F29
+- Si el texto dice "NÚMEROS ENCONTRADOS EN PDF:", analiza esos números
+- Busca patrones como: 511, 538, 563, 062, 077, 151 seguidos de valores
+- También busca RUT (formato XX.XXX.XXX-X), PERIODO (YYYYMM), FOLIO
+- Si no encuentras un código específico, usa 0
+- IMPORTANTE: Extrae SOLO valores que veas en el texto
 
 Extrae los códigos F29 y devuelve SOLO JSON con formato:
 {
