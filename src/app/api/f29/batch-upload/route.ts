@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
             success: true,
             confidence_score: extracted.confidence,
             data: extracted, // Agregar datos extraídos para el frontend
-            diagnostic: diagnosticResult.debugInfo, // Agregar info de diagnóstico
+            diagnostic: extracted.debugInfo || {}, // Agregar info de diagnóstico si existe
             extracted_data: {
               raw_data: extracted,
               calculated_data: {
