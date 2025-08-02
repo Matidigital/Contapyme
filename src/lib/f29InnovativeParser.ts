@@ -3,11 +3,17 @@
 // Parser de nueva generación con múltiples estrategias innovadoras
 // ==========================================
 
-import * as pdfjsLib from 'pdfjs-dist';
+// Importación condicional de pdfjs-dist solo en el cliente
+let pdfjsLib: any = null;
 
-// Configurar worker
+// Solo importar en el cliente para evitar problemas en el servidor
 if (typeof window !== 'undefined') {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = '/workers/pdf.worker.min.js';
+  try {
+    pdfjsLib = require('pdfjs-dist');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '/workers/pdf.worker.min.js';
+  } catch (error) {
+    console.warn('PDF.js no disponible:', error);
+  }
 }
 
 export interface F29InnovativeData {
@@ -155,9 +161,18 @@ export async function parseF29Innovative(file: File): Promise<F29InnovativeData>
   }
 }
 
-// ESTRATEGIA 1: Análisis estructural con pdfjs-dist
+// ESTRATEGIA 1: Análisis estructural (fallback sin pdfjs-dist)
 async function extractWithStructuralAnalysis(file: File): Promise<Partial<F29InnovativeData> | null> {
   try {
+    // Si no hay pdfjs-dist disponible, usar análisis de texto simple
+    if (!pdfjsLib) {
+      console.log('📄 PDF.js no disponible, usando análisis de texto simple');
+      const text = await extractTextFromPDF(file);
+      const result: Partial<F29InnovativeData> = {};
+      extractBasicInfoFromHeader(text, result);
+      return Object.keys(result).length > 0 ? result : null;
+    }
+
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     const page = await pdf.getPage(1);
@@ -221,9 +236,35 @@ async function extractWithTabularAnalysis(file: File): Promise<Partial<F29Innova
   }
 }
 
-// ESTRATEGIA 3: Análisis posicional por coordenadas
+// ESTRATEGIA 3: Análisis posicional por coordenadas (fallback sin pdfjs-dist)
 async function extractWithPositionalAnalysis(file: File): Promise<Partial<F29InnovativeData> | null> {
   try {
+    // Si no hay pdfjs-dist, usar análisis de líneas
+    if (!pdfjsLib) {
+      console.log('📄 Análisis posicional: usando fallback de líneas');
+      const text = await extractTextFromPDF(file);
+      const result: Partial<F29InnovativeData> = {};
+      
+      // Analizar línea por línea buscando códigos y valores
+      const lines = text.split('\n');
+      for (const line of lines) {
+        for (const [code, config] of Object.entries(F29_CODES)) {
+          if (line.includes(code) && config.field) {
+            const numberMatch = line.match(/(\d{1,3}(?:\.\d{3})*)/);
+            if (numberMatch) {
+              const value = cleanNumber(numberMatch[1]);
+              if (value > 0) {
+                (result as any)[config.field] = value;
+                console.log(`📍 Line analysis: ${code} = ${value.toLocaleString()}`);
+              }
+            }
+          }
+        }
+      }
+      
+      return Object.keys(result).length > 0 ? result : null;
+    }
+
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     const page = await pdf.getPage(1);
@@ -370,21 +411,60 @@ async function extractWithDataFlow(file: File): Promise<Partial<F29InnovativeDat
 
 // Funciones auxiliares
 async function extractTextFromPDF(file: File): Promise<string> {
-  const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  let fullText = '';
-  
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    const pageText = content.items
-      .filter((item): item is any => 'str' in item)
-      .map(item => item.str)
-      .join(' ');
-    fullText += pageText + '\n';
+  try {
+    // Si pdfjs-dist está disponible, usarlo
+    if (pdfjsLib) {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let fullText = '';
+      
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const pageText = content.items
+          .filter((item): item is any => 'str' in item)
+          .map(item => item.str)
+          .join(' ');
+        fullText += pageText + '\n';
+      }
+      
+      return fullText;
+    } else {
+      // Fallback: análisis binario simple
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      
+      // Probar diferentes encodings
+      const decoders = [
+        new TextDecoder('utf-8'),
+        new TextDecoder('latin1'),
+        new TextDecoder('windows-1252'),
+        new TextDecoder('iso-8859-1')
+      ];
+      
+      let bestText = '';
+      let maxNumbers = 0;
+      
+      for (const decoder of decoders) {
+        try {
+          const text = decoder.decode(uint8Array);
+          const numberCount = (text.match(/\d{3,}/g) || []).length;
+          
+          if (numberCount > maxNumbers) {
+            maxNumbers = numberCount;
+            bestText = text;
+          }
+        } catch (e) {
+          // Continuar con el siguiente decoder
+        }
+      }
+      
+      return bestText;
+    }
+  } catch (error) {
+    console.error('Error extracting text from PDF:', error);
+    return '';
   }
-  
-  return fullText;
 }
 
 function cleanNumber(str: string): number {
