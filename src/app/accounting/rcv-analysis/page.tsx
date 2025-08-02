@@ -10,17 +10,21 @@ interface ProveedorSummary {
   rutProveedor: string;
   razonSocial: string;
   totalTransacciones: number;
+  transaccionesSuma: number;
+  transaccionesResta: number;
   montoExentoTotal: number;
   montoNetoTotal: number;
-  montoTotalSum: number;
+  montoCalculado: number;
   porcentajeDelTotal: number;
 }
 
 interface RCVAnalysis {
   totalTransacciones: number;
+  transaccionesSuma: number;
+  transaccionesResta: number;
   montoExentoGlobal: number;
   montoNetoGlobal: number;
-  montoTotalGlobal: number;
+  montoCalculadoGlobal: number;
   proveedoresPrincipales: ProveedorSummary[];
   periodoInicio: string;
   periodoFin: string;
@@ -146,9 +150,13 @@ export default function RCVAnalysisPage() {
   const chartData = result ? result.proveedoresPrincipales.slice(0, 10).map(p => ({
     name: p.razonSocial.length > 25 ? p.razonSocial.substring(0, 25) + '...' : p.razonSocial,
     fullName: p.razonSocial,
-    monto: p.montoTotalSum,
+    monto: Math.abs(p.montoCalculado), // Usar valor absoluto para gráficos
+    montoReal: p.montoCalculado, // Mantener valor real para tooltips
     transacciones: p.totalTransacciones,
-    porcentaje: p.porcentajeDelTotal
+    transaccionesSuma: p.transaccionesSuma,
+    transaccionesResta: p.transaccionesResta,
+    porcentaje: p.porcentajeDelTotal,
+    tipo: p.montoCalculado >= 0 ? 'Compras' : 'Devoluciones'
   })) : [];
 
   // Colores para el gráfico
@@ -159,14 +167,16 @@ export default function RCVAnalysisPage() {
     if (!result) return;
 
     const csvData = [
-      ['RUT Proveedor', 'Razón Social', 'Transacciones', 'Monto Exento', 'Monto Neto', 'Monto Total', 'Porcentaje'],
+      ['RUT Proveedor', 'Razón Social', 'Total Trans.', 'Compras (33/34)', 'Devoluciones (61)', 'Monto Exento', 'Monto Neto', 'Monto Calculado', 'Porcentaje'],
       ...result.proveedoresPrincipales.map(p => [
         p.rutProveedor,
         p.razonSocial,
         p.totalTransacciones.toString(),
+        p.transaccionesSuma.toString(),
+        p.transaccionesResta.toString(),
         p.montoExentoTotal.toString(),
         p.montoNetoTotal.toString(),
-        p.montoTotalSum.toString(),
+        p.montoCalculado.toString(),
         p.porcentajeDelTotal.toFixed(2) + '%'
       ])
     ];
@@ -336,8 +346,13 @@ export default function RCVAnalysisPage() {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-gray-600">Monto Total</p>
-                      <p className="text-2xl font-bold text-gray-900">{formatCurrency(result.montoTotalGlobal)}</p>
+                      <p className="text-sm font-medium text-gray-600">Monto Neto Calculado</p>
+                      <p className={`text-2xl font-bold ${result.montoCalculadoGlobal >= 0 ? 'text-gray-900' : 'text-red-600'}`}>
+                        {formatCurrency(result.montoCalculadoGlobal)}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {result.transaccionesSuma} compras - {result.transaccionesResta} devoluciones
+                      </p>
                     </div>
                     <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
                       <TrendingUp className="w-6 h-6 text-purple-600" />
@@ -385,10 +400,10 @@ export default function RCVAnalysisPage() {
                         />
                         <YAxis tickFormatter={(value) => `$${(value / 1000000).toFixed(1)}M`} />
                         <Tooltip 
-                          formatter={(value: number, name: string) => [formatCurrency(value), 'Monto Total']}
+                          formatter={(value: number, name: string) => [formatCurrency(value), 'Monto Calculado']}
                           labelFormatter={(label) => {
                             const item = chartData.find(d => d.name === label);
-                            return item?.fullName || label;
+                            return item ? `${item.fullName} (${item.tipo})` : label;
                           }}
                         />
                         <Bar dataKey="monto" fill="#3B82F6" />
@@ -470,10 +485,11 @@ export default function RCVAnalysisPage() {
                         <tr className="border-b">
                           <th className="text-left p-2">RUT</th>
                           <th className="text-left p-2">Razón Social</th>
-                          <th className="text-center p-2">Transacciones</th>
+                          <th className="text-center p-2">Total Trans.</th>
+                          <th className="text-center p-2">Compras/Devoluc.</th>
                           <th className="text-right p-2">Monto Exento</th>
                           <th className="text-right p-2">Monto Neto</th>
-                          <th className="text-right p-2">Monto Total</th>
+                          <th className="text-right p-2">Monto Calculado</th>
                           <th className="text-center p-2">% del Total</th>
                         </tr>
                       </thead>
@@ -483,9 +499,17 @@ export default function RCVAnalysisPage() {
                             <td className="p-2 font-mono text-sm">{proveedor.rutProveedor}</td>
                             <td className="p-2">{proveedor.razonSocial}</td>
                             <td className="p-2 text-center">{proveedor.totalTransacciones}</td>
+                            <td className="p-2 text-center">
+                              <span className="text-green-600 font-medium">{proveedor.transaccionesSuma}</span>
+                              {proveedor.transaccionesResta > 0 && (
+                                <span className="text-red-600 font-medium"> (-{proveedor.transaccionesResta})</span>
+                              )}
+                            </td>
                             <td className="p-2 text-right">{formatCurrency(proveedor.montoExentoTotal)}</td>
                             <td className="p-2 text-right">{formatCurrency(proveedor.montoNetoTotal)}</td>
-                            <td className="p-2 text-right font-semibold">{formatCurrency(proveedor.montoTotalSum)}</td>
+                            <td className={`p-2 text-right font-semibold ${proveedor.montoCalculado >= 0 ? '' : 'text-red-600'}`}>
+                              {formatCurrency(proveedor.montoCalculado)}
+                            </td>
                             <td className="p-2 text-center">
                               <span className={`px-2 py-1 rounded text-xs ${
                                 proveedor.porcentajeDelTotal >= 10 ? 'bg-red-100 text-red-800' :

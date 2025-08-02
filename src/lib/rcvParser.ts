@@ -37,17 +37,21 @@ export interface ProveedorSummary {
   rutProveedor: string;
   razonSocial: string;
   totalTransacciones: number;
+  transaccionesSuma: number; // Tipo 33 y 34
+  transaccionesResta: number; // Tipo 61
   montoExentoTotal: number;
   montoNetoTotal: number;
-  montoTotalSum: number;
+  montoCalculado: number; // (J + K) considerando tipo documento
   porcentajeDelTotal: number;
 }
 
 export interface RCVAnalysis {
   totalTransacciones: number;
+  transaccionesSuma: number; // Docs tipo 33 y 34
+  transaccionesResta: number; // Docs tipo 61
   montoExentoGlobal: number;
   montoNetoGlobal: number;
-  montoTotalGlobal: number;
+  montoCalculadoGlobal: number; // Total considerando tipos de documento
   proveedoresPrincipales: ProveedorSummary[];
   transacciones: RCVRow[];
   periodoInicio: string;
@@ -71,7 +75,7 @@ export async function parseRCV(file: File): Promise<RCVAnalysis> {
     
     console.log('✅ Análisis RCV completado exitosamente');
     console.log(`📊 Total transacciones: ${analysis.totalTransacciones}`);
-    console.log(`💰 Monto total global: ${analysis.montoTotalGlobal.toLocaleString()}`);
+    console.log(`💰 Monto calculado global: ${analysis.montoCalculadoGlobal.toLocaleString()}`);
     console.log(`🏢 Proveedores únicos: ${analysis.proveedoresPrincipales.length}`);
     
     return analysis;
@@ -98,7 +102,9 @@ function processCSVContent(csvContent: string): RCVAnalysis {
   
   let montoExentoGlobal = 0;
   let montoNetoGlobal = 0;
-  let montoTotalGlobal = 0;
+  let montoCalculadoGlobal = 0;
+  let transaccionesSumaGlobal = 0;
+  let transaccionesRestaGlobal = 0;
   
   let fechaMinima = '';
   let fechaMaxima = '';
@@ -116,10 +122,33 @@ function processCSVContent(csvContent: string): RCVAnalysis {
       
       transacciones.push(row);
       
+      // Calcular monto de la transacción (J + K)
+      const montoTransaccion = row.montoExento + row.montoNeto;
+      
+      // Aplicar lógica según tipo de documento
+      let montoFinalTransaccion = 0;
+      let esSuma = false;
+      let esResta = false;
+      
+      if (row.tipoDoc === '33' || row.tipoDoc === '34') {
+        // Facturas y facturas exentas: SUMAN
+        montoFinalTransaccion = montoTransaccion;
+        esSuma = true;
+        transaccionesSumaGlobal++;
+      } else if (row.tipoDoc === '61') {
+        // Notas de crédito: RESTAN
+        montoFinalTransaccion = -montoTransaccion;
+        esResta = true;
+        transaccionesRestaGlobal++;
+      } else {
+        // Otros tipos: neutral por ahora
+        montoFinalTransaccion = 0;
+      }
+      
       // Sumar totales globales
       montoExentoGlobal += row.montoExento;
       montoNetoGlobal += row.montoNeto;
-      montoTotalGlobal += row.montoTotal;
+      montoCalculadoGlobal += montoFinalTransaccion;
       
       // Trackear fechas para período
       if (!fechaMinima || row.fechaDocto < fechaMinima) {
@@ -136,15 +165,20 @@ function processCSVContent(csvContent: string): RCVAnalysis {
         proveedor.totalTransacciones++;
         proveedor.montoExentoTotal += row.montoExento;
         proveedor.montoNetoTotal += row.montoNeto;
-        proveedor.montoTotalSum += row.montoTotal;
+        proveedor.montoCalculado += montoFinalTransaccion;
+        
+        if (esSuma) proveedor.transaccionesSuma++;
+        if (esResta) proveedor.transaccionesResta++;
       } else {
         proveedoresMap.set(rutKey, {
           rutProveedor: row.rutProveedor,
           razonSocial: row.razonSocial,
           totalTransacciones: 1,
+          transaccionesSuma: esSuma ? 1 : 0,
+          transaccionesResta: esResta ? 1 : 0,
           montoExentoTotal: row.montoExento,
           montoNetoTotal: row.montoNeto,
-          montoTotalSum: row.montoTotal,
+          montoCalculado: montoFinalTransaccion,
           porcentajeDelTotal: 0 // Se calculará después
         });
       }
@@ -159,22 +193,25 @@ function processCSVContent(csvContent: string): RCVAnalysis {
   const proveedoresPrincipales = Array.from(proveedoresMap.values())
     .map(proveedor => ({
       ...proveedor,
-      porcentajeDelTotal: montoTotalGlobal > 0 
-        ? (proveedor.montoTotalSum / montoTotalGlobal) * 100 
+      porcentajeDelTotal: Math.abs(montoCalculadoGlobal) > 0 
+        ? Math.abs(proveedor.montoCalculado / montoCalculadoGlobal) * 100 
         : 0
     }))
-    .sort((a, b) => b.montoTotalSum - a.montoTotalSum); // Ordenar por monto total descendente
+    .sort((a, b) => Math.abs(b.montoCalculado) - Math.abs(a.montoCalculado)); // Ordenar por monto calculado absoluto
   
   console.log(`🏆 Top 5 proveedores:`);
   proveedoresPrincipales.slice(0, 5).forEach((p, i) => {
-    console.log(`${i + 1}. ${p.razonSocial}: $${p.montoTotalSum.toLocaleString()} (${p.porcentajeDelTotal.toFixed(1)}%)`);
+    const tipoOperacion = p.montoCalculado >= 0 ? 'COMPRAS' : 'DEVOLUCIONES';
+    console.log(`${i + 1}. ${p.razonSocial}: $${Math.abs(p.montoCalculado).toLocaleString()} ${tipoOperacion} (${p.porcentajeDelTotal.toFixed(1)}%)`);
   });
   
   return {
     totalTransacciones: transacciones.length,
+    transaccionesSuma: transaccionesSumaGlobal,
+    transaccionesResta: transaccionesRestaGlobal,
     montoExentoGlobal,
     montoNetoGlobal,
-    montoTotalGlobal,
+    montoCalculadoGlobal,
     proveedoresPrincipales,
     transacciones,
     periodoInicio: fechaMinima,
@@ -243,7 +280,7 @@ export function getTransaccionesByProveedor(analysis: RCVAnalysis, rutProveedor:
 // Función para estadísticas generales
 export function getEstadisticasRCV(analysis: RCVAnalysis) {
   const avgTransaccionMonto = analysis.totalTransacciones > 0 
-    ? analysis.montoTotalGlobal / analysis.totalTransacciones 
+    ? Math.abs(analysis.montoCalculadoGlobal) / analysis.totalTransacciones 
     : 0;
   
   const proveedorTop = analysis.proveedoresPrincipales[0];
@@ -254,6 +291,11 @@ export function getEstadisticasRCV(analysis: RCVAnalysis) {
     concentracionTop5: analysis.proveedoresPrincipales
       .slice(0, 5)
       .reduce((sum, p) => sum + p.porcentajeDelTotal, 0),
-    proveedorPrincipal: proveedorTop
+    proveedorPrincipal: proveedorTop,
+    balanceOperaciones: {
+      compras: analysis.transaccionesSuma,
+      devoluciones: analysis.transaccionesResta,
+      montoNeto: analysis.montoCalculadoGlobal
+    }
   };
 }
