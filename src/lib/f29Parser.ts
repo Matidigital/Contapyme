@@ -45,17 +45,26 @@ export async function parseF29(file: File): Promise<F29Data> {
     
     console.log('🤖 Iniciando análisis con Claude AI...');
     
-    // INTENTAR PDF.js PRIMERO (mejor extracción de texto)
-    console.log('📄 Intentando extracción con PDF.js para mejor precisión...');
+    // INTENTAR PDF-PARSE PRIMERO (mejor extracción de texto)
+    console.log('📄 Intentando extracción con PDF-Parse...');
+    const pdfParseResult = await extractWithPDFParse(file);
+    
+    if (pdfParseResult) {
+      console.log('✅ PDF-Parse exitoso, Claude analizó correctamente');
+      return pdfParseResult;
+    }
+    
+    // Si PDF-Parse falla, intentar PDF.js
+    console.log('🔄 PDF-Parse falló, intentando PDF.js...');
     const pdfResult = await extractWithPDFJS(file);
     
     if (pdfResult) {
-      console.log('✅ PDF.js exitoso, Claude analizó correctamente');
+      console.log('✅ PDF.js exitoso');
       return pdfResult;
     }
     
-    // Si PDF.js falla, usar extracción directa como fallback
-    console.log('🔄 PDF.js falló, usando extracción de texto directo...');
+    // Si ambos fallan, usar extracción directa como fallback
+    console.log('🔄 PDF.js también falló, usando extracción directa...');
     const claudeResult = await extractWithClaude(file);
     
     if (claudeResult) {
@@ -80,9 +89,105 @@ export async function parseF29(file: File): Promise<F29Data> {
   }
 }
 
+async function extractWithPDFParse(file: File): Promise<F29Data | null> {
+  try {
+    console.log('📄 PDF-Parse: Extrayendo texto del PDF...');
+    
+    const pdf = await import('pdf-parse');
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    
+    const data = await pdf.default(buffer, {
+      // Opciones para mejor extracción
+      max: 0, // Sin límite de páginas
+      version: 'v2.0.550'
+    });
+    
+    console.log(`📄 PDF-Parse: Extraídas ${data.numpages} páginas`);
+    console.log(`📝 Texto total: ${data.text.length} caracteres`);
+    
+    if (data.text && data.text.length > 100) {
+      console.log('✅ PDF-Parse extrajo texto exitosamente');
+      console.log(`📋 Muestra: ${data.text.substring(0, 500)}...`);
+      
+      // Enviar texto extraído a Claude
+      const apiKey = process.env.ANTHROPIC_API_KEY;
+      if (!apiKey) return null;
+      
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 1500,
+          temperature: 0,
+          messages: [{
+            role: 'user',
+            content: `ANÁLISIS F29 - TEXTO EXTRAÍDO CON PDF-PARSE
+
+Texto completo del formulario F29:
+${data.text}
+
+INSTRUCCIONES:
+- Este es el texto COMPLETO extraído del PDF
+- Busca los códigos F29 y sus valores asociados
+- Los códigos están en formato: [código] [descripción] [valor]
+- Extrae EXACTAMENTE los valores que aparecen
+
+CÓDIGOS A BUSCAR:
+- 511: Crédito IVA
+- 538: Débito/Total débitos
+- 563: Base imponible/Ventas
+- 062: PPM
+- 077: Remanente
+- 151: Retención
+
+RESPONDE SOLO CON JSON:
+{
+  "rut": "rut encontrado",
+  "folio": "folio encontrado",
+  "periodo": "YYYYMM",
+  "razonSocial": "nombre empresa",
+  "codigo511": valor_numerico,
+  "codigo538": valor_numerico,
+  "codigo563": valor_numerico,
+  "codigo062": valor_numerico,
+  "codigo077": valor_numerico,
+  "codigo151": valor_numerico
+}`
+          }]
+        })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        const content = result.content?.[0]?.text;
+        
+        if (content) {
+          console.log('📝 Respuesta Claude:', content.substring(0, 200));
+          const jsonMatch = content.match(/\{[\s\S]*?\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            return createF29Result(parsed, 'pdf-parse-claude');
+          }
+        }
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('❌ Error en PDF-Parse:', error);
+    return null;
+  }
+}
+
 async function extractWithPDFJS(file: File): Promise<F29Data | null> {
   try {
-    console.log('📄 PDF.js: Extrayendo texto estructurado...');
+    console.log('📄 PDF.js: Intentando como fallback...');
     
     // En Netlify no podemos usar PDF.js con worker, usar alternativa
     if (typeof window === 'undefined') {
