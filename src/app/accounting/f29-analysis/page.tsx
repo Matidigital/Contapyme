@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { Header } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
-import { FileText, Upload, AlertCircle, CheckCircle, X, TrendingUp } from 'lucide-react';
+import { FileText, Upload, AlertCircle, CheckCircle, X, TrendingUp, Download, BarChart3, Eye } from 'lucide-react';
 
 interface UploadResult {
   file_name: string;
@@ -37,6 +37,7 @@ export default function F29AnalysisPage() {
   const [result, setResult] = useState<F29Results | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [showDetailedAnalysis, setShowDetailedAnalysis] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -138,6 +139,48 @@ export default function F29AnalysisPage() {
     if (confidence >= 90) return 'Alta Confianza';
     if (confidence >= 70) return 'Confianza Media';
     return 'Baja Confianza';
+  };
+
+  // Función para exportar resultados a CSV
+  const handleExportResults = () => {
+    if (!result) return;
+
+    const csvData = [
+      ['Campo', 'Valor', 'Código'],
+      ['RUT', result.rut, ''],
+      ['Período', result.periodo, ''],
+      ['Ventas Netas', result.codigo563.toString(), '563'],
+      ['Débito Fiscal', result.codigo538.toString(), '538'],
+      ['Crédito Fiscal', result.codigo511.toString(), '511'],
+      ['PPM', result.codigo062.toString(), '062'],
+      ['Remanente', result.codigo077.toString(), '077'],
+      ...(result.codigo151 > 0 ? [['Honorarios Retenidos', result.codigo151.toString(), '151']] : []),
+      ['Compras Netas (Calculado)', result.comprasNetas.toString(), 'Calc'],
+      ['IVA Determinado', result.ivaDeterminado.toString(), 'Calc'],
+      ['Margen Bruto', result.margenBruto.toString(), 'Calc'],
+      ['Total a Pagar', result.totalAPagar.toString(), 'Calc'],
+      ['Confianza (%)', result.confidence.toString(), ''],
+      ['Método', result.method, '']
+    ];
+
+    const csvContent = csvData.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `F29_${result.periodo}_${result.rut.replace(/\./g, '').replace('-', '')}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  // Función para mostrar/ocultar análisis detallado
+  const toggleDetailedAnalysis = () => {
+    setShowDetailedAnalysis(!showDetailedAnalysis);
   };
 
   return (
@@ -397,12 +440,22 @@ export default function F29AnalysisPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="mt-6 flex space-x-3">
-                <Button variant="outline" size="sm">
-                  📋 Exportar Resultados
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleExportResults}
+                >
+                  <Download className="w-4 h-4 mr-1" />
+                  Exportar Resultados
                 </Button>
-                <Button variant="outline" size="sm">
-                  📊 Ver Análisis Detallado
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={toggleDetailedAnalysis}
+                >
+                  <Eye className="w-4 h-4 mr-1" />
+                  {showDetailedAnalysis ? 'Ocultar Detalle' : 'Ver Análisis Detallado'}
                 </Button>
                 <Button 
                   variant="primary" 
@@ -412,6 +465,191 @@ export default function F29AnalysisPage() {
                   <TrendingUp className="w-4 h-4 mr-1" />
                   Análisis Comparativo
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Análisis Detallado */}
+        {result && showDetailedAnalysis && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <BarChart3 className="w-5 h-5 text-blue-600" />
+                <span>Análisis Detallado F29</span>
+              </CardTitle>
+              <CardDescription>
+                Métricas avanzadas, ratios financieros y recomendaciones
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Métricas Calculadas */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 Métricas Calculadas</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <p className="text-sm text-blue-700 font-medium">Margen Bruto (%)</p>
+                      <p className="text-xl font-bold text-blue-900">
+                        {result.codigo563 > 0 ? `${((result.margenBruto / result.codigo563) * 100).toFixed(2)}%` : 'N/A'}
+                      </p>
+                      <p className="text-xs text-blue-600">
+                        {result.margenBruto > 0 ? 'Positivo' : 'Negativo'}
+                      </p>
+                    </div>
+                    
+                    <div className="bg-green-50 rounded-lg p-4">
+                      <p className="text-sm text-green-700 font-medium">Efectividad IVA</p>
+                      <p className="text-xl font-bold text-green-900">
+                        {result.codigo563 > 0 ? `${((result.codigo538 / result.codigo563) * 100).toFixed(2)}%` : 'N/A'}
+                      </p>
+                      <p className="text-xs text-green-600">Débito/Ventas</p>
+                    </div>
+                    
+                    <div className="bg-purple-50 rounded-lg p-4">
+                      <p className="text-sm text-purple-700 font-medium">Ratio Crédito/Débito</p>
+                      <p className="text-xl font-bold text-purple-900">
+                        {result.codigo538 > 0 ? `${(result.codigo511 / result.codigo538).toFixed(2)}` : 'N/A'}
+                      </p>
+                      <p className="text-xs text-purple-600">
+                        {result.codigo511 > result.codigo538 ? 'Mayor crédito' : 'Mayor débito'}
+                      </p>
+                    </div>
+                    
+                    <div className="bg-orange-50 rounded-lg p-4">
+                      <p className="text-sm text-orange-700 font-medium">Carga Tributaria</p>
+                      <p className="text-xl font-bold text-orange-900">
+                        {result.codigo563 > 0 ? `${((result.totalAPagar / result.codigo563) * 100).toFixed(2)}%` : 'N/A'}
+                      </p>
+                      <p className="text-xs text-orange-600">Total/Ventas</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Análisis de Tendencias */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">📈 Análisis de Ratios</h3>
+                  <div className="bg-gray-50 rounded-lg p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-3">Situación Fiscal</h4>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span>Estado IVA:</span>
+                            <span className={`font-medium ${result.ivaDeterminado < 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {result.ivaDeterminado < 0 ? 'A favor' : 'A pagar'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>PPM mensual:</span>
+                            <span className="font-medium">{formatCurrency(result.codigo062)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Remanente disponible:</span>
+                            <span className="font-medium">{formatCurrency(result.codigo077)}</span>
+                          </div>
+                          {result.codigo151 > 0 && (
+                            <div className="flex justify-between">
+                              <span>Honorarios retenidos:</span>
+                              <span className="font-medium">{formatCurrency(result.codigo151)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium text-gray-900 mb-3">Análisis Operacional</h4>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span>Ventas del período:</span>
+                            <span className="font-medium">{formatCurrency(result.codigo563)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Compras estimadas:</span>
+                            <span className="font-medium">{formatCurrency(result.comprasNetas)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Resultado bruto:</span>
+                            <span className={`font-medium ${result.margenBruto > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {formatCurrency(result.margenBruto)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Recomendaciones */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">💡 Recomendaciones</h3>
+                  <div className="bg-blue-50 rounded-lg p-6">
+                    <div className="space-y-3">
+                      {result.ivaDeterminado < 0 && (
+                        <div className="flex items-start space-x-3">
+                          <CheckCircle className="w-5 h-5 text-green-500 mt-0.5" />
+                          <p className="text-sm text-gray-700">
+                            <strong>IVA a favor:</strong> Tienes crédito fiscal disponible de {formatCurrency(Math.abs(result.ivaDeterminado))}. 
+                            Puedes solicitar devolución o utilizarlo en períodos futuros.
+                          </p>
+                        </div>
+                      )}
+                      
+                      {result.margenBruto < 0 && (
+                        <div className="flex items-start space-x-3">
+                          <AlertCircle className="w-5 h-5 text-yellow-500 mt-0.5" />
+                          <p className="text-sm text-gray-700">
+                            <strong>Margen negativo:</strong> Tus compras superan las ventas. 
+                            Revisa tu estrategia de precios y optimiza costos.
+                          </p>
+                        </div>
+                      )}
+                      
+                      {result.codigo563 > 0 && result.codigo538 / result.codigo563 > 0.19 && (
+                        <div className="flex items-start space-x-3">
+                          <AlertCircle className="w-5 h-5 text-blue-500 mt-0.5" />
+                          <p className="text-sm text-gray-700">
+                            <strong>Alta carga de IVA:</strong> Tu débito fiscal representa más del 19% de las ventas. 
+                            Verifica que todas las compras estén siendo consideradas.
+                          </p>
+                        </div>
+                      )}
+                      
+                      {result.codigo151 > 0 && (
+                        <div className="flex items-start space-x-3">
+                          <CheckCircle className="w-5 h-5 text-green-500 mt-0.5" />
+                          <p className="text-sm text-gray-700">
+                            <strong>Honorarios retenidos:</strong> Se detectaron {formatCurrency(result.codigo151)} en retenciones. 
+                            Puedes usar este monto como crédito en tu declaración anual.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Información Técnica */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">🔧 Información Técnica</h3>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <p className="font-medium text-gray-700">Método de extracción</p>
+                        <p className="text-gray-600">{result.method}</p>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-700">Nivel de confianza</p>
+                        <p className={`font-medium ${getConfidenceColor(result.confidence)}`}>
+                          {result.confidence}% - {getConfidenceLabel(result.confidence)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-700">Archivo procesado</p>
+                        <p className="text-gray-600 truncate">{file?.name || 'N/A'}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
