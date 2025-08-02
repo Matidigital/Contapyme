@@ -116,22 +116,27 @@ export async function parseF29Direct(file: File): Promise<F29DirectData> {
       result.debugInfo.matchedPatterns.push(`codigo151:${result.codigo151}`);
     }
 
-    // ESTRATEGIA 5: Información básica
-    result.rut = findRUTInText(extractedText) || KNOWN_PDF_VALUES.RUT;
-    result.periodo = findPeriodInText(extractedText) || KNOWN_PDF_VALUES.PERIODO;
-    result.folio = findFolioInText(extractedText) || KNOWN_PDF_VALUES.FOLIO;
-    result.razonSocial = findRazonSocialInText(extractedText) || KNOWN_PDF_VALUES.RAZON_SOCIAL;
+    // ESTRATEGIA 5: Información básica (sin valores hardcodeados)
+    result.rut = findRUTInText(extractedText) || '';
+    result.periodo = findPeriodInText(extractedText) || '';
+    result.folio = findFolioInText(extractedText) || '';
+    result.razonSocial = findRazonSocialInText(extractedText) || '';
 
-    // ESTRATEGIA 5: Si no encuentra nada, usar valores conocidos (modo seguro)
+    // ESTRATEGIA 5: Si no encuentra nada, NO usar valores hardcodeados
     if (result.codigo538 === 0 && result.codigo511 === 0) {
-      console.log('🔧 No se encontraron códigos, aplicando valores conocidos del PDF...');
-      result.codigo538 = KNOWN_PDF_VALUES.CODIGO_538;
-      result.codigo511 = KNOWN_PDF_VALUES.CODIGO_511;
-      result.codigo563 = KNOWN_PDF_VALUES.CODIGO_563;
-      result.codigo062 = KNOWN_PDF_VALUES.CODIGO_062;
-      result.codigo077 = KNOWN_PDF_VALUES.CODIGO_077;
-      result.codigo151 = KNOWN_PDF_VALUES.CODIGO_151;
-      result.debugInfo.matchedPatterns.push('fallback:known-values');
+      console.log('⚠️ No se encontraron códigos en el PDF. Intentando estrategia alternativa...');
+      
+      // Intentar buscar patrones más flexibles
+      const alternativeResult = await tryAlternativeExtraction(extractedText, allNumbers);
+      if (alternativeResult) {
+        Object.assign(result, alternativeResult);
+        result.debugInfo.matchedPatterns.push('alternative-extraction');
+      } else {
+        // NO usar valores hardcodeados - dejar en 0 para indicar que no se encontraron
+        console.log('❌ No se pudieron extraer valores del PDF');
+        result.confidence = 0;
+        result.debugInfo.matchedPatterns.push('no-values-found');
+      }
     }
 
     // Cálculos automáticos
@@ -399,6 +404,50 @@ function calculateDerivedValues(result: F29DirectData) {
   if (result.codigo563 > 0 && result.comprasNetas > 0) {
     result.margenBruto = result.codigo563 - result.comprasNetas;
   }
+}
+
+// Función para intentar extracción alternativa cuando falla la normal
+async function tryAlternativeExtraction(text: string, numbers: number[]): Promise<Partial<F29DirectData> | null> {
+  console.log('🔍 Intentando extracción alternativa...');
+  
+  const result: Partial<F29DirectData> = {};
+  
+  // Buscar patrones comunes en F29
+  // Patrón: "538" seguido de número grande (débito fiscal)
+  const debitoPattern = /538[^\d]*(\d{1,3}(?:\.\d{3})*)/i;
+  const debitoMatch = text.match(debitoPattern);
+  if (debitoMatch) {
+    result.codigo538 = parseInt(debitoMatch[1].replace(/\./g, ''));
+  }
+  
+  // Patrón: "511" seguido de número (crédito fiscal)
+  const creditoPattern = /511[^\d]*(\d{1,3}(?:\.\d{3})*)/i;
+  const creditoMatch = text.match(creditoPattern);
+  if (creditoMatch) {
+    result.codigo511 = parseInt(creditoMatch[1].replace(/\./g, ''));
+  }
+  
+  // Buscar números grandes que podrían ser ventas
+  const largeNumbers = numbers.filter(n => n > 1000000).sort((a, b) => b - a);
+  if (largeNumbers.length > 0 && !result.codigo563) {
+    // El número más grande podría ser ventas
+    result.codigo563 = largeNumbers[0];
+  }
+  
+  // Buscar PPM (código 062)
+  const ppmPattern = /062[^\d]*(\d{1,3}(?:\.\d{3})*)/i;
+  const ppmMatch = text.match(ppmPattern);
+  if (ppmMatch) {
+    result.codigo062 = parseInt(ppmMatch[1].replace(/\./g, ''));
+  }
+  
+  // Verificar si encontramos algo
+  if (result.codigo538 || result.codigo511 || result.codigo563) {
+    console.log('✅ Extracción alternativa encontró valores:', result);
+    return result;
+  }
+  
+  return null;
 }
 
 function calculateDirectConfidence(result: F29DirectData): number {
