@@ -4,11 +4,7 @@
 // ==========================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { parseF29RealStructure } from '@/lib/f29RealStructureParser';
-import { parseF29Innovative } from '@/lib/f29InnovativeParser';
-import { parseF29Simple } from '@/lib/f29SimpleParser';
-import { parseF29Diagnostic } from '@/lib/f29DiagnosticParser';
-import { validateF29Data } from '@/lib/f29Validator';
+import { parseF29 } from '@/lib/f29Parser';
 import { insertF29Form } from '@/lib/databaseSimple';
 
 // Configuración para archivos grandes
@@ -68,38 +64,9 @@ export async function POST(request: NextRequest) {
         try {
           console.log(`📄 Procesando: ${file.name} (${Math.round(file.size/1024)}KB)`);
 
-          // 1. ESTRATEGIA PRINCIPAL: Parser de estructura real
-          console.log(`🎯 Iniciando parser de estructura real para: ${file.name}`);
-          let extracted = await parseF29RealStructure(file);
-          console.log(`📊 Parser Real: confidence ${extracted?.confidence || 0}`);
-          
-          // 2. Si falla, intentar con el parser innovador
-          if (!extracted || extracted.confidence < 60) {
-            console.log(`🔄 Parser real insuficiente (confidence: ${extracted?.confidence || 0}), probando innovador...`);
-            const innovativeResult = await parseF29Innovative(file);
-            if (innovativeResult && innovativeResult.confidence > (extracted?.confidence || 0)) {
-              extracted = innovativeResult;
-              console.log(`📊 Parser Innovador: confidence ${extracted.confidence}`);
-            }
-          }
-          
-          // 3. Si ambos fallan, usar parser simple
-          if (!extracted || extracted.confidence < 40) {
-            console.log(`⚠️ Probando parser simple como fallback...`);
-            const simpleResult = await parseF29Simple(file);
-            if (simpleResult && simpleResult.confidence > (extracted?.confidence || 0)) {
-              extracted = simpleResult;
-              console.log(`📊 Parser Simple: confidence ${extracted.confidence}`);
-            }
-          }
-          
-          // 4. Último recurso: diagnóstico
-          if (!extracted || extracted.confidence < 20) {
-            console.log(`🔍 Usando diagnóstico como último recurso...`);
-            const diagnosticResult = await parseF29Diagnostic(file);
-            extracted = diagnosticResult;
-            console.log(`📊 Diagnostic: confidence ${extracted.confidence}`);
-          }
+          // USAR EL NUEVO PARSER LIMPIO
+          console.log(`🚀 Procesando con parser limpio: ${file.name}`);
+          const extracted = await parseF29(file);
           
           if (!extracted || extracted.confidence === 0) {
             throw new Error('No se pudieron extraer datos del PDF con ningún parser');
