@@ -25,7 +25,8 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:funny-elf-4be477.netlify.app)",
       "Bash(find:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }

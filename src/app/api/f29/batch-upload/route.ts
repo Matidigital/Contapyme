@@ -4,7 +4,7 @@
 // ==========================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { parseF29Smart } from '@/lib/f29SmartParser';
+import { parseF29Ultra } from '@/lib/f29UltraParser';
 import { validateF29Data } from '@/lib/f29Validator';
 import { insertF29Form } from '@/lib/databaseSimple';
 
@@ -65,8 +65,8 @@ export async function POST(request: NextRequest) {
         try {
           console.log(`📄 Procesando: ${file.name} (${Math.round(file.size/1024)}KB)`);
 
-          // 1. Extraer datos con smart parser
-          const extracted = await parseF29Smart(file);
+          // 1. Extraer datos con ultra parser
+          const extracted = await parseF29Ultra(file);
           
           if (!extracted || extracted.confidence === 0) {
             throw new Error('No se pudieron extraer datos del PDF');
@@ -101,7 +101,8 @@ export async function POST(request: NextRequest) {
                 ivaPagar: extracted.ivaDeterminado,
                 totalAPagar: extracted.totalAPagar,
                 confidence: extracted.confidence,
-                method: extracted.method
+                method: extracted.method,
+                debugInfo: extracted.debugInfo
               },
               file_size: file.size,
               period,
