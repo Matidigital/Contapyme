@@ -39,7 +39,10 @@ export async function parseF29(file: File): Promise<F29Data> {
     console.log(`🔑 API Key presente: ${apiKey ? 'SÍ' : 'NO'}`);
     
     if (!apiKey) {
-      console.warn('⚠️ ANTHROPIC_API_KEY no está configurada - usando datos de ejemplo');
+      console.error('❌ ANTHROPIC_API_KEY no está configurada en Netlify');
+      console.log('🔧 Para configurar: Netlify Dashboard → Environment Variables → Add:');
+      console.log('   Key: ANTHROPIC_API_KEY');
+      console.log('   Value: sk-ant-api03-...');
       const result = getGuaranteedData();
       result.method = 'no-api-key';
       return result;
@@ -100,38 +103,36 @@ async function extractWithClaude(file: File): Promise<F29Data | null> {
           content: [
             {
               type: 'text',
-              text: `Eres un experto contador chileno. Analiza este formulario F29 y extrae EXACTAMENTE estos datos:
+              text: `Analiza este formulario F29 chileno y extrae los datos exactos.
 
-CÓDIGOS A EXTRAER:
-- Código 511: CRÉD. IVA POR DCTOS. ELECTRÓNICOS
-- Código 538: TOTAL DÉBITOS
-- Código 563: BASE IMPONIBLE  
-- Código 062: PPM NETO DETERMINADO
-- Código 077: REMANENTE DE CRÉDITO FISC.
-- Código 151: RETENCIÓN TASA LEY 21.133
+Busca en las tablas del formulario estos códigos específicos:
+- 511 (CRÉD. IVA POR DCTOS. ELECTRÓNICOS)
+- 538 (TOTAL DÉBITOS)
+- 563 (BASE IMPONIBLE)
+- 062 (PPM NETO DETERMINADO)  
+- 077 (REMANENTE DE CRÉDITO FISC.)
+- 151 (RETENCIÓN)
 
-INFORMACIÓN BÁSICA:
-- RUT del contribuyente
-- FOLIO del formulario
-- PERÍODO tributario
+También extrae:
+- RUT (formato XX.XXX.XXX-X)
+- FOLIO (número largo)
+- PERÍODO (YYYYMM)
+- Razón Social
 
-IMPORTANTE: 
-- Extrae solo números enteros (sin puntos ni comas)
-- Si no encuentras un código, usa 0
-- Valores típicos están entre 1.000 y 50.000.000
+CRÍTICO: Extrae los números REALES del documento, no inventes valores.
 
-Responde SOLO con este JSON exacto:
+Responde SOLO con JSON:
 {
-  "rut": "XX.XXX.XXX-X",
-  "folio": "número",
-  "periodo": "YYYYMM",  
-  "razonSocial": "Nombre empresa",
-  "codigo511": 0,
-  "codigo538": 0,
-  "codigo563": 0,
-  "codigo062": 0,
-  "codigo077": 0,
-  "codigo151": 0
+  "rut": "texto_real_del_pdf",
+  "folio": "numero_real_del_pdf", 
+  "periodo": "periodo_real_del_pdf",
+  "razonSocial": "empresa_real_del_pdf",
+  "codigo511": numero_real_sin_puntos,
+  "codigo538": numero_real_sin_puntos,
+  "codigo563": numero_real_sin_puntos,
+  "codigo062": numero_real_sin_puntos,
+  "codigo077": numero_real_sin_puntos,
+  "codigo151": numero_real_sin_puntos
 }`
             },
             {
@@ -151,7 +152,20 @@ Responde SOLO con este JSON exacto:
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ Claude API error:', response.status, errorText);
+      console.error('❌ Claude API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText
+      });
+      
+      if (response.status === 401) {
+        console.error('🔑 API Key inválida o expirada');
+      } else if (response.status === 429) {
+        console.error('⏰ Rate limit excedido - espera un momento');
+      } else if (response.status === 400) {
+        console.error('📄 Error en el formato del request o PDF');
+      }
+      
       return null;
     }
     
@@ -219,65 +233,38 @@ Responde SOLO con este JSON exacto:
 }
 
 function getGuaranteedData(): F29Data {
-  console.log('📋 Generando datos variables simulados...');
+  console.log('⚠️ Claude AI no está funcionando - usando datos de ejemplo del PDF original');
   
-  // Generar datos variables para simular diferentes PDFs
-  const baseValues = {
-    ventas: Math.floor(Math.random() * 50000000) + 10000000, // 10M - 60M
-    factor: Math.random() * 0.3 + 0.7 // 0.7 - 1.0
-  };
-  
-  const codigo563 = baseValues.ventas;
-  const codigo538 = Math.floor(codigo563 * 0.19 * baseValues.factor);
-  const codigo511 = Math.floor(codigo538 * (Math.random() * 0.3 + 0.9)); // 90% - 120% del débito
-  const codigo062 = Math.floor(codigo563 * 0.02 * Math.random()); // 0-2% de las ventas
-  const codigo077 = Math.floor(Math.random() * 1000000); // Hasta 1M
-  const codigo151 = Math.floor(Math.random() * 100000); // Hasta 100K
-  
-  // Generar RUT aleatorio válido
-  const rutBase = Math.floor(Math.random() * 90000000) + 10000000;
-  const rutFormatted = `${rutBase.toString().slice(0,2)}.${rutBase.toString().slice(2,5)}.${rutBase.toString().slice(5,8)}-${Math.floor(Math.random() * 10)}`;
-  
-  // Generar folio aleatorio
-  const folio = Math.floor(Math.random() * 9000000000) + 1000000000;
-  
-  // Generar período reciente
-  const currentDate = new Date();
-  const year = currentDate.getFullYear();
-  const month = Math.floor(Math.random() * 12) + 1;
-  const periodo = `${year}${month.toString().padStart(2, '0')}`;
-  
+  // Usar datos del PDF de ejemplo original para que sea consistente
   const result: F29Data = {
-    rut: rutFormatted,
-    folio: folio.toString(),
-    periodo: periodo,
-    razonSocial: 'EMPRESA SIMULADA SPA',
+    rut: '77.754.241-9',
+    folio: '8246153316',
+    periodo: '202505',
+    razonSocial: 'COMERCIALIZADORA TODO CAMAS SPA',
     
-    codigo511: codigo511,
-    codigo538: codigo538,
-    codigo563: codigo563,
-    codigo062: codigo062,
-    codigo077: codigo077,
-    codigo151: codigo151,
+    // Datos reales del PDF de ejemplo
+    codigo511: 4188643, // CRÉD. IVA POR DCTOS. ELECTRÓNICOS
+    codigo538: 3410651, // TOTAL DÉBITOS  
+    codigo563: 17950795, // BASE IMPONIBLE
+    codigo062: 359016, // PPM NETO DETERMINADO
+    codigo077: 777992, // REMANENTE DE CRÉDITO FISC.
+    codigo151: 25439, // RETENCIÓN TASA LEY 21.133
     
     comprasNetas: 0,
     ivaDeterminado: 0,
     totalAPagar: 0,
     margenBruto: 0,
     
-    confidence: 75, // Menor confianza porque son datos simulados
-    method: 'simulated-data'
+    confidence: 60, // Baja confianza porque no es del PDF real
+    method: 'fallback-example-data'
   };
   
   // Calcular campos derivados
   calculateFields(result);
   
-  console.log('✅ Datos simulados generados:', {
-    rut: result.rut,
-    ventas: result.codigo563.toLocaleString(),
-    debito: result.codigo538.toLocaleString(),
-    credito: result.codigo511.toLocaleString()
-  });
+  console.log('⚠️ IMPORTANTE: Estos NO son los datos de tu PDF');
+  console.log('🔧 Para extraer datos reales, necesitas configurar Claude AI');
+  console.log('✅ Datos de ejemplo aplicados (PDF original)');
   
   return result;
 }
