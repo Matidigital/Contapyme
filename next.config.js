@@ -17,7 +17,7 @@ const nextConfig = {
     missingSuspenseWithCSRBailout: false,
   },
   // Configuración para Netlify (no usar export por las APIs)
-  trailingSlash: true,
+  // trailingSlash: true, // Comentado para evitar problemas con APIs
   
   // Configuración webpack para Netlify
   webpack: (config, { isServer, dev }) => {
