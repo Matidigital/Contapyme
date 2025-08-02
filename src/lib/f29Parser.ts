@@ -44,6 +44,18 @@ export async function parseF29(file: File): Promise<F29Data> {
     }
     
     console.log('🤖 Iniciando análisis con Claude AI...');
+    
+    // Probar primero con extracción PDF.js más precisa
+    console.log('📄 Intentando extracción con PDF.js...');
+    const pdfResult = await extractWithPDFJS(file);
+    
+    if (pdfResult) {
+      console.log(`✅ PDF.js + Claude completó análisis: ${pdfResult.confidence}% confianza`);
+      return pdfResult;
+    }
+    
+    // Si PDF.js falla, usar método texto directo
+    console.log('🔄 Usando extracción de texto directo...');
     const claudeResult = await extractWithClaude(file);
     
     if (claudeResult) {
@@ -65,6 +77,142 @@ export async function parseF29(file: File): Promise<F29Data> {
   } catch (error) {
     console.error('❌ Error en análisis IA:', error);
     throw new Error(`IA_ERROR: ${error instanceof Error ? error.message : 'Error desconocido en IA'}`);
+  }
+}
+
+async function extractWithPDFJS(file: File): Promise<F29Data | null> {
+  try {
+    console.log('📄 PDF.js: Extrayendo texto estructurado...');
+    
+    const pdfjs = await import('pdfjs-dist');
+    
+    // Configurar worker solo si estamos en servidor
+    if (typeof window === 'undefined') {
+      pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js`;
+    }
+    
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+    
+    console.log(`📄 PDF.js: PDF cargado con ${pdf.numPages} páginas`);
+    
+    // Extraer texto de la primera página (F29 es típicamente 1 página)
+    const page = await pdf.getPage(1);
+    const textContent = await page.getTextContent();
+    
+    // Extraer texto preservando estructura
+    const extractedText = textContent.items
+      .map((item: any) => item.str)
+      .join(' ');
+    
+    console.log(`📝 PDF.js texto extraído: ${extractedText.length} caracteres`);
+    console.log(`📋 PDF.js muestra: ${extractedText.substring(0, 500)}...`);
+    
+    if (extractedText.length < 50) {
+      console.warn('⚠️ PDF.js: Muy poco texto extraído');
+      return null;
+    }
+    
+    // Usar Claude con el texto extraído por PDF.js
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) return null;
+    
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 1500,
+        temperature: 0,
+        messages: [{
+          role: 'user',
+          content: `ANÁLISIS EXPERTO F29 - TEXTO PDF.js
+
+Texto extraído de formulario F29 con PDF.js:
+${extractedText}
+
+INSTRUCCIONES CRÍTICAS:
+- Este texto fue extraído con PDF.js preservando estructura
+- Busca EXACTAMENTE los códigos numéricos F29
+- Los valores están asociados a cada código
+- NO inventes valores que no veas
+
+CÓDIGOS F29 A ENCONTRAR:
+- 511: CRÉD. IVA POR DCTOS. ELECTRÓNICOS
+- 538: TOTAL DÉBITOS
+- 563: BASE IMPONIBLE  
+- 062: PPM NETO DETERMINADO
+- 077: REMANENTE DE CRÉDITO FISC.
+- 151: RETENCIÓN
+
+FORMATO RESPUESTA (JSON únicamente):
+{
+  "rut": "rut_real_del_documento",
+  "folio": "folio_real_encontrado",
+  "periodo": "periodo_real_YYYYMM",
+  "razonSocial": "nombre_empresa_real",
+  "codigo511": numero_entero_real,
+  "codigo538": numero_entero_real,
+  "codigo563": numero_entero_real,
+  "codigo062": numero_entero_real,
+  "codigo077": numero_entero_real,
+  "codigo151": numero_entero_real
+}`
+        }]
+      })
+    });
+    
+    if (!response.ok) {
+      console.error('❌ PDF.js + Claude error:', response.status);
+      return null;
+    }
+    
+    const data = await response.json();
+    const content = data.content?.[0]?.text;
+    
+    if (!content) return null;
+    
+    console.log('📝 PDF.js + Claude response:', content);
+    
+    const jsonMatch = content.match(/\{[\s\S]*?\}/);
+    if (!jsonMatch) {
+      console.error('❌ PDF.js: No JSON en respuesta');
+      return null;
+    }
+    
+    const parsed = JSON.parse(jsonMatch[0]);
+    
+    const result: F29Data = {
+      rut: parsed.rut || '',
+      folio: parsed.folio || '',
+      periodo: parsed.periodo || '',
+      razonSocial: parsed.razonSocial || '',
+      codigo511: parseInt(parsed.codigo511) || 0,
+      codigo538: parseInt(parsed.codigo538) || 0,
+      codigo563: parseInt(parsed.codigo563) || 0,
+      codigo062: parseInt(parsed.codigo062) || 0,
+      codigo077: parseInt(parsed.codigo077) || 0,
+      codigo151: parseInt(parsed.codigo151) || 0,
+      comprasNetas: 0,
+      ivaDeterminado: 0,
+      totalAPagar: 0,
+      margenBruto: 0,
+      confidence: 98,
+      method: 'pdfjs-claude-precision'
+    };
+    
+    calculateFields(result);
+    
+    console.log('✅ PDF.js + Claude completado');
+    return result;
+    
+  } catch (error) {
+    console.error('❌ PDF.js error:', error);
+    return null;
   }
 }
 
@@ -104,6 +252,7 @@ async function extractWithClaude(file: File): Promise<F29Data | null> {
     }
     
     console.log(`📝 Texto extraído: ${extractedText.length} caracteres`);
+    console.log(`📋 Muestra de texto: ${extractedText.substring(0, 500)}...`);
     
     if (extractedText.length < 100) {
       console.warn('⚠️ Muy poco texto extraído del PDF');
@@ -209,15 +358,17 @@ FORMATO RESPUESTA (solo JSON, sin explicaciones):
       return null;
     }
     
-    console.log('📝 Claude response:', content.substring(0, 300));
+    console.log('📝 Claude response completa:', content);
     
     // Extraer JSON de la respuesta
     const jsonMatch = content.match(/\{[\s\S]*?\}/);
     if (!jsonMatch) {
       console.error('❌ No JSON found in response');
+      console.log('🔍 Response que no contiene JSON:', content);
       return null;
     }
     
+    console.log('📊 JSON extraído:', jsonMatch[0]);
     const parsed = JSON.parse(jsonMatch[0]);
     
     // Validar valores razonables
@@ -290,6 +441,7 @@ async function extractWithClaudeRetry(file: File): Promise<F29Data | null> {
     }
     
     console.log(`📝 Retry text length: ${extractedText.length}`);
+    console.log(`📋 Retry muestra texto: ${extractedText.substring(0, 500)}...`);
     
     if (extractedText.length < 100) return null;
     
