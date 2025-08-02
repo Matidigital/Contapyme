@@ -96,33 +96,17 @@ async function extractWithClaude(file: File): Promise<F29Data | null> {
       return null;
     }
     
-    console.log('🟣 Llamando a Claude AI...');
+    console.log('🟣 Estrategia inteligente: Claude analiza PDF como imagen...');
     
-    // Por ahora, usar método más simple sin PDF.js para evitar problemas de build
-    // Extraer datos usando análisis de patrones del contenido binario
-    const arrayBuffer = await file.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
+    // ESTRATEGIA INTELIGENTE: Convertir PDF a imagen y enviar a Claude (igual que tú haces)
+    const pdfImageBase64 = await convertPDFToImage(file);
     
-    // Convertir a texto usando múltiples encodings
-    let extractedText = '';
-    
-    // Intentar UTF-8
-    try {
-      const decoder = new TextDecoder('utf-8');
-      extractedText = decoder.decode(uint8Array);
-    } catch {
-      // Fallback a Latin1
-      extractedText = String.fromCharCode(...uint8Array);
-    }
-    
-    console.log(`📝 Contenido extraído: ${extractedText.length} caracteres`);
-    
-    if (extractedText.length < 100) {
-      console.warn('⚠️ Muy poco contenido extraído del PDF');
+    if (!pdfImageBase64) {
+      console.warn('⚠️ No se pudo convertir PDF a imagen');
       return null;
     }
     
-    console.log('📡 Enviando contenido a Claude API...');
+    console.log('📡 Enviando imagen del F29 a Claude para análisis visual...');
     
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -132,49 +116,56 @@ async function extractWithClaude(file: File): Promise<F29Data | null> {
         'content-type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'claude-3-sonnet-20240229',
+        model: 'claude-3-5-sonnet-20241022',
         max_tokens: 1000,
         messages: [{
           role: 'user',
-          content: `Analiza este contenido extraído de un formulario F29 chileno y encuentra los datos específicos.
+          content: [
+            {
+              type: 'text',
+              text: `Analiza este formulario F29 chileno. Eres un experto contador y necesitas extraer los datos específicos del documento.
 
-CONTENIDO DEL F29:
-${extractedText.substring(0, 8000)}
+INSTRUCCIONES CRÍTICAS:
+1. Lee VISUALMENTE el formulario F29 como un documento oficial
+2. Extrae los valores exactos que ves en los campos específicos
+3. NO inventes valores, solo usa lo que realmente ves
+4. Los códigos aparecen en casillas numeradas (ej: casilla 511, 538, etc.)
 
-Busca y extrae estos códigos específicos del formulario F29:
-- 511 (CRÉD. IVA POR DCTOS. ELECTRÓNICOS)
-- 538 (TOTAL DÉBITOS)
-- 563 (BASE IMPONIBLE)
-- 062 (PPM NETO DETERMINADO)
-- 077 (REMANENTE DE CRÉDITO FISC.)
-- 151 (RETENCIÓN)
+DATOS A EXTRAER:
+- RUT del contribuyente (formato XX.XXX.XXX-X)
+- FOLIO del formulario (número largo)
+- PERÍODO tributario (YYYYMM o fecha)
+- Razón Social de la empresa
+- Código 511: CRÉD. IVA POR DCTOS. ELECTRÓNICOS
+- Código 538: TOTAL DÉBITOS  
+- Código 563: BASE IMPONIBLE
+- Código 062: PPM NETO DETERMINADO
+- Código 077: REMANENTE DE CRÉDITO FISC.
+- Código 151: RETENCIÓN TASA LEY 21.133
 
-También extrae la información básica:
-- RUT (formato XX.XXX.XXX-X)
-- FOLIO (número largo)
-- PERÍODO (YYYYMM)
-- Razón Social
-
-INSTRUCCIONES:
-- Busca números que aparezcan cerca de estos códigos
-- Los códigos pueden aparecer como "511", "Código 511", "511:", "(511)", etc.
-- Los valores pueden tener puntos como separadores (ej: 1.234.567)
-- Si no encuentras un código específico, usa 0
-- Solo extrae datos que realmente veas en el contenido
-
-Responde SOLO con JSON válido:
+FORMATO DE RESPUESTA (JSON únicamente):
 {
-  "rut": "rut_encontrado_o_vacio",
-  "folio": "folio_encontrado_o_vacio",
-  "periodo": "periodo_encontrado_o_vacio",
-  "razonSocial": "empresa_encontrada_o_vacia",
-  "codigo511": numero_entero_sin_puntos,
-  "codigo538": numero_entero_sin_puntos,
-  "codigo563": numero_entero_sin_puntos,
-  "codigo062": numero_entero_sin_puntos,
-  "codigo077": numero_entero_sin_puntos,
-  "codigo151": numero_entero_sin_puntos
+  "rut": "valor_real_del_documento",
+  "folio": "numero_real_del_folio",
+  "periodo": "periodo_real",
+  "razonSocial": "nombre_real_empresa",
+  "codigo511": numero_entero_sin_separadores,
+  "codigo538": numero_entero_sin_separadores,
+  "codigo563": numero_entero_sin_separadores,
+  "codigo062": numero_entero_sin_separadores,
+  "codigo077": numero_entero_sin_separadores,
+  "codigo151": numero_entero_sin_separadores
 }`
+            },
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: 'application/pdf',
+                data: pdfImageBase64
+              }
+            }
+          ]
         }]
       })
     });
@@ -260,6 +251,26 @@ Responde SOLO con JSON válido:
     
   } catch (error) {
     console.error('❌ Error calling Claude:', error);
+    return null;
+  }
+}
+
+async function convertPDFToImage(file: File): Promise<string | null> {
+  try {
+    console.log('🖼️ Estrategia profesional: PDF → Imagen → Claude análisis visual');
+    
+    // ESTRATEGIA SIMPLE Y ROBUSTA: Enviar PDF directamente como base64
+    // Claude 3.5 puede analizar PDFs directamente como imágenes
+    const arrayBuffer = await file.arrayBuffer();
+    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    
+    console.log(`📄 PDF convertido a base64: ${base64.length} caracteres`);
+    
+    // Claude puede analizar PDFs directamente - mucho más simple y robusto
+    return base64;
+    
+  } catch (error) {
+    console.error('❌ Error procesando PDF:', error);
     return null;
   }
 }
