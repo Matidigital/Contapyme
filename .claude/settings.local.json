@@ -16,7 +16,12 @@
       "Bash(mkdir:*)",
       "Bash(npm run dev:*)",
       "Bash(grep:*)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(git config:*)",
+      "Bash(node:*)",
+      "Bash(cat:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": []
   }

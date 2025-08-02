@@ -1,0 +1,26 @@
+VARIABLES DE ENTORNO PARA NETLIFY
+=====================================
+
+Agregar una por una en Netlify:
+
+1. NEXT_PUBLIC_SUPABASE_URL
+   https://yttdnmokivtayeunlvlk.supabase.co
+
+2. NEXT_PUBLIC_SUPABASE_ANON_KEY
+   eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0dGRubW9raXZ0YXlldW5sdmxrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwOTE5MjAsImV4cCI6MjA2OTY2NzkyMH0.60JTrvgqRMEHDCTrMkZDJYgb8QIYnFShBXVvJCzJJfs
+
+3. SUPABASE_SERVICE_ROLE_KEY
+   eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0dGRubW9raXZ0YXlldW5sdmxrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDA5MTkyMCwiZXhwIjoyMDY5NjY3OTIwfQ.sdjibYLZAvmIGP_eXlJuUIu8yfoscVkl87HvsFCHv-Q
+
+4. NODE_ENV
+   production
+
+5. NETLIFY
+   true
+
+INSTRUCCIONES:
+- Ve a Site settings > Environment variables
+- Click "Add a variable" para cada una
+- Copia exactamente Key y Value
+- Guarda cada variable
+- Luego redeploy el sitio
