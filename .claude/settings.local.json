@@ -21,7 +21,11 @@
       "Bash(git config:*)",
       "Bash(node:*)",
       "Bash(cat:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:funny-elf-4be477.netlify.app)",
+      "Bash(find:*)",
+      "Bash(dir:*)"
     ],
     "deny": []
   }
