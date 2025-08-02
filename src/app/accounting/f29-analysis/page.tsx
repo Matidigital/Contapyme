@@ -19,11 +19,12 @@ interface F29Results {
   periodo: string;
   codigo049: number; // Préstamo Solidario
   codigo538: number; // Débito Fiscal
-  codigo537: number; // Total Créditos
+  codigo537: number; // Total Créditos Bruto
   codigo062: number; // PPM
   codigo077: number; // Remanente
   codigo563: number; // Ventas Netas
   codigo151: number; // Honorarios Retenidos
+  totalCreditos: number; // Total Créditos Neto (537-077)
   comprasNetas: number;
   ivaDeterminado: number;
   totalAPagar: number;

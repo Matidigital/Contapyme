@@ -21,6 +21,7 @@ export interface F29Data {
   codigo151: number; // RETENCIÓN
   
   // Calculados
+  totalCreditos: number; // Código 537 - Código 077
   comprasNetas: number;
   ivaDeterminado: number;
   totalAPagar: number;
@@ -200,6 +201,7 @@ Responde ÚNICAMENTE con este JSON:
       codigo077: parseInt(parsed.codigo077) || 0,
       codigo089: parseInt(parsed.codigo089) || 0,
       codigo151: parseInt(parsed.codigo151) || 0,
+      totalCreditos: 0,
       comprasNetas: 0,
       ivaDeterminado: 0,
       totalAPagar: 0,
@@ -229,25 +231,32 @@ Responde ÚNICAMENTE con este JSON:
 
 // Calcula campos derivados
 function calculateFields(result: F29Data) {
-  // Compras Netas = Código 537 (Total Créditos) ÷ 0.19
-  if (result.codigo537 > 0) {
-    result.comprasNetas = Math.round(result.codigo537 / 0.19);
+  // Total Créditos = Código 537 (sin restar remanente)
+  result.totalCreditos = result.codigo537;
+  
+  // Compras Netas = Total Créditos ÷ 0.19
+  if (result.totalCreditos > 0) {
+    result.comprasNetas = Math.round(result.totalCreditos / 0.19);
   }
   
   // IVA Determinado - usar código 089 si está disponible
   if (result.codigo089 > 0) {
     result.ivaDeterminado = result.codigo089;
-  } else if (result.codigo538 > 0 && result.codigo537 > 0) {
-    result.ivaDeterminado = result.codigo538 - result.codigo537;
+  } else if (result.codigo538 > 0 && result.totalCreditos > 0) {
+    result.ivaDeterminado = result.codigo538 - result.totalCreditos;
   }
   
-  // Total a Pagar (basado en ejemplo real)
-  // Si tenemos IVA determinado (089), usar ese + PPM + Préstamo Solidario
-  if (result.codigo089 > 0) {
-    result.totalAPagar = result.codigo089 + result.codigo062 + result.codigo049;
+  // Total a Pagar - Si hay remanente (077 > 0), total es 0
+  if (result.codigo077 > 0) {
+    result.totalAPagar = 0;
   } else {
-    // Fórmula estándar + Préstamo Solidario
-    result.totalAPagar = Math.abs(result.ivaDeterminado) + result.codigo062 + result.codigo077 + result.codigo049;
+    // Si tenemos IVA determinado (089), usar ese + PPM + Préstamo Solidario
+    if (result.codigo089 > 0) {
+      result.totalAPagar = result.codigo089 + result.codigo062 + result.codigo049;
+    } else {
+      // Fórmula estándar + Préstamo Solidario
+      result.totalAPagar = Math.abs(result.ivaDeterminado) + result.codigo062 + result.codigo049;
+    }
   }
   
   // Margen Bruto = Ventas - Compras
@@ -256,6 +265,7 @@ function calculateFields(result: F29Data) {
   }
   
   console.log('🧮 Campos calculados:', {
+    totalCreditos: result.totalCreditos.toLocaleString(),
     comprasNetas: result.comprasNetas.toLocaleString(),
     ivaDeterminado: result.ivaDeterminado.toLocaleString(),
     totalAPagar: result.totalAPagar.toLocaleString(),
