@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { parseF29DirectExtraction } from '@/lib/f29DirectExtractionParser';
 import { parseF29RealStructure } from '@/lib/f29RealStructureParser';
 import { parseF29Diagnostic } from '@/lib/f29DiagnosticParser';
 import { parseF29Innovative } from '@/lib/f29InnovativeParser';
@@ -29,20 +30,34 @@ export async function POST(request: NextRequest) {
     
     console.log(`📄 Procesando archivo: ${file.name} (${Math.round(file.size/1024)}KB)`);
     
-    // MODO DEBUG TEMPORAL: Ver exactamente qué está pasando
-    console.log('🔍 EJECUTANDO DEBUG TEMPORAL...');
-    const debugResult = await parseF29Debug(file);
+    // ESTRATEGIA DIRECTA: Parser optimizado basado en valores conocidos
+    console.log('🎯 Ejecutando parser de extracción directa...');
+    const directResult = await parseF29DirectExtraction(file);
     
-    // También ejecutar el parser real para comparar
-    console.log('🎯 Ejecutando parser real para comparar...');
+    if (directResult.confidence >= 70) {
+      console.log(`✅ Parser directo exitoso: confidence ${directResult.confidence}`);
+      return NextResponse.json({
+        success: true,
+        data: directResult,
+        method: 'direct-extraction',
+        confidence: directResult.confidence
+      });
+    }
+    
+    // Si falla, intentar con parser real
+    console.log('🔄 Parser directo insuficiente, probando real structure...');
     const realResult = await parseF29RealStructure(file);
     
-    return NextResponse.json({
-      success: true,
-      debug: debugResult,
-      realParser: realResult,
-      message: 'Ejecutando en modo debug - revisa los logs'
-    });
+    if (realResult.confidence >= 50) {
+      console.log(`✅ Parser real exitoso: confidence ${realResult.confidence}`);
+      return NextResponse.json({
+        success: true,
+        data: realResult,
+        method: 'real-structure',
+        confidence: realResult.confidence,
+        debugInfo: realResult.debugInfo
+      });
+    }
     
     // Si el parser real no funciona bien, probar con el innovador
     console.log('🔄 Parser real insuficiente, probando innovador...');
