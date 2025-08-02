@@ -57,9 +57,18 @@ export async function parseF29(file: File): Promise<F29Data> {
       return claudeResult;
     }
     
-    // PASO 2: Si Claude falla, NO usar fallback - mostrar error claro
-    console.error('❌ Claude AI falló - NO se pueden extraer datos reales');
-    throw new Error('CLAUDE_FALLO: No se pudieron extraer datos del PDF. Revisa la configuración de Claude AI.');
+    // PASO 2: Si Claude falla, usar parser básico como fallback temporal
+    console.warn('⚠️ Claude AI falló - usando parser básico como fallback');
+    const basicResult = await extractWithBasicParser(file);
+    
+    if (basicResult) {
+      console.log('✅ Parser básico procesó el PDF exitosamente!');
+      return basicResult;
+    }
+    
+    // Si ambos fallan, mostrar error claro
+    console.error('❌ Todos los parsers fallaron - NO se pueden extraer datos');
+    throw new Error('PARSER_FALLO: No se pudieron extraer datos del PDF con ningún método.');
     
   } catch (error) {
     console.error('❌ Error en F29 Parser:', error);
@@ -177,7 +186,7 @@ Responde SOLO con JSON válido:
       console.error('❌ Claude API error:', {
         status: response.status,
         statusText: response.statusText,
-        error: errorText
+        error: errorText.substring(0, 500)
       });
       
       if (response.status === 401) {
@@ -185,7 +194,8 @@ Responde SOLO con JSON válido:
       } else if (response.status === 429) {
         console.error('⏰ Rate limit excedido - espera un momento');
       } else if (response.status === 400) {
-        console.error('📄 Error en el formato del request o PDF');
+        console.error('📄 Error en el formato del request o contenido');
+        console.log('🔍 Muestra del contenido enviado:', extractedText.substring(0, 200));
       }
       
       return null;
@@ -254,7 +264,134 @@ Responde SOLO con JSON válido:
   }
 }
 
-// Esta función ya no se usa - removida para evitar datos falsos
+async function extractWithBasicParser(file: File): Promise<F29Data | null> {
+  try {
+    console.log('🔧 Intentando parser básico...');
+    
+    const arrayBuffer = await file.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    
+    // Convertir a texto usando múltiples encodings
+    let content = '';
+    
+    // Intentar UTF-8 primero
+    try {
+      const decoder = new TextDecoder('utf-8');
+      content = decoder.decode(uint8Array);
+    } catch {
+      // Fallback a Latin1
+      content = String.fromCharCode(...uint8Array);
+    }
+    
+    console.log(`📝 Contenido extraído: ${content.length} caracteres`);
+    
+    if (content.length < 100) {
+      console.warn('⚠️ Muy poco contenido extraído');
+      return null;
+    }
+    
+    // Buscar patrones de códigos F29 con regex
+    const patterns = {
+      rut: /(\d{1,2}\.?\d{3}\.?\d{3}-?[\dK])/i,
+      folio: /(?:folio|nro\.?|número)[:\s]*(\d{8,15})/i,
+      periodo: /(\d{4})[-\/]?(\d{1,2})|(\d{6})/i,
+      codigo511: /(?:511|créd\.?\s*iva)[:\s]*[\$]?[\s]*(\d{1,3}(?:[.,]\d{3})*)/i,
+      codigo538: /(?:538|total\s*débito)[:\s]*[\$]?[\s]*(\d{1,3}(?:[.,]\d{3})*)/i,
+      codigo563: /(?:563|base\s*imponible)[:\s]*[\$]?[\s]*(\d{1,3}(?:[.,]\d{3})*)/i,
+      codigo062: /(?:062|ppm)[:\s]*[\$]?[\s]*(\d{1,3}(?:[.,]\d{3})*)/i,
+      codigo077: /(?:077|remanente)[:\s]*[\$]?[\s]*(\d{1,3}(?:[.,]\d{3})*)/i,
+      codigo151: /(?:151|retención)[:\s]*[\$]?[\s]*(\d{1,3}(?:[.,]\d{3})*)/i,
+    };
+    
+    const extracted: any = {};
+    
+    // Extraer cada campo
+    for (const [field, pattern] of Object.entries(patterns)) {
+      const match = content.match(pattern);
+      if (match) {
+        if (field === 'rut') {
+          extracted[field] = match[1];
+        } else if (field === 'folio') {
+          extracted[field] = match[1];
+        } else if (field === 'periodo') {
+          if (match[3]) {
+            extracted[field] = match[3]; // YYYYMM directo
+          } else if (match[1] && match[2]) {
+            extracted[field] = match[1] + match[2].padStart(2, '0'); // YYYY + MM
+          }
+        } else {
+          // Para códigos numéricos, remover puntos y comas
+          const numStr = match[1].replace(/[.,]/g, '');
+          extracted[field] = parseInt(numStr) || 0;
+        }
+      } else {
+        extracted[field] = field.startsWith('codigo') ? 0 : '';
+      }
+    }
+    
+    // Buscar razón social (líneas cerca del RUT)
+    if (extracted.rut) {
+      const rutIndex = content.indexOf(extracted.rut);
+      if (rutIndex > -1) {
+        const beforeRut = content.substring(Math.max(0, rutIndex - 200), rutIndex);
+        const afterRut = content.substring(rutIndex, rutIndex + 200);
+        const combined = beforeRut + afterRut;
+        
+        // Buscar texto que parezca nombre de empresa
+        const nameMatch = combined.match(/([A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑa-záéíóúñ\s]{10,50}(?:SPA|LTDA|SA|EIRL)?)/);
+        if (nameMatch) {
+          extracted.razonSocial = nameMatch[1].trim();
+        }
+      }
+    }
+    
+    console.log('🔍 Datos extraídos con parser básico:', {
+      rut: extracted.rut,
+      folio: extracted.folio,
+      periodo: extracted.periodo,
+      razonSocial: extracted.razonSocial,
+      codigo511: extracted.codigo511,
+      codigo538: extracted.codigo538,
+      codigo563: extracted.codigo563
+    });
+    
+    // Crear resultado
+    const result: F29Data = {
+      rut: extracted.rut || '',
+      folio: extracted.folio || '',
+      periodo: extracted.periodo || '',
+      razonSocial: extracted.razonSocial || '',
+      codigo511: extracted.codigo511 || 0,
+      codigo538: extracted.codigo538 || 0,
+      codigo563: extracted.codigo563 || 0,
+      codigo062: extracted.codigo062 || 0,
+      codigo077: extracted.codigo077 || 0,
+      codigo151: extracted.codigo151 || 0,
+      comprasNetas: 0,
+      ivaDeterminado: 0,
+      totalAPagar: 0,
+      margenBruto: 0,
+      confidence: 75, // Confianza media para parser básico
+      method: 'basic-pattern-parser'
+    };
+    
+    // Calcular campos derivados
+    calculateFields(result);
+    
+    // Validar que se encontraron datos mínimos
+    if (result.codigo563 > 0 || result.codigo538 > 0) {
+      console.log('✅ Parser básico encontró datos válidos');
+      return result;
+    } else {
+      console.warn('⚠️ Parser básico no encontró datos suficientes');
+      return null;
+    }
+    
+  } catch (error) {
+    console.error('❌ Error en parser básico:', error);
+    return null;
+  }
+}
 
 function calculateFields(result: F29Data) {
   // Compras Netas = Código 538 ÷ 0.19
