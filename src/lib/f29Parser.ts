@@ -84,18 +84,24 @@ async function extractWithPDFJS(file: File): Promise<F29Data | null> {
   try {
     console.log('📄 PDF.js: Extrayendo texto estructurado...');
     
-    const pdfjs = await import('pdfjs-dist');
-    
-    // Configurar worker para Netlify con CDN fallback
-    try {
-      pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-    } catch (error) {
-      // Fallback sin worker si no está disponible
-      console.log('⚠️ PDF worker no disponible, continuando sin worker...');
+    // En Netlify no podemos usar PDF.js con worker, usar alternativa
+    if (typeof window === 'undefined') {
+      console.log('🔄 Entorno servidor detectado, saltando PDF.js...');
+      return null;
     }
     
+    const pdfjs = await import('pdfjs-dist');
+    
+    // Deshabilitar worker completamente para evitar errores en Netlify
+    pdfjs.GlobalWorkerOptions.workerSrc = undefined;
+    
     const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+    const pdf = await pdfjs.getDocument({ 
+      data: arrayBuffer,
+      disableWorker: true,
+      disableRange: true,
+      disableStream: true
+    }).promise;
     
     console.log(`📄 PDF.js: PDF cargado con ${pdf.numPages} páginas`);
     
@@ -236,21 +242,43 @@ async function extractWithClaude(file: File): Promise<F29Data | null> {
     const arrayBuffer = await file.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
     
-    // Intentar extraer texto usando diferentes encodings
+    // Extraer texto del PDF usando múltiples estrategias
     let extractedText = '';
     
-    try {
-      // UTF-8
-      const decoder = new TextDecoder('utf-8');
-      extractedText = decoder.decode(uint8Array);
-    } catch {
+    // Estrategia 1: Buscar bloques de texto en el PDF binario
+    console.log('🔍 Buscando texto en estructura PDF...');
+    
+    // Convertir a string para buscar patrones
+    const pdfString = String.fromCharCode(...uint8Array.slice(0, 100000)); // Limitar para evitar overflow
+    
+    // Buscar objetos de texto en PDF (entre BT y ET)
+    const textMatches = pdfString.match(/BT[^]*?ET/g) || [];
+    console.log(`📄 Encontrados ${textMatches.length} bloques de texto en PDF`);
+    
+    // Extraer texto de los bloques
+    for (const block of textMatches) {
+      // Buscar texto entre paréntesis (literal strings en PDF)
+      const stringMatches = block.match(/\(([^)]+)\)/g) || [];
+      for (const match of stringMatches) {
+        extractedText += match.slice(1, -1) + ' ';
+      }
+    }
+    
+    // Si no encontramos suficiente texto, intentar decodificación directa
+    if (extractedText.length < 100) {
+      console.log('⚠️ Poco texto encontrado, intentando decodificación completa...');
       try {
-        // Latin1
-        const decoder = new TextDecoder('latin1');
-        extractedText = decoder.decode(uint8Array);
-      } catch {
-        // Fallback: caracteres directos
-        extractedText = String.fromCharCode(...uint8Array);
+        const decoder = new TextDecoder('utf-8', { fatal: false });
+        const fullText = decoder.decode(uint8Array);
+        
+        // Buscar patrones de F29 en el texto completo
+        const f29Patterns = fullText.match(/\b(511|538|563|062|077|151|RUT|PERIODO|FOLIO)\b[^0-9]*(\d+)/gi) || [];
+        if (f29Patterns.length > 0) {
+          extractedText = fullText;
+          console.log(`✅ Encontrados ${f29Patterns.length} patrones F29 en decodificación completa`);
+        }
+      } catch (e) {
+        console.log('⚠️ Error en decodificación UTF-8:', e);
       }
     }
     
