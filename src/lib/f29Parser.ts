@@ -251,16 +251,51 @@ async function extractWithClaude(file: File): Promise<F29Data | null> {
     // Convertir a string para buscar patrones
     const pdfString = String.fromCharCode(...uint8Array.slice(0, 100000)); // Limitar para evitar overflow
     
-    // Buscar objetos de texto en PDF (entre BT y ET)
-    const textMatches = pdfString.match(/BT[^]*?ET/g) || [];
-    console.log(`📄 Encontrados ${textMatches.length} bloques de texto en PDF`);
+    // Buscar streams de contenido descomprimido en el PDF
+    const streamPattern = /stream[\r\n]+([\s\S]*?)[\r\n]+endstream/g;
+    let streamMatch;
+    let streams = [];
     
-    // Extraer texto de los bloques
-    for (const block of textMatches) {
-      // Buscar texto entre paréntesis (literal strings en PDF)
-      const stringMatches = block.match(/\(([^)]+)\)/g) || [];
-      for (const match of stringMatches) {
-        extractedText += match.slice(1, -1) + ' ';
+    while ((streamMatch = streamPattern.exec(pdfString)) !== null) {
+      streams.push(streamMatch[1]);
+    }
+    
+    console.log(`📄 Encontrados ${streams.length} streams en PDF`);
+    
+    // Buscar texto en los streams
+    for (const stream of streams) {
+      // Buscar operadores de texto Tj y TJ (texto en PDF)
+      const tjMatches = stream.match(/\((.*?)\)\s*Tj/g) || [];
+      const tjArrayMatches = stream.match(/\[(.*?)\]\s*TJ/g) || [];
+      
+      // Extraer texto de operadores Tj
+      for (const match of tjMatches) {
+        const text = match.match(/\((.*?)\)/);
+        if (text) {
+          extractedText += text[1] + ' ';
+        }
+      }
+      
+      // Extraer texto de operadores TJ (arrays)
+      for (const match of tjArrayMatches) {
+        const arrayContent = match.match(/\[(.*?)\]/);
+        if (arrayContent) {
+          const textParts = arrayContent[1].match(/\((.*?)\)/g) || [];
+          for (const part of textParts) {
+            extractedText += part.slice(1, -1) + ' ';
+          }
+        }
+      }
+    }
+    
+    // También buscar texto directo en el PDF (sin compresión)
+    const directTextMatches = pdfString.match(/\(((?:[^()\\]|\\.)*)\)\s*Tj/g) || [];
+    console.log(`📄 Encontrados ${directTextMatches.length} textos directos`);
+    
+    for (const match of directTextMatches) {
+      const text = match.match(/\((.*?)\)/);
+      if (text) {
+        extractedText += text[1] + ' ';
       }
     }
     
@@ -271,11 +306,29 @@ async function extractWithClaude(file: File): Promise<F29Data | null> {
         const decoder = new TextDecoder('utf-8', { fatal: false });
         const fullText = decoder.decode(uint8Array);
         
-        // Buscar patrones de F29 en el texto completo
-        const f29Patterns = fullText.match(/\b(511|538|563|062|077|151|RUT|PERIODO|FOLIO)\b[^0-9]*(\d+)/gi) || [];
-        if (f29Patterns.length > 0) {
+        // Buscar códigos F29 específicos con diferentes formatos
+        const codePatterns = [
+          /511[\s\S]{0,50}?([\d,.\s]+)/,
+          /538[\s\S]{0,50}?([\d,.\s]+)/,
+          /563[\s\S]{0,50}?([\d,.\s]+)/,
+          /062[\s\S]{0,50}?([\d,.\s]+)/,
+          /077[\s\S]{0,50}?([\d,.\s]+)/,
+          /151[\s\S]{0,50}?([\d,.\s]+)/,
+          /\b(\d{1,2}[.-]\d{3}[.-]\d{3}[.-][0-9kK])\b/i, // RUT
+          /PERIODO[\s:]+(\d{6})/i,
+          /FOLIO[\s:]+(\d{8,})/i
+        ];
+        
+        let foundCodes = 0;
+        for (const pattern of codePatterns) {
+          if (pattern.test(fullText)) {
+            foundCodes++;
+          }
+        }
+        
+        if (foundCodes > 3 || extractedText.length > 0) {
           extractedText = fullText;
-          console.log(`✅ Encontrados ${f29Patterns.length} patrones F29 en decodificación completa`);
+          console.log(`✅ Encontrados ${foundCodes} códigos F29 en decodificación completa`);
         }
       } catch (e) {
         console.log('⚠️ Error en decodificación UTF-8:', e);
