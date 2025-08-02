@@ -36,22 +36,22 @@ export async function parseF29Visual(file: File): Promise<F29Data> {
   console.log(`📄 Archivo: ${file.name} (${(file.size / 1024).toFixed(2)} KB)`);
   
   try {
-    // Paso 1: Convertir PDF a imagen usando servicio externo
-    console.log('🖼️ Convirtiendo PDF a imagen...');
-    const imageBase64 = await convertPDFToImage(file);
+    // Paso 1: Preparar PDF para análisis directo con Claude
+    console.log('📄 Preparando PDF para Claude Vision...');
+    const pdfBase64 = await convertPDFToImage(file);
     
-    if (!imageBase64) {
-      throw new Error('No se pudo convertir el PDF a imagen');
+    if (!pdfBase64) {
+      throw new Error('No se pudo preparar el PDF');
     }
     
-    console.log('✅ PDF convertido exitosamente a imagen');
+    console.log('✅ PDF preparado exitosamente');
     
-    // Paso 2: Enviar imagen a Claude para análisis visual
-    console.log('🤖 Enviando imagen a Claude AI para análisis visual...');
-    const result = await analyzeWithClaude(imageBase64);
+    // Paso 2: Enviar PDF a Claude para análisis visual directo
+    console.log('🤖 Enviando PDF a Claude Vision para análisis...');
+    const result = await analyzeWithClaude(pdfBase64);
     
     if (!result) {
-      throw new Error('Claude no pudo analizar la imagen');
+      throw new Error('Claude no pudo analizar el PDF');
     }
     
     console.log('✅ Análisis completado exitosamente');
@@ -63,59 +63,20 @@ export async function parseF29Visual(file: File): Promise<F29Data> {
   }
 }
 
-// Convierte PDF a imagen usando pdf-to-png-converter
+// Convierte PDF a base64 para envío directo a Claude
 async function convertPDFToImage(file: File): Promise<string | null> {
   try {
-    console.log('📤 Convirtiendo PDF a PNG...');
+    console.log('📤 Preparando PDF para análisis visual...');
     
-    // En entorno servidor, usar la librería
-    if (typeof window === 'undefined') {
-      const { pdfToPng } = await import('pdf-to-png-converter');
-      const arrayBuffer = await file.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-      
-      console.log('🔄 Procesando PDF con pdf-to-png-converter...');
-      
-      const pngPages = await pdfToPng(buffer, {
-        outputFolder: '/tmp', // Folder temporal
-        outputFileMask: 'f29_page',
-        disableFontFace: true,
-        useSystemFonts: false,
-        enableXfa: true,
-        viewportScale: 2.0, // Alta calidad
-        outputFileMaskFunc: (pageNum, totalPages) => `f29_page_${pageNum}.png`
-      });
-      
-      if (pngPages && pngPages.length > 0) {
-        // Tomar la primera página
-        const firstPage = pngPages[0];
-        const base64 = firstPage.content.toString('base64');
-        
-        console.log(`✅ PDF convertido a PNG exitosamente (${base64.length} caracteres)`);
-        return base64;
-      }
-    }
-    
-    // Fallback: Enviar PDF directamente como documento
-    console.log('⚠️ Fallback: Enviando PDF directamente (no como imagen)');
     const arrayBuffer = await file.arrayBuffer();
     const base64 = Buffer.from(arrayBuffer).toString('base64');
     
+    console.log(`✅ PDF preparado para Claude Vision (${base64.length} caracteres)`);
     return base64;
     
   } catch (error) {
-    console.error('❌ Error convirtiendo PDF a imagen:', error);
-    console.log('🔄 Intentando fallback...');
-    
-    // Fallback final
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const base64 = Buffer.from(arrayBuffer).toString('base64');
-      return base64;
-    } catch (fallbackError) {
-      console.error('❌ Error en fallback:', fallbackError);
-      return null;
-    }
+    console.error('❌ Error preparando PDF:', error);
+    return null;
   }
 }
 
@@ -183,12 +144,10 @@ Responde ÚNICAMENTE con este JSON:
 }`
             },
             {
-              type: 'image',
+              type: 'document',
               source: {
                 type: 'base64',
-                media_type: imageBase64.startsWith('/9j/') ? 'image/jpeg' : 
-                           imageBase64.startsWith('iVBORw0KGgo') ? 'image/png' :
-                           'application/pdf',
+                media_type: 'application/pdf',
                 data: imageBase64
               }
             }
