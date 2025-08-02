@@ -225,9 +225,9 @@ Responde ÚNICAMENTE con este JSON:
 
 // Calcula campos derivados
 function calculateFields(result: F29Data) {
-  // Compras Netas = Código 538 ÷ 0.19
-  if (result.codigo538 > 0) {
-    result.comprasNetas = Math.round(result.codigo538 / 0.19);
+  // Compras Netas = Código 511 (Crédito Fiscal) ÷ 0.19
+  if (result.codigo511 > 0) {
+    result.comprasNetas = Math.round(result.codigo511 / 0.19);
   }
   
   // IVA Determinado - usar código 089 si está disponible
