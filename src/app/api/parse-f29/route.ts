@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseF29DirectExtraction } from '@/lib/f29DirectExtractionParser';
+import { parseF29WithAI } from '@/lib/f29AIParser';
 import { parseF29RealStructure } from '@/lib/f29RealStructureParser';
 import { parseF29Diagnostic } from '@/lib/f29DiagnosticParser';
 import { parseF29Innovative } from '@/lib/f29InnovativeParser';
@@ -44,8 +45,23 @@ export async function POST(request: NextRequest) {
       });
     }
     
-    // Si falla, intentar con parser real
-    console.log('🔄 Parser directo insuficiente, probando real structure...');
+    // Si falla, intentar con IA
+    console.log('🤖 Parser directo insuficiente, probando con IA...');
+    const aiResult = await parseF29WithAI(file);
+    
+    if (aiResult.confidence >= 80) {
+      console.log(`✅ Parser IA exitoso: confidence ${aiResult.confidence} (${aiResult.aiProvider})`);
+      return NextResponse.json({
+        success: true,
+        data: aiResult,
+        method: 'ai-extraction',
+        confidence: aiResult.confidence,
+        aiProvider: aiResult.aiProvider
+      });
+    }
+    
+    // Si IA no está disponible o falla, intentar con parser real
+    console.log('🔄 IA insuficiente, probando real structure...');
     const realResult = await parseF29RealStructure(file);
     
     if (realResult.confidence >= 50) {
