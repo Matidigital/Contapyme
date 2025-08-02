@@ -4,9 +4,10 @@
 // ==========================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { parseF29Direct } from '@/lib/f29DirectParser';
+import { parseF29RealStructure } from '@/lib/f29RealStructureParser';
 import { parseF29Innovative } from '@/lib/f29InnovativeParser';
 import { parseF29Simple } from '@/lib/f29SimpleParser';
+import { parseF29Diagnostic } from '@/lib/f29DiagnosticParser';
 import { validateF29Data } from '@/lib/f29Validator';
 import { insertF29Form } from '@/lib/databaseSimple';
 
@@ -67,13 +68,14 @@ export async function POST(request: NextRequest) {
         try {
           console.log(`📄 Procesando: ${file.name} (${Math.round(file.size/1024)}KB)`);
 
-          // 1. Intentar con el parser simple (más rápido y directo)
-          let extracted = await parseF29Simple(file);
-          console.log(`📊 Parser Simple: confidence ${extracted?.confidence || 0}`);
+          // 1. ESTRATEGIA PRINCIPAL: Parser de estructura real
+          console.log(`🎯 Iniciando parser de estructura real para: ${file.name}`);
+          let extracted = await parseF29RealStructure(file);
+          console.log(`📊 Parser Real: confidence ${extracted?.confidence || 0}`);
           
           // 2. Si falla, intentar con el parser innovador
-          if (!extracted || extracted.confidence < 50) {
-            console.log(`⚠️ Parser simple insufficient (confidence: ${extracted?.confidence || 0}), probando innovador...`);
+          if (!extracted || extracted.confidence < 60) {
+            console.log(`🔄 Parser real insuficiente (confidence: ${extracted?.confidence || 0}), probando innovador...`);
             const innovativeResult = await parseF29Innovative(file);
             if (innovativeResult && innovativeResult.confidence > (extracted?.confidence || 0)) {
               extracted = innovativeResult;
@@ -81,14 +83,22 @@ export async function POST(request: NextRequest) {
             }
           }
           
-          // 3. Si ambos fallan, usar el parser directo como último recurso
-          if (!extracted || extracted.confidence < 30) {
-            console.log(`⚠️ Parsers avanzados fallaron (confidence: ${extracted?.confidence || 0}), usando directo...`);
-            const directResult = await parseF29Direct(file);
-            if (directResult && directResult.confidence > (extracted?.confidence || 0)) {
-              extracted = directResult;
-              console.log(`📊 Parser Directo: confidence ${extracted.confidence}`);
+          // 3. Si ambos fallan, usar parser simple
+          if (!extracted || extracted.confidence < 40) {
+            console.log(`⚠️ Probando parser simple como fallback...`);
+            const simpleResult = await parseF29Simple(file);
+            if (simpleResult && simpleResult.confidence > (extracted?.confidence || 0)) {
+              extracted = simpleResult;
+              console.log(`📊 Parser Simple: confidence ${extracted.confidence}`);
             }
+          }
+          
+          // 4. Último recurso: diagnóstico
+          if (!extracted || extracted.confidence < 20) {
+            console.log(`🔍 Usando diagnóstico como último recurso...`);
+            const diagnosticResult = await parseF29Diagnostic(file);
+            extracted = diagnosticResult;
+            console.log(`📊 Diagnostic: confidence ${extracted.confidence}`);
           }
           
           if (!extracted || extracted.confidence === 0) {
@@ -108,6 +118,7 @@ export async function POST(request: NextRequest) {
             success: true,
             confidence_score: extracted.confidence,
             data: extracted, // Agregar datos extraídos para el frontend
+            diagnostic: diagnosticResult.debugInfo, // Agregar info de diagnóstico
             extracted_data: {
               raw_data: extracted,
               calculated_data: {
