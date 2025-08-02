@@ -31,24 +31,40 @@ export interface F29Data {
 
 export async function parseF29(file: File): Promise<F29Data> {
   console.log('🚀 F29 Parser: Iniciando extracción desde cero...');
+  console.log(`📄 Archivo recibido: ${file.name} (${file.size} bytes)`);
   
   try {
+    // VERIFICAR API KEY ANTES DE INTENTAR
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    console.log(`🔑 API Key presente: ${apiKey ? 'SÍ' : 'NO'}`);
+    
+    if (!apiKey) {
+      console.warn('⚠️ ANTHROPIC_API_KEY no está configurada - usando datos de ejemplo');
+      const result = getGuaranteedData();
+      result.method = 'no-api-key';
+      return result;
+    }
+    
     // PASO 1: Intentar Claude AI
+    console.log('🟣 Intentando llamar a Claude AI...');
     const claudeResult = await extractWithClaude(file);
     
     if (claudeResult) {
-      console.log('✅ Claude AI exitoso!');
+      console.log('✅ Claude AI procesó el PDF exitosamente!');
       return claudeResult;
     }
     
-    // PASO 2: Si Claude falla, usar datos garantizados
-    console.log('📋 Claude no disponible, usando datos garantizados...');
-    return getGuaranteedData();
+    // PASO 2: Si Claude falla, mostrar por qué
+    console.warn('❌ Claude AI falló - usando datos garantizados del PDF de ejemplo');
+    const result = getGuaranteedData();
+    result.method = 'claude-failed';
+    return result;
     
   } catch (error) {
     console.error('❌ Error en F29 Parser:', error);
-    // Siempre devolver datos válidos, nunca fallar
-    return getGuaranteedData();
+    const result = getGuaranteedData();
+    result.method = 'error-fallback';
+    return result;
   }
 }
 
@@ -66,6 +82,8 @@ async function extractWithClaude(file: File): Promise<F29Data | null> {
     // Convertir PDF a base64
     const arrayBuffer = await file.arrayBuffer();
     const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    
+    console.log('📡 Enviando request a Claude API...');
     
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -128,6 +146,8 @@ Responde SOLO con este JSON exacto:
         }]
       })
     });
+    
+    console.log(`📊 Claude response status: ${response.status}`);
     
     if (!response.ok) {
       const errorText = await response.text();
