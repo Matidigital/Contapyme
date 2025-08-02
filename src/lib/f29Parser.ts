@@ -35,17 +35,31 @@ export async function parseF29(file: File): Promise<F29Data> {
   
   try {
     // VERIFICAR API KEY ANTES DE INTENTAR
+    console.log('🔍 Verificando configuración...');
     const apiKey = process.env.ANTHROPIC_API_KEY;
     console.log(`🔑 API Key presente: ${apiKey ? 'SÍ' : 'NO'}`);
     
+    if (apiKey) {
+      console.log(`🔑 API Key length: ${apiKey.length}`);
+      console.log(`🔑 API Key starts with: ${apiKey.substring(0, 10)}...`);
+    }
+    
     if (!apiKey) {
-      console.error('❌ ANTHROPIC_API_KEY no está configurada en Netlify');
-      console.log('🔧 Para configurar: Netlify Dashboard → Environment Variables → Add:');
+      console.error('❌ ANTHROPIC_API_KEY no está configurada');
+      console.log('🔧 Para configurar: Environment Variables');
       console.log('   Key: ANTHROPIC_API_KEY');
       console.log('   Value: sk-ant-api03-...');
       
-      // NO usar fallback - fallar claramente
-      throw new Error('CONFIGURAR_CLAUDE_API: No se puede extraer datos reales sin Claude AI');
+      // USAR FALLBACK INMEDIATAMENTE SI NO HAY API KEY
+      console.log('🔄 Sin API key, usando parser básico...');
+      const basicResult = await extractWithBasicParser(file);
+      
+      if (basicResult) {
+        console.log('✅ Parser básico procesó el PDF exitosamente (sin Claude)!');
+        return basicResult;
+      }
+      
+      throw new Error('CONFIGURAR_CLAUDE_API: No se puede extraer datos sin Claude AI ni parser básico');
     }
     
     // PASO 1: Intentar Claude AI
@@ -89,14 +103,16 @@ export async function parseF29(file: File): Promise<F29Data> {
 
 async function extractWithClaude(file: File): Promise<F29Data | null> {
   try {
+    console.log('🔧 extractWithClaude: Iniciando...');
     const apiKey = process.env.ANTHROPIC_API_KEY;
     
     if (!apiKey) {
-      console.log('⚠️ ANTHROPIC_API_KEY no encontrada');
+      console.log('⚠️ ANTHROPIC_API_KEY no encontrada en extractWithClaude');
       return null;
     }
     
     console.log('🟣 Estrategia simple: Extraer texto y enviar a Claude...');
+    console.log('📁 Obteniendo arrayBuffer del archivo...');
     
     // ESTRATEGIA SIMPLE PERO EFECTIVA: Extraer texto del PDF y enviar a Claude
     const arrayBuffer = await file.arrayBuffer();

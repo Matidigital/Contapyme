@@ -27,7 +27,8 @@
       "Bash(find:*)",
       "Bash(dir:*)",
       "Bash(curl:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(timeout 5 curl -X GET http://localhost:3002/api/parse-f29)"
     ],
     "deny": []
   }
