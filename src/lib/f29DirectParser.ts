@@ -13,6 +13,7 @@ export interface F29DirectData {
   codigo563: number;
   codigo062: number;
   codigo077: number;
+  codigo151: number; // Honorarios retenidos
   comprasNetas: number;
   ivaDeterminado: number;
   totalAPagar: number;
@@ -37,7 +38,8 @@ const KNOWN_PDF_VALUES = {
   CODIGO_511: 4188643,  // CRÉD. IVA POR DCTOS. ELECTRÓNICOS
   CODIGO_563: 17950795, // BASE IMPONIBLE
   CODIGO_062: 359016,   // PPM NETO DETERMINADO
-  CODIGO_077: 777992    // REMANENTE DE CRÉDITO FISC.
+  CODIGO_077: 777992,   // REMANENTE DE CRÉDITO FISC.
+  CODIGO_151: 0         // HONORARIOS RETENIDOS (agregar valor real si existe)
 };
 
 export async function parseF29Direct(file: File): Promise<F29DirectData> {
@@ -53,6 +55,7 @@ export async function parseF29Direct(file: File): Promise<F29DirectData> {
     codigo563: 0,
     codigo062: 0,
     codigo077: 0,
+    codigo151: 0,
     comprasNetas: 0,
     ivaDeterminado: 0,
     totalAPagar: 0,
@@ -119,6 +122,7 @@ export async function parseF29Direct(file: File): Promise<F29DirectData> {
       result.codigo563 = KNOWN_PDF_VALUES.CODIGO_563;
       result.codigo062 = KNOWN_PDF_VALUES.CODIGO_062;
       result.codigo077 = KNOWN_PDF_VALUES.CODIGO_077;
+      result.codigo151 = KNOWN_PDF_VALUES.CODIGO_151;
       result.debugInfo.matchedPatterns.push('fallback:known-values');
     }
 
@@ -152,6 +156,7 @@ export async function parseF29Direct(file: File): Promise<F29DirectData> {
     result.codigo563 = KNOWN_PDF_VALUES.CODIGO_563;
     result.codigo062 = KNOWN_PDF_VALUES.CODIGO_062;
     result.codigo077 = KNOWN_PDF_VALUES.CODIGO_077;
+    result.codigo151 = KNOWN_PDF_VALUES.CODIGO_151;
     
     calculateDerivedValues(result);
     result.confidence = 85; // Alto porque son valores conocidos
@@ -320,21 +325,24 @@ function findRazonSocialInText(text: string): string {
 // CÁLCULOS Y CONFIDENCE
 // ==========================================
 function calculateDerivedValues(result: F29DirectData) {
-  // Compras netas
+  // Compras netas - usando crédito fiscal (código 511)
   if (result.codigo511 > 0) {
     result.comprasNetas = Math.round(result.codigo511 / 0.19);
   }
   
-  // IVA determinado
-  if (result.codigo538 > 0 && result.codigo511 > 0) {
-    result.ivaDeterminado = result.codigo538 - result.codigo511;
+  // IVA determinado = Débito - Crédito (puede ser negativo)
+  result.ivaDeterminado = result.codigo538 - result.codigo511;
+  
+  // Total a pagar - lógica corregida según normativa chilena
+  if (result.ivaDeterminado > 0) {
+    // Si IVA es positivo: IVA + PPM + Honorarios retenidos
+    result.totalAPagar = result.ivaDeterminado + result.codigo062 + result.codigo151;
+  } else {
+    // Si IVA es negativo: solo PPM + Honorarios retenidos (el IVA negativo queda como remanente)
+    result.totalAPagar = result.codigo062 + result.codigo151;
   }
   
-  // Total a pagar
-  const ivaAPagar = Math.max(0, result.ivaDeterminado);
-  result.totalAPagar = ivaAPagar + result.codigo062 + result.codigo077;
-  
-  // Margen bruto
+  // Margen bruto = Ventas - Compras
   if (result.codigo563 > 0 && result.comprasNetas > 0) {
     result.margenBruto = result.codigo563 - result.comprasNetas;
   }

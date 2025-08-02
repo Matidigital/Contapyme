@@ -22,9 +22,11 @@ interface F29Results {
   codigo062: number; // PPM
   codigo077: number; // Remanente
   codigo563: number; // Ventas Netas
+  codigo151: number; // Honorarios Retenidos
   comprasNetas: number;
-  ivaPagar: number;
+  ivaDeterminado: number;
   totalAPagar: number;
+  margenBruto: number;
   confidence: number;
   method: string;
 }
@@ -290,24 +292,24 @@ export default function F29AnalysisPage() {
 
                 {/* IVA */}
                 <div className={`rounded-lg p-4 border ${
-                  result.ivaPagar < 0 
+                  result.ivaDeterminado < 0 
                     ? 'bg-green-50 border-green-200' 
                     : 'bg-red-50 border-red-200'
                 }`}>
                   <h4 className={`text-sm font-medium mb-1 ${
-                    result.ivaPagar < 0 ? 'text-green-700' : 'text-red-700'
+                    result.ivaDeterminado < 0 ? 'text-green-700' : 'text-red-700'
                   }`}>
                     IVA Determinado
                   </h4>
                   <p className={`text-2xl font-bold ${
-                    result.ivaPagar < 0 ? 'text-green-900' : 'text-red-900'
+                    result.ivaDeterminado < 0 ? 'text-green-900' : 'text-red-900'
                   }`}>
-                    {formatCurrency(result.ivaPagar)}
+                    {formatCurrency(result.ivaDeterminado)}
                   </p>
                   <p className={`text-xs ${
-                    result.ivaPagar < 0 ? 'text-green-600' : 'text-red-600'
+                    result.ivaDeterminado < 0 ? 'text-green-600' : 'text-red-600'
                   }`}>
-                    {result.ivaPagar < 0 ? 'A favor del contribuyente' : 'A pagar'}
+                    {result.ivaDeterminado < 0 ? 'A favor del contribuyente' : 'A pagar'}
                   </p>
                 </div>
 
@@ -329,13 +331,55 @@ export default function F29AnalysisPage() {
                   <p className="text-xs text-orange-600">Código 511</p>
                 </div>
 
+                {/* PPM */}
+                <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
+                  <h4 className="text-sm font-medium text-indigo-700 mb-1">PPM</h4>
+                  <p className="text-2xl font-bold text-indigo-900">
+                    {formatCurrency(result.codigo062)}
+                  </p>
+                  <p className="text-xs text-indigo-600">Código 062</p>
+                </div>
+
+                {/* Remanente */}
+                <div className="bg-teal-50 rounded-lg p-4 border border-teal-200">
+                  <h4 className="text-sm font-medium text-teal-700 mb-1">Remanente Crédito</h4>
+                  <p className="text-2xl font-bold text-teal-900">
+                    {formatCurrency(result.codigo077)}
+                  </p>
+                  <p className="text-xs text-teal-600">Código 077</p>
+                </div>
+
                 {/* Total a Pagar */}
                 <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-300">
                   <h4 className="text-sm font-medium text-gray-700 mb-1">Total a Pagar</h4>
                   <p className="text-2xl font-bold text-gray-900">
                     {formatCurrency(result.totalAPagar)}
                   </p>
-                  <p className="text-xs text-gray-600">IVA + PPM + Remanente</p>
+                  <p className="text-xs text-gray-600">
+                    {result.ivaDeterminado > 0 ? 'IVA + PPM' : 'Solo PPM (IVA negativo)'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Sección de Margen Bruto */}
+              <div className="mt-6 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-6 border border-blue-200">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 Análisis de Margen</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600 mb-1">Ventas Netas</p>
+                    <p className="text-xl font-bold text-blue-900">{formatCurrency(result.codigo563)}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600 mb-1">(-) Compras Netas</p>
+                    <p className="text-xl font-bold text-red-900">{formatCurrency(result.comprasNetas)}</p>
+                  </div>
+                  <div className="text-center bg-white rounded-lg p-3">
+                    <p className="text-sm text-gray-600 mb-1">(=) Margen Bruto</p>
+                    <p className="text-xl font-bold text-green-900">{formatCurrency(result.margenBruto)}</p>
+                    <p className="text-xs text-gray-500">
+                      {result.codigo563 > 0 ? `${((result.margenBruto / result.codigo563) * 100).toFixed(1)}% de las ventas` : ''}
+                    </p>
+                  </div>
                 </div>
               </div>
 
