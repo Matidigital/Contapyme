@@ -4,7 +4,7 @@
 // ==========================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { parseF29SuperParser } from '@/lib/f29SuperParser';
+import { parseF29Smart } from '@/lib/f29SmartParser';
 import { validateF29Data } from '@/lib/f29Validator';
 import { insertF29Form } from '@/lib/databaseSimple';
 
@@ -65,38 +65,48 @@ export async function POST(request: NextRequest) {
         try {
           console.log(`📄 Procesando: ${file.name} (${Math.round(file.size/1024)}KB)`);
 
-          // 1. Extraer datos con super parser
-          const extracted = await parseF29SuperParser(file);
+          // 1. Extraer datos con smart parser
+          const extracted = await parseF29Smart(file);
           
-          if (!extracted || Object.keys(extracted).length === 0) {
+          if (!extracted || extracted.confidence === 0) {
             throw new Error('No se pudieron extraer datos del PDF');
           }
 
-          // 2. Validar y enriquecer datos
-          const validated = await validateF29Data(extracted);
-          
-          // 3. Detectar período automáticamente
-          const period = detectPeriodFromData(validated, file.name);
+          // 2. Usar período detectado por el smart parser
+          const period = extracted.periodo || detectPeriodFromFileName(file.name);
           
           if (!period) {
             throw new Error('No se pudo detectar el período del formulario');
           }
 
-          // 4. Calcular score de confianza
-          const confidenceScore = calculateConfidenceScore(validated);
-
           return {
             file_name: file.name,
             period,
             success: true,
-            confidence_score: confidenceScore,
+            confidence_score: extracted.confidence,
+            data: extracted, // Agregar datos extraídos para el frontend
             extracted_data: {
               raw_data: extracted,
-              calculated_data: validated,
+              calculated_data: {
+                rut: extracted.rut,
+                periodo: extracted.periodo,
+                folio: extracted.folio,
+                razonSocial: extracted.razonSocial,
+                codigo538: extracted.codigo538,
+                codigo511: extracted.codigo511,
+                codigo563: extracted.codigo563,
+                codigo062: extracted.codigo062,
+                codigo077: extracted.codigo077,
+                comprasNetas: extracted.comprasNetas,
+                ivaPagar: extracted.ivaDeterminado,
+                totalAPagar: extracted.totalAPagar,
+                confidence: extracted.confidence,
+                method: extracted.method
+              },
               file_size: file.size,
               period,
-              rut: validated.rut || '',
-              folio: validated.folio || ''
+              rut: extracted.rut || '',
+              folio: extracted.folio || ''
             }
           };
 
@@ -202,7 +212,8 @@ export async function POST(request: NextRequest) {
         success: r.success,
         period: r.period,
         confidence_score: r.confidence_score,
-        error: r.error
+        error: r.error,
+        data: (r as any).data // Incluir datos extraídos
       })),
       analysis,
       next_steps: generateNextSteps(successful.length, failed.length)
@@ -226,6 +237,20 @@ export async function POST(request: NextRequest) {
 // ==========================================
 // FUNCIONES AUXILIARES
 // ==========================================
+
+function detectPeriodFromFileName(fileName: string): string | null {
+  // Intentar extraer período YYYYMM del nombre del archivo
+  const periodMatch = fileName.match(/(\d{4})(\d{2})/);
+  if (periodMatch) {
+    return periodMatch[1] + periodMatch[2];
+  }
+  
+  // Si no se encuentra, usar período actual como fallback
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  return `${year}${month}`;
+}
 
 function detectPeriodFromData(data: any, fileName: string): string | null {
   // 1. Intentar desde datos extraídos
