@@ -139,43 +139,90 @@ async function extractWithAdvancedMethod(file: File): Promise<F29Data | null> {
     if (extractedText.length < 100) {
       console.log('📊 Buscando patrones F29 específicos...');
       
-      // Buscar códigos F29 con contexto
+      // Buscar códigos F29 con contexto mejorado
       const codePatterns = [
-        { code: '511', name: 'Crédito IVA' },
-        { code: '538', name: 'Débito Fiscal' },
-        { code: '563', name: 'Base Imponible' },
-        { code: '062', name: 'PPM' },
-        { code: '077', name: 'Remanente' },
-        { code: '151', name: 'Retención' }
+        { code: '511', name: 'Crédito IVA', patterns: ['511', 'CRÉD.*IVA.*DCTOS.*ELECTRÓNICOS'] },
+        { code: '538', name: 'Total Débitos', patterns: ['538', 'TOTAL DÉBITOS'] },
+        { code: '563', name: 'Base Imponible', patterns: ['563', 'BASE IMPONIBLE'] },
+        { code: '062', name: 'PPM', patterns: ['062', 'PPM NETO DETERMINADO'] },
+        { code: '089', name: 'IVA Determinado', patterns: ['089', 'IMP.*DETERM.*IVA'] },
+        { code: '077', name: 'Remanente', patterns: ['077', 'REMANENTE'] },
+        { code: '151', name: 'Retención', patterns: ['151', 'RETENCIÓN'] }
       ];
       
       const foundCodes = {};
       
       for (const pattern of codePatterns) {
-        // Buscar el código seguido de números
-        const regex = new RegExp(`${pattern.code}[^0-9]{0,100}?(\\d{1,3}(?:[.,]\\d{3})*(?:[.,]\\d{0,2})?)`, 'i');
-        const match = pdfContent.match(regex);
-        
-        if (match) {
-          const value = match[1].replace(/[.,]/g, '');
-          foundCodes[`codigo${pattern.code}`] = parseInt(value) || 0;
-          console.log(`✅ Encontrado ${pattern.name} (${pattern.code}): ${value}`);
+        // Buscar con múltiples patrones
+        let found = false;
+        for (const searchPattern of pattern.patterns) {
+          if (found) break;
+          
+          // Buscar el patrón seguido de números
+          const regex = new RegExp(`${searchPattern}[^0-9]{0,200}?(\\d{1,3}(?:[.,]\\d{3})*(?:[.,]\\d{0,2})?)`, 'i');
+          const match = pdfContent.match(regex);
+          
+          if (match) {
+            const value = match[1].replace(/[.,]/g, '');
+            foundCodes[`codigo${pattern.code}`] = parseInt(value) || 0;
+            console.log(`✅ Encontrado ${pattern.name} (${pattern.code}): ${value}`);
+            found = true;
+          }
         }
       }
       
-      // Buscar RUT
-      const rutMatch = pdfContent.match(/(\d{1,2}[.-]?\d{3}[.-]?\d{3}[.-]?[0-9kK])/);
-      if (rutMatch) {
-        foundCodes.rut = rutMatch[1];
-        console.log(`✅ Encontrado RUT: ${rutMatch[1]}`);
+      // Buscar RUT con mejor patrón
+      const rutPatterns = [
+        /RUT[^0-9]{0,20}?(\d{1,2}[.\-]?\d{3}[.\-]?\d{3}[.\-]?[0-9kK])/i,
+        /\[03\][^0-9]{0,20}?(\d{1,2}[.\-]?\d{3}[.\-]?\d{3}[.\-]?[0-9kK])/,
+        /(\d{2}[.\-]\d{3}[.\-]\d{3}[.\-][0-9kK])/
+      ];
+      
+      for (const rutPattern of rutPatterns) {
+        const rutMatch = pdfContent.match(rutPattern);
+        if (rutMatch) {
+          foundCodes.rut = rutMatch[1];
+          console.log(`✅ Encontrado RUT: ${rutMatch[1]}`);
+          break;
+        }
+      }
+      
+      // Buscar FOLIO
+      const folioPatterns = [
+        /FOLIO[^0-9]{0,20}?(\d{10})/i,
+        /\[07\][^0-9]{0,20}?(\d{10})/
+      ];
+      
+      for (const folioPattern of folioPatterns) {
+        const folioMatch = pdfContent.match(folioPattern);
+        if (folioMatch) {
+          foundCodes.folio = folioMatch[1];
+          console.log(`✅ Encontrado FOLIO: ${folioMatch[1]}`);
+          break;
+        }
+      }
+      
+      // Buscar PERIODO
+      const periodoPatterns = [
+        /PERIODO[^0-9]{0,20}?(\d{6})/i,
+        /\[15\][^0-9]{0,20}?(\d{6})/
+      ];
+      
+      for (const periodoPattern of periodoPatterns) {
+        const periodoMatch = pdfContent.match(periodoPattern);
+        if (periodoMatch) {
+          foundCodes.periodo = periodoMatch[1];
+          console.log(`✅ Encontrado PERIODO: ${periodoMatch[1]}`);
+          break;
+        }
       }
       
       // Si encontramos códigos, crear resultado directo
       if (Object.keys(foundCodes).length > 3) {
         const result: F29Data = {
           rut: foundCodes.rut || '',
-          folio: Date.now().toString(),
-          periodo: new Date().toISOString().slice(0, 7).replace('-', ''),
+          folio: foundCodes.folio || Date.now().toString(),
+          periodo: foundCodes.periodo || new Date().toISOString().slice(0, 7).replace('-', ''),
           razonSocial: 'EMPRESA',
           codigo511: foundCodes.codigo511 || 0,
           codigo538: foundCodes.codigo538 || 0,
@@ -184,7 +231,7 @@ async function extractWithAdvancedMethod(file: File): Promise<F29Data | null> {
           codigo077: foundCodes.codigo077 || 0,
           codigo151: foundCodes.codigo151 || 0,
           comprasNetas: 0,
-          ivaDeterminado: 0,
+          ivaDeterminado: foundCodes.codigo089 || 0, // Usar código 089 si está disponible
           totalAPagar: 0,
           margenBruto: 0,
           confidence: 85,
@@ -1150,8 +1197,8 @@ function calculateFields(result: F29Data) {
     result.comprasNetas = Math.round(result.codigo538 / 0.19);
   }
   
-  // IVA Determinado = Código 538 - Código 511
-  if (result.codigo538 > 0 && result.codigo511 > 0) {
+  // IVA Determinado = Código 538 - Código 511 (si no viene ya calculado)
+  if (result.ivaDeterminado === 0 && result.codigo538 > 0 && result.codigo511 > 0) {
     result.ivaDeterminado = result.codigo538 - result.codigo511;
   }
   
