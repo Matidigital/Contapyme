@@ -1,69 +1,196 @@
 import Link from 'next/link'
+import { Header } from '@/components/layout'
+import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui'
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-16">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            ContaPyme
-          </h1>
-          <p className="text-xl text-gray-600 mb-8">
-            Sistema Contable Integral para PyMEs
-          </p>
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-2xl mx-auto">
-            <h2 className="text-2xl font-semibold mb-4">¡Bienvenido!</h2>
-            <p className="text-gray-700 mb-6">
-              Tu plataforma para gestionar balances, proyecciones financieras y 
-              unificar toda la información contable de tu empresa en un solo lugar.
-            </p>
-            
-            {/* Action Buttons */}
-            <div className="mb-8 space-y-3">
-              <div className="space-x-4">
-                <Link 
-                  href="/demo"
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium inline-block"
-                >
-                  🚀 Explorar Demo
-                </Link>
-                <Link 
-                  href="/dashboard"
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium inline-block"
-                >
-                  📊 Ir al Dashboard
-                </Link>
-                <Link 
-                  href="/working"
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium inline-block"
-                >
-                  ✅ Ver Estado
-                </Link>
-              </div>
-              
-              <div className="text-sm text-gray-500 bg-blue-50 p-3 rounded-lg">
-                <strong>💡 Modo Demo:</strong> Explora todas las funcionalidades sin registrarte. 
-                Sistema completamente funcional para probar antes de implementar autenticación.
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 border rounded-lg">
-                <h3 className="font-semibold text-blue-600">Dashboard</h3>
-                <p className="text-sm text-gray-600">Vista integral de tus finanzas</p>
-              </div>
-              <div className="p-4 border rounded-lg">
-                <h3 className="font-semibold text-green-600">Balances</h3>
-                <p className="text-sm text-gray-600">Información contable en tiempo real</p>
-              </div>
-              <div className="p-4 border rounded-lg">
-                <h3 className="font-semibold text-purple-600">Proyecciones</h3>
-                <p className="text-sm text-gray-600">Análisis predictivo financiero</p>
-              </div>
-            </div>
+    <div className="min-h-screen bg-gray-50">
+      <Header 
+        title="Inicio"
+        subtitle="Bienvenido a ContaPyme"
+        actions={
+          <div className="flex space-x-2">
+            <Link href="/design-system">
+              <Button variant="outline" size="sm">Sistema de Diseño</Button>
+            </Link>
+            <Link href="/dashboard">
+              <Button variant="primary" size="sm">Dashboard</Button>
+            </Link>
           </div>
+        }
+      />
+
+      <main className="max-w-6xl mx-auto py-12 px-4">
+        {/* Hero Section */}
+        <div className="text-center mb-12">
+          <div className="mb-8">
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+              ContaPyme
+            </h1>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Sistema Contable Integral para PyMEs chilenas con análisis automático de formularios F29
+            </p>
+          </div>
+
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row justify-center gap-4 mb-8">
+            <Link href="/demo">
+              <Button variant="primary" size="lg">
+                🚀 Explorar Demo
+              </Button>
+            </Link>
+            <Link href="/dashboard">
+              <Button variant="success" size="lg">
+                📊 Ir al Dashboard
+              </Button>
+            </Link>
+            <Link href="/working">
+              <Button variant="outline" size="lg">
+                ✅ Ver Estado del Sistema
+              </Button>
+            </Link>
+          </div>
+
+          {/* Info Banner */}
+          <Card variant="flat" className="bg-blue-50 border border-blue-200 max-w-3xl mx-auto">
+            <CardContent className="p-6">
+              <div className="flex items-start space-x-3">
+                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-white text-sm">💡</span>
+                </div>
+                <div className="text-left">
+                  <p className="text-blue-900 font-medium mb-1">Modo Demo Activo</p>
+                  <p className="text-blue-700 text-sm">
+                    Explora todas las funcionalidades sin registrarte. 
+                    Sistema completamente funcional con análisis F29 automático.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </div>
-    </main>
+
+        {/* Features Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+          <Card hover={true} variant="elevated">
+            <CardHeader>
+              <div className="w-12 h-12 bg-blue-100 rounded-xl mb-4 flex items-center justify-center">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <CardTitle>Dashboard Integral</CardTitle>
+              <CardDescription>
+                Vista completa de la salud financiera de tu empresa con métricas en tiempo real
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card hover={true} variant="elevated">
+            <CardHeader>
+              <div className="w-12 h-12 bg-green-100 rounded-xl mb-4 flex items-center justify-center">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <CardTitle>Análisis F29 Automático</CardTitle>
+              <CardDescription>
+                Sube tu formulario F29 y obtén análisis detallado con 85-95% de confiabilidad
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card hover={true} variant="elevated">
+            <CardHeader>
+              <div className="w-12 h-12 bg-purple-100 rounded-xl mb-4 flex items-center justify-center">
+                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+              </div>
+              <CardTitle>Análisis Comparativo</CardTitle>
+              <CardDescription>
+                Compara múltiples períodos y obtén insights automáticos de tendencias y estacionalidad
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+
+        {/* Featured Module */}
+        <Card variant="bordered" className="border-blue-200">
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50">
+            <div className="flex items-center space-x-4">
+              <div className="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <div>
+                <CardTitle className="text-xl">Módulo Contabilidad</CardTitle>
+                <CardDescription className="text-base">
+                  ✅ Completamente funcional con análisis F29 automático
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-3">Funcionalidades Principales:</h4>
+                <ul className="space-y-2 text-sm text-gray-700">
+                  <li className="flex items-center">
+                    <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
+                    Análisis individual de formularios F29
+                  </li>
+                  <li className="flex items-center">
+                    <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
+                    Análisis comparativo temporal (hasta 24 períodos)
+                  </li>
+                  <li className="flex items-center">
+                    <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
+                    Detección automática de códigos fiscales
+                  </li>
+                  <li className="flex items-center">
+                    <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
+                    Validación matemática de consistencia
+                  </li>
+                  <li className="flex items-center">
+                    <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
+                    Insights automáticos en español
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-3">Estadísticas del Sistema:</h4>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                    <span className="text-sm font-medium text-blue-900">Confiabilidad</span>
+                    <span className="text-sm font-bold text-blue-600">85-95%</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                    <span className="text-sm font-medium text-green-900">Estrategias de Parsing</span>
+                    <span className="text-sm font-bold text-green-600">4 métodos</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
+                    <span className="text-sm font-medium text-purple-900">Estado del Sistema</span>
+                    <span className="text-sm font-bold text-purple-600">100% Funcional</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="mt-6 flex flex-col sm:flex-row gap-3">
+              <Link href="/accounting/f29-analysis">
+                <Button variant="primary">📄 Análisis F29 Individual</Button>
+              </Link>
+              <Link href="/accounting/f29-comparative">
+                <Button variant="success">📊 Análisis Comparativo</Button>
+              </Link>
+              <Link href="/accounting">
+                <Button variant="outline">Ver Módulo Completo</Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </main>
+    </div>
   )
 }
