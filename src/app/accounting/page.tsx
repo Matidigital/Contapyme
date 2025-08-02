@@ -99,23 +99,65 @@ export default function AccountingPage() {
             )}
           </div>
 
-          {/* F29 Analysis Section */}
+          {/* Analysis Tools Section */}
           <div className="mb-8">
-            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl shadow-lg mb-6 overflow-hidden">
-              <div className="px-8 py-6 text-white">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                    <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
+            <h3 className="text-xl font-semibold text-gray-900 mb-6">Herramientas de Análisis</h3>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* F29 Analysis */}
+              <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl shadow-lg overflow-hidden">
+                <div className="px-8 py-6 text-white">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                      <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">Análisis Formulario F29</h3>
+                      <p className="text-indigo-100">Analiza tu situación fiscal con IA</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-2xl font-bold">Análisis Formulario F29</h3>
-                    <p className="text-indigo-100">Sube tu formulario F29 y obtén análisis detallado de tu situación fiscal</p>
+                  <div className="mt-6">
+                    <Link href="/accounting/f29-analysis" className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-6 py-3 rounded-lg font-medium inline-flex items-center space-x-2 transition-all">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      <span>Iniciar Análisis F29</span>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+
+              {/* RCV Analysis */}
+              <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl shadow-lg overflow-hidden">
+                <div className="px-8 py-6 text-white">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                      <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-6m-4 0H3m2 0h6M7 3h10M9 7h6m-6 4h6m-6 4h6" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold">Análisis RCV - Proveedores</h3>
+                      <p className="text-emerald-100">Identifica tus proveedores principales</p>
+                    </div>
+                  </div>
+                  <div className="mt-6">
+                    <Link href="/accounting/rcv-analysis" className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-6 py-3 rounded-lg font-medium inline-flex items-center space-x-2 transition-all">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                      <span>Analizar RCV</span>
+                    </Link>
                   </div>
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* F29 Demo Section */}
+          <div className="mb-8">
 
             <div className="bg-white rounded-xl shadow-lg p-8">
               <div className="max-w-4xl mx-auto">
