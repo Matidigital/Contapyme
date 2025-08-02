@@ -96,17 +96,48 @@ async function extractWithClaude(file: File): Promise<F29Data | null> {
       return null;
     }
     
-    console.log('🟣 Estrategia inteligente: Claude analiza PDF como imagen...');
+    console.log('🟣 Estrategia simple: Extraer texto y enviar a Claude...');
     
-    // ESTRATEGIA INTELIGENTE: Convertir PDF a imagen y enviar a Claude (igual que tú haces)
-    const pdfImageBase64 = await convertPDFToImage(file);
+    // ESTRATEGIA SIMPLE PERO EFECTIVA: Extraer texto del PDF y enviar a Claude
+    const arrayBuffer = await file.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
     
-    if (!pdfImageBase64) {
-      console.warn('⚠️ No se pudo convertir PDF a imagen');
+    // Intentar extraer texto usando diferentes encodings
+    let extractedText = '';
+    
+    try {
+      // UTF-8
+      const decoder = new TextDecoder('utf-8');
+      extractedText = decoder.decode(uint8Array);
+    } catch {
+      try {
+        // Latin1
+        const decoder = new TextDecoder('latin1');
+        extractedText = decoder.decode(uint8Array);
+      } catch {
+        // Fallback: caracteres directos
+        extractedText = String.fromCharCode(...uint8Array);
+      }
+    }
+    
+    console.log(`📝 Texto extraído: ${extractedText.length} caracteres`);
+    
+    if (extractedText.length < 100) {
+      console.warn('⚠️ Muy poco texto extraído del PDF');
       return null;
     }
     
-    console.log('📡 Enviando imagen del F29 a Claude para análisis visual...');
+    // Buscar patrones típicos de F29 para validar que es el documento correcto
+    const hasF29Patterns = /\b(511|538|563|062|077|151)\b/.test(extractedText) ||
+                          /formulario.*29/i.test(extractedText) ||
+                          /servicio.*impuestos/i.test(extractedText);
+    
+    if (!hasF29Patterns) {
+      console.warn('⚠️ El documento no parece ser un F29 válido');
+      return null;
+    }
+    
+    console.log('📡 Enviando texto del F29 a Claude para análisis...');
     
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -120,52 +151,45 @@ async function extractWithClaude(file: File): Promise<F29Data | null> {
         max_tokens: 1000,
         messages: [{
           role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: `Analiza este formulario F29 chileno. Eres un experto contador y necesitas extraer los datos específicos del documento.
+          content: `Analiza este texto extraído de un formulario F29 chileno. Eres un experto contador especializado en formularios tributarios chilenos.
 
-INSTRUCCIONES CRÍTICAS:
-1. Lee VISUALMENTE el formulario F29 como un documento oficial
-2. Extrae los valores exactos que ves en los campos específicos
-3. NO inventes valores, solo usa lo que realmente ves
-4. Los códigos aparecen en casillas numeradas (ej: casilla 511, 538, etc.)
+TEXTO DEL FORMULARIO F29:
+${extractedText.substring(0, 8000)}
 
-DATOS A EXTRAER:
+INSTRUCCIONES:
+1. Encuentra los códigos específicos del formulario F29 y sus valores
+2. Los códigos pueden aparecer como "511", "Código 511", "511:", "(511)", etc.
+3. Los valores están cerca de los códigos y pueden tener separadores de miles
+4. Extrae información básica del contribuyente
+5. SOLO usa valores que realmente encuentres en el texto
+
+CÓDIGOS F29 A BUSCAR:
+- 511: CRÉD. IVA POR DCTOS. ELECTRÓNICOS
+- 538: TOTAL DÉBITOS  
+- 563: BASE IMPONIBLE
+- 062: PPM NETO DETERMINADO
+- 077: REMANENTE DE CRÉDITO FISC.
+- 151: RETENCIÓN TASA LEY 21.133
+
+INFORMACIÓN BÁSICA:
 - RUT del contribuyente (formato XX.XXX.XXX-X)
-- FOLIO del formulario (número largo)
-- PERÍODO tributario (YYYYMM o fecha)
+- FOLIO del formulario
+- PERÍODO tributario (YYYYMM)
 - Razón Social de la empresa
-- Código 511: CRÉD. IVA POR DCTOS. ELECTRÓNICOS
-- Código 538: TOTAL DÉBITOS  
-- Código 563: BASE IMPONIBLE
-- Código 062: PPM NETO DETERMINADO
-- Código 077: REMANENTE DE CRÉDITO FISC.
-- Código 151: RETENCIÓN TASA LEY 21.133
 
-FORMATO DE RESPUESTA (JSON únicamente):
+Responde ÚNICAMENTE con JSON válido:
 {
-  "rut": "valor_real_del_documento",
-  "folio": "numero_real_del_folio",
-  "periodo": "periodo_real",
-  "razonSocial": "nombre_real_empresa",
-  "codigo511": numero_entero_sin_separadores,
-  "codigo538": numero_entero_sin_separadores,
-  "codigo563": numero_entero_sin_separadores,
-  "codigo062": numero_entero_sin_separadores,
-  "codigo077": numero_entero_sin_separadores,
-  "codigo151": numero_entero_sin_separadores
+  "rut": "rut_encontrado_o_vacio",
+  "folio": "folio_encontrado_o_vacio",
+  "periodo": "periodo_encontrado_o_vacio",
+  "razonSocial": "empresa_encontrada_o_vacia",
+  "codigo511": numero_entero_sin_separadores_o_0,
+  "codigo538": numero_entero_sin_separadores_o_0,
+  "codigo563": numero_entero_sin_separadores_o_0,
+  "codigo062": numero_entero_sin_separadores_o_0,
+  "codigo077": numero_entero_sin_separadores_o_0,
+  "codigo151": numero_entero_sin_separadores_o_0
 }`
-            },
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'application/pdf',
-                data: pdfImageBase64
-              }
-            }
-          ]
         }]
       })
     });
@@ -185,8 +209,8 @@ FORMATO DE RESPUESTA (JSON únicamente):
       } else if (response.status === 429) {
         console.error('⏰ Rate limit excedido - espera un momento');
       } else if (response.status === 400) {
-        console.error('📄 Error en el formato del request o contenido');
-        console.log('🔍 Muestra del contenido enviado:', extractedText.substring(0, 200));
+        console.error('📄 Error en el formato del request o PDF');
+        console.log('🔍 Tamaño del PDF enviado:', pdfImageBase64.length, 'caracteres');
       }
       
       return null;
@@ -255,25 +279,7 @@ FORMATO DE RESPUESTA (JSON únicamente):
   }
 }
 
-async function convertPDFToImage(file: File): Promise<string | null> {
-  try {
-    console.log('🖼️ Estrategia profesional: PDF → Imagen → Claude análisis visual');
-    
-    // ESTRATEGIA SIMPLE Y ROBUSTA: Enviar PDF directamente como base64
-    // Claude 3.5 puede analizar PDFs directamente como imágenes
-    const arrayBuffer = await file.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-    
-    console.log(`📄 PDF convertido a base64: ${base64.length} caracteres`);
-    
-    // Claude puede analizar PDFs directamente - mucho más simple y robusto
-    return base64;
-    
-  } catch (error) {
-    console.error('❌ Error procesando PDF:', error);
-    return null;
-  }
-}
+// Función removida - ya no es necesaria con el enfoque de análisis de texto
 
 async function extractWithBasicParser(file: File): Promise<F29Data | null> {
   try {
