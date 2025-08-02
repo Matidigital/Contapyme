@@ -30,53 +30,41 @@ export interface F29Data {
 }
 
 export async function parseF29(file: File): Promise<F29Data> {
-  console.log('🚀 F29 Parser: Iniciando extracción robusta...');
+  console.log('🚀 F29 Parser: Análisis con IA de alta precisión...');
   console.log(`📄 Archivo recibido: ${file.name} (${file.size} bytes)`);
   
   try {
-    // ESTRATEGIA SIMPLIFICADA: Parser básico primero (más confiable)
-    console.log('🔧 Iniciando con parser básico...');
-    const basicResult = await extractWithBasicParser(file);
-    
-    if (basicResult && basicResult.codigo563 > 0) {
-      console.log('✅ Parser básico encontró datos válidos!');
-      return basicResult;
-    }
-    
-    // Si el parser básico no encuentra nada, intentar Claude como backup
-    console.log('🔍 Verificando Claude AI como backup...');
+    // ESTRATEGIA ÚNICA: SOLO CLAUDE AI (máxima precisión)
+    console.log('🔍 Verificando Claude AI...');
     const apiKey = process.env.ANTHROPIC_API_KEY;
     
-    if (apiKey) {
-      console.log('🟣 Intentando Claude AI como backup...');
-      const claudeResult = await extractWithClaude(file);
-      
-      if (claudeResult) {
-        console.log('✅ Claude AI procesó el PDF exitosamente!');
-        return claudeResult;
-      }
+    if (!apiKey) {
+      console.error('❌ ANTHROPIC_API_KEY no está configurada');
+      throw new Error('CLAUDE_REQUIRED: Se requiere Claude AI para análisis preciso de F29');
     }
     
-    // Si nada funciona, devolver datos básicos extraídos
-    if (basicResult) {
-      console.log('⚠️ Devolviendo datos parciales del parser básico');
-      return basicResult;
+    console.log('🤖 Iniciando análisis con Claude AI...');
+    const claudeResult = await extractWithClaude(file);
+    
+    if (claudeResult) {
+      console.log(`✅ Claude AI completó análisis: ${claudeResult.confidence}% confianza`);
+      return claudeResult;
     }
     
-    throw new Error('NO_DATA_FOUND: No se pudieron extraer datos del PDF');
+    // Si Claude falla, intentar una vez más con configuración diferente
+    console.log('🔄 Reintentando Claude AI con configuración alternativa...');
+    const retryResult = await extractWithClaudeRetry(file);
+    
+    if (retryResult) {
+      console.log('✅ Claude AI exitoso en segundo intento');
+      return retryResult;
+    }
+    
+    throw new Error('CLAUDE_FAILED: Claude AI no pudo procesar el PDF');
     
   } catch (error) {
-    console.error('❌ Error en F29 Parser:', error);
-    
-    // Intentar parser de emergencia ultra-simple
-    try {
-      console.log('🚨 Intentando parser de emergencia...');
-      const emergencyResult = await extractEmergencyData(file);
-      return emergencyResult;
-    } catch (emergencyError) {
-      console.error('❌ Parser de emergencia también falló');
-      throw new Error('TOTAL_FAILURE: No se pudieron extraer datos con ningún método');
-    }
+    console.error('❌ Error en análisis IA:', error);
+    throw new Error(`IA_ERROR: ${error instanceof Error ? error.message : 'Error desconocido en IA'}`);
   }
 }
 
@@ -122,14 +110,17 @@ async function extractWithClaude(file: File): Promise<F29Data | null> {
       return null;
     }
     
-    // Buscar patrones típicos de F29 para validar que es el documento correcto
+    // Validación mejorada para F29
     const hasF29Patterns = /\b(511|538|563|062|077|151)\b/.test(extractedText) ||
                           /formulario.*29/i.test(extractedText) ||
-                          /servicio.*impuestos/i.test(extractedText);
+                          /servicio.*impuestos/i.test(extractedText) ||
+                          /declaraci[oó]n.*mensual/i.test(extractedText) ||
+                          /iva/i.test(extractedText);
+    
+    console.log(`📋 Patrones F29 encontrados: ${hasF29Patterns ? 'SÍ' : 'NO'}`);
     
     if (!hasF29Patterns) {
-      console.warn('⚠️ El documento no parece ser un F29 válido');
-      return null;
+      console.warn('⚠️ Documento no parece F29, pero continuando análisis...');
     }
     
     console.log('📡 Enviando texto del F29 a Claude para análisis...');
@@ -146,44 +137,43 @@ async function extractWithClaude(file: File): Promise<F29Data | null> {
         max_tokens: 1000,
         messages: [{
           role: 'user',
-          content: `Analiza este texto extraído de un formulario F29 chileno. Eres un experto contador especializado en formularios tributarios chilenos.
+          content: `Eres un experto contador chileno especialista en formularios F29. Analiza este texto extraído de un formulario F29 chileno y extrae los datos EXACTOS.
 
 TEXTO DEL FORMULARIO F29:
-${extractedText.substring(0, 8000)}
+${extractedText.substring(0, 10000)}
 
-INSTRUCCIONES:
-1. Encuentra los códigos específicos del formulario F29 y sus valores
-2. Los códigos pueden aparecer como "511", "Código 511", "511:", "(511)", etc.
-3. Los valores están cerca de los códigos y pueden tener separadores de miles
-4. Extrae información básica del contribuyente
-5. SOLO usa valores que realmente encuentres en el texto
+MISIÓN CRÍTICA:
+- Encuentra SOLO los valores que realmente existen en el documento
+- NO inventes ni estimes valores
+- Si no encuentras un código específico, usa 0
+- Los códigos aparecen como números de 3 dígitos (ej: 511, 538, 563)
 
-CÓDIGOS F29 A BUSCAR:
-- 511: CRÉD. IVA POR DCTOS. ELECTRÓNICOS
-- 538: TOTAL DÉBITOS  
-- 563: BASE IMPONIBLE
-- 062: PPM NETO DETERMINADO
-- 077: REMANENTE DE CRÉDITO FISC.
-- 151: RETENCIÓN TASA LEY 21.133
+CÓDIGOS F29 PRIORITARIOS (busca exactamente estos):
+- CÓDIGO 511: CRÉD. IVA POR DCTOS. ELECTRÓNICOS (valor asociado)
+- CÓDIGO 538: TOTAL DÉBITOS (valor asociado)  
+- CÓDIGO 563: BASE IMPONIBLE (valor asociado)
+- CÓDIGO 062: PPM NETO DETERMINADO (valor asociado)
+- CÓDIGO 077: REMANENTE DE CRÉDITO FISC. (valor asociado)
+- CÓDIGO 151: RETENCIÓN TASA LEY 21.133 (valor asociado)
 
-INFORMACIÓN BÁSICA:
-- RUT del contribuyente (formato XX.XXX.XXX-X)
-- FOLIO del formulario
-- PERÍODO tributario (YYYYMM)
-- Razón Social de la empresa
+DATOS CONTRIBUYENTE:
+- RUT: formato XX.XXX.XXX-X (busca exactamente este patrón)
+- FOLIO: número largo del formulario
+- PERÍODO: YYYYMM o fecha del período tributario
+- RAZÓN SOCIAL: nombre completo de la empresa
 
-Responde ÚNICAMENTE con JSON válido:
+FORMATO RESPUESTA (solo JSON, sin explicaciones):
 {
-  "rut": "rut_encontrado_o_vacio",
-  "folio": "folio_encontrado_o_vacio",
-  "periodo": "periodo_encontrado_o_vacio",
-  "razonSocial": "empresa_encontrada_o_vacia",
-  "codigo511": numero_entero_sin_separadores_o_0,
-  "codigo538": numero_entero_sin_separadores_o_0,
-  "codigo563": numero_entero_sin_separadores_o_0,
-  "codigo062": numero_entero_sin_separadores_o_0,
-  "codigo077": numero_entero_sin_separadores_o_0,
-  "codigo151": numero_entero_sin_separadores_o_0
+  "rut": "XX.XXX.XXX-X_del_documento",
+  "folio": "numero_folio_real",
+  "periodo": "YYYYMM_real",
+  "razonSocial": "NOMBRE_EMPRESA_REAL",
+  "codigo511": valor_numerico_real_sin_puntos,
+  "codigo538": valor_numerico_real_sin_puntos,
+  "codigo563": valor_numerico_real_sin_puntos,
+  "codigo062": valor_numerico_real_sin_puntos,
+  "codigo077": valor_numerico_real_sin_puntos,
+  "codigo151": valor_numerico_real_sin_puntos
 }`
         }]
       })
@@ -231,8 +221,14 @@ Responde ÚNICAMENTE con JSON válido:
     const parsed = JSON.parse(jsonMatch[0]);
     
     // Validar valores razonables
-    if (parsed.codigo563 > 100000000000) {
-      console.warn('⚠️ Valores sospechosos de Claude');
+    if (parsed.codigo563 > 100000000000 || parsed.codigo538 > 100000000000) {
+      console.warn('⚠️ Valores demasiado altos, parecen erróneos');
+      return null;
+    }
+    
+    // Validar que se encontraron datos mínimos
+    if (parsed.codigo563 === 0 && parsed.codigo538 === 0 && parsed.codigo511 === 0) {
+      console.warn('⚠️ No se encontraron códigos principales en el análisis');
       return null;
     }
     
@@ -270,6 +266,118 @@ Responde ÚNICAMENTE con JSON válido:
     
   } catch (error) {
     console.error('❌ Error calling Claude:', error);
+    return null;
+  }
+}
+
+async function extractWithClaudeRetry(file: File): Promise<F29Data | null> {
+  try {
+    console.log('🔄 Claude retry: Usando estrategia alternativa...');
+    
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) return null;
+    
+    // Extraer texto con encoding alternativo
+    const arrayBuffer = await file.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    
+    let extractedText = '';
+    try {
+      const decoder = new TextDecoder('latin1');
+      extractedText = decoder.decode(uint8Array);
+    } catch {
+      extractedText = String.fromCharCode(...uint8Array);
+    }
+    
+    console.log(`📝 Retry text length: ${extractedText.length}`);
+    
+    if (extractedText.length < 100) return null;
+    
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 1500,
+        temperature: 0.1,
+        messages: [{
+          role: 'user',
+          content: `ANÁLISIS EXPERTO F29 - SEGUNDA PASADA
+
+Texto del documento:
+${extractedText.substring(0, 12000)}
+
+INSTRUCCIONES ESPECÍFICAS:
+1. Busca EXACTAMENTE estos patrones de códigos F29
+2. Los valores están inmediatamente después del código
+3. Pueden tener formato: "511 123456" o "511: 123.456" o "511    123456"
+4. Extrae solo números reales del documento
+
+CÓDIGOS CRÍTICOS A ENCONTRAR:
+511, 538, 563, 062, 077, 151
+
+Responde SOLO JSON:
+{
+  "rut": "rut_exacto_del_documento",
+  "folio": "folio_exacto",
+  "periodo": "periodo_exacto",
+  "razonSocial": "razon_social_exacta",
+  "codigo511": numero_entero,
+  "codigo538": numero_entero,
+  "codigo563": numero_entero,
+  "codigo062": numero_entero,
+  "codigo077": numero_entero,
+  "codigo151": numero_entero
+}`
+        }]
+      })
+    });
+    
+    if (!response.ok) {
+      console.error('❌ Claude retry failed:', response.status);
+      return null;
+    }
+    
+    const data = await response.json();
+    const content = data.content?.[0]?.text;
+    
+    if (!content) return null;
+    
+    const jsonMatch = content.match(/\{[\s\S]*?\}/);
+    if (!jsonMatch) return null;
+    
+    const parsed = JSON.parse(jsonMatch[0]);
+    
+    const result: F29Data = {
+      rut: parsed.rut || '',
+      folio: parsed.folio || '',
+      periodo: parsed.periodo || '',
+      razonSocial: parsed.razonSocial || '',
+      codigo511: parseInt(parsed.codigo511) || 0,
+      codigo538: parseInt(parsed.codigo538) || 0,
+      codigo563: parseInt(parsed.codigo563) || 0,
+      codigo062: parseInt(parsed.codigo062) || 0,
+      codigo077: parseInt(parsed.codigo077) || 0,
+      codigo151: parseInt(parsed.codigo151) || 0,
+      comprasNetas: 0,
+      ivaDeterminado: 0,
+      totalAPagar: 0,
+      margenBruto: 0,
+      confidence: 90,
+      method: 'claude-ai-retry'
+    };
+    
+    calculateFields(result);
+    
+    console.log('✅ Claude retry successful');
+    return result;
+    
+  } catch (error) {
+    console.error('❌ Claude retry error:', error);
     return null;
   }
 }
