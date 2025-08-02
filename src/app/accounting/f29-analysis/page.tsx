@@ -19,7 +19,7 @@ interface F29Results {
   periodo: string;
   codigo049: number; // Préstamo Solidario
   codigo538: number; // Débito Fiscal
-  codigo511: number; // Crédito Fiscal
+  codigo537: number; // Total Créditos
   codigo062: number; // PPM
   codigo077: number; // Remanente
   codigo563: number; // Ventas Netas
@@ -160,7 +160,7 @@ export default function F29AnalysisPage() {
       ['Período', result.periodo, ''],
       ['Ventas Netas', result.codigo563.toString(), '563'],
       ['Débito Fiscal', result.codigo538.toString(), '538'],
-      ['Crédito Fiscal', result.codigo511.toString(), '511'],
+      ['Total Créditos', result.codigo537.toString(), '537'],
       ['PPM', result.codigo062.toString(), '062'],
       ['Remanente', result.codigo077.toString(), '077'],
       ...(result.codigo049 > 0 ? [['Préstamo Solidario', result.codigo049.toString(), '049']] : []),
@@ -375,13 +375,13 @@ export default function F29AnalysisPage() {
                   <p className="text-xs text-purple-600">Código 538</p>
                 </div>
 
-                {/* Crédito Fiscal */}
+                {/* Total Créditos */}
                 <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
-                  <h4 className="text-sm font-medium text-orange-700 mb-1">Crédito Fiscal</h4>
+                  <h4 className="text-sm font-medium text-orange-700 mb-1">Total Créditos</h4>
                   <p className="text-2xl font-bold text-orange-900">
-                    {formatCurrency(result.codigo511)}
+                    {formatCurrency(result.codigo537)}
                   </p>
-                  <p className="text-xs text-orange-600">Código 511</p>
+                  <p className="text-xs text-orange-600">Código 537</p>
                 </div>
 
                 {/* PPM */}
@@ -432,8 +432,8 @@ export default function F29AnalysisPage() {
                   </p>
                   <p className="text-xs text-gray-600">
                     {result.ivaDeterminado > 0 
-                      ? `IVA + PPM${result.codigo151 > 0 ? ' + Honorarios' : ''}`
-                      : `Solo PPM${result.codigo151 > 0 ? ' + Honorarios' : ''} (IVA negativo)`}
+                      ? `IVA + PPM${result.codigo049 > 0 ? ' + Préstamo Sol.' : ''}${result.codigo151 > 0 ? ' + Honorarios' : ''}`
+                      : `PPM${result.codigo049 > 0 ? ' + Préstamo Sol.' : ''}${result.codigo151 > 0 ? ' + Honorarios' : ''} (IVA negativo)`}
                   </p>
                 </div>
               </div>

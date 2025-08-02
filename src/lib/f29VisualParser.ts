@@ -12,7 +12,7 @@ export interface F29Data {
   
   // Códigos principales
   codigo049: number; // PRÉSTAMO SOLIDARIO (Ret. 3% Rta 42 N°1)
-  codigo511: number; // CRÉD. IVA POR DCTOS. ELECTRÓNICOS
+  codigo537: number; // TOTAL CRÉDITOS
   codigo538: number; // TOTAL DÉBITOS
   codigo563: number; // BASE IMPONIBLE
   codigo062: number; // PPM NETO DETERMINADO
@@ -117,7 +117,7 @@ EXTRAE EXACTAMENTE estos valores:
 - PERIODO tributario (formato YYYYMM)
 - RAZÓN SOCIAL de la empresa
 - Código 049: PRÉSTAMO SOLIDARIO / Ret. 3% Rta 42 N°1
-- Código 511: CRÉD. IVA POR DCTOS. ELECTRÓNICOS
+- Código 537: TOTAL CRÉDITOS
 - Código 538: TOTAL DÉBITOS
 - Código 563: BASE IMPONIBLE
 - Código 062: PPM NETO DETERMINADO
@@ -137,7 +137,7 @@ Responde ÚNICAMENTE con este JSON:
   "periodo": "YYYYMM",
   "razonSocial": "NOMBRE EMPRESA",
   "codigo049": numero,
-  "codigo511": numero,
+  "codigo537": numero,
   "codigo538": numero,
   "codigo563": numero,
   "codigo062": numero,
@@ -193,7 +193,7 @@ Responde ÚNICAMENTE con este JSON:
       periodo: parsed.periodo || '',
       razonSocial: parsed.razonSocial || '',
       codigo049: parseInt(parsed.codigo049) || 0,
-      codigo511: parseInt(parsed.codigo511) || 0,
+      codigo537: parseInt(parsed.codigo537) || 0,
       codigo538: parseInt(parsed.codigo538) || 0,
       codigo563: parseInt(parsed.codigo563) || 0,
       codigo062: parseInt(parsed.codigo062) || 0,
@@ -213,7 +213,7 @@ Responde ÚNICAMENTE con este JSON:
     
     console.log('✅ Resultado del análisis visual:', {
       rut: result.rut,
-      codigo511: result.codigo511.toLocaleString(),
+      codigo537: result.codigo537.toLocaleString(),
       codigo538: result.codigo538.toLocaleString(),
       ivaDeterminado: result.ivaDeterminado.toLocaleString(),
       totalAPagar: result.totalAPagar.toLocaleString()
@@ -229,25 +229,25 @@ Responde ÚNICAMENTE con este JSON:
 
 // Calcula campos derivados
 function calculateFields(result: F29Data) {
-  // Compras Netas = Código 511 (Crédito Fiscal) ÷ 0.19
-  if (result.codigo511 > 0) {
-    result.comprasNetas = Math.round(result.codigo511 / 0.19);
+  // Compras Netas = Código 537 (Total Créditos) ÷ 0.19
+  if (result.codigo537 > 0) {
+    result.comprasNetas = Math.round(result.codigo537 / 0.19);
   }
   
   // IVA Determinado - usar código 089 si está disponible
   if (result.codigo089 > 0) {
     result.ivaDeterminado = result.codigo089;
-  } else if (result.codigo538 > 0 && result.codigo511 > 0) {
-    result.ivaDeterminado = result.codigo538 - result.codigo511;
+  } else if (result.codigo538 > 0 && result.codigo537 > 0) {
+    result.ivaDeterminado = result.codigo538 - result.codigo537;
   }
   
   // Total a Pagar (basado en ejemplo real)
-  // Si tenemos IVA determinado (089), usar ese + PPM
+  // Si tenemos IVA determinado (089), usar ese + PPM + Préstamo Solidario
   if (result.codigo089 > 0) {
-    result.totalAPagar = result.codigo089 + result.codigo062;
+    result.totalAPagar = result.codigo089 + result.codigo062 + result.codigo049;
   } else {
-    // Fórmula estándar
-    result.totalAPagar = Math.abs(result.ivaDeterminado) + result.codigo062 + result.codigo077;
+    // Fórmula estándar + Préstamo Solidario
+    result.totalAPagar = Math.abs(result.ivaDeterminado) + result.codigo062 + result.codigo077 + result.codigo049;
   }
   
   // Margen Bruto = Ventas - Compras
