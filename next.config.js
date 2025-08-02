@@ -36,6 +36,17 @@ const nextConfig = {
       crypto: false,
     }
     
+    // Configuración específica para PDF.js worker
+    if (!isServer) {
+      config.output.globalObject = 'self';
+    }
+    
+    // Manejar workers correctamente
+    config.module.rules.push({
+      test: /\.worker\.js$/,
+      use: { loader: 'worker-loader' },
+    });
+    
     return config
   }
 }
