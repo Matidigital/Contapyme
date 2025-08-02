@@ -92,10 +92,10 @@ async function extractWithClaude(file: File): Promise<F29Data | null> {
     // Claude no puede procesar PDFs directamente, necesitamos extraer texto primero
     const pdfjs = await import('pdfjs-dist');
     
-    // Configurar worker
+    // Configurar worker para entorno servidor (Netlify)
     if (typeof window === 'undefined') {
-      const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.entry');
-      pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+      // En servidor, usar worker desde CDN
+      pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js`;
     }
     
     console.log('📄 Extrayendo texto del PDF...');

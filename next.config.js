@@ -21,7 +21,7 @@ const nextConfig = {
   
   // Configuración webpack para Netlify
   webpack: (config, { isServer, dev }) => {
-    // Configuración para pdfjs-dist
+    // Configuración para pdfjs-dist sin worker-loader
     config.resolve.alias = {
       ...config.resolve.alias,
       canvas: false,
@@ -36,16 +36,16 @@ const nextConfig = {
       crypto: false,
     }
     
-    // Configuración específica para PDF.js worker
+    // Configuración específica para PDF.js
     if (!isServer) {
       config.output.globalObject = 'self';
+      
+      // Excluir pdfjs worker de webpack processing
+      config.externals = config.externals || [];
+      config.externals.push({
+        'pdfjs-dist/build/pdf.worker.entry': 'pdfjsWorker'
+      });
     }
-    
-    // Manejar workers correctamente
-    config.module.rules.push({
-      test: /\.worker\.js$/,
-      use: { loader: 'worker-loader' },
-    });
     
     return config
   }
