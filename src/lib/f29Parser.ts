@@ -227,7 +227,7 @@ FORMATO RESPUESTA (JSON únicamente):
 
 async function extractWithClaude(file: File): Promise<F29Data | null> {
   try {
-    console.log('🔧 extractWithClaude: Iniciando...');
+    console.log('🔧 extractWithClaude: Iniciando análisis visual con Claude...');
     const apiKey = process.env.ANTHROPIC_API_KEY;
     
     if (!apiKey) {
@@ -235,7 +235,7 @@ async function extractWithClaude(file: File): Promise<F29Data | null> {
       return null;
     }
     
-    console.log('🟣 Estrategia simple: Extraer texto y enviar a Claude...');
+    console.log('🖼️ Estrategia visual: Enviar PDF como imagen a Claude...');
     console.log('📁 Obteniendo arrayBuffer del archivo...');
     
     // ESTRATEGIA SIMPLE PERO EFECTIVA: Extraer texto del PDF y enviar a Claude
@@ -336,26 +336,91 @@ async function extractWithClaude(file: File): Promise<F29Data | null> {
     }
     
     console.log(`📝 Texto extraído: ${extractedText.length} caracteres`);
-    console.log(`📋 Muestra de texto: ${extractedText.substring(0, 500)}...`);
     
+    // NUEVA ESTRATEGIA: Si no hay texto, enviar PDF como imagen
     if (extractedText.length < 100) {
-      console.warn('⚠️ Muy poco texto extraído del PDF');
-      return null;
+      console.log('⚠️ Poco texto extraído, enviando PDF como imagen a Claude...');
+      
+      // Convertir PDF a base64
+      const base64PDF = Buffer.from(uint8Array).toString('base64');
+      console.log(`📸 PDF convertido a base64: ${base64PDF.length} caracteres`);
+      
+      // Limitar tamaño si es muy grande
+      const maxSize = 1000000; // 1MB en base64
+      const pdfData = base64PDF.length > maxSize 
+        ? base64PDF.substring(0, maxSize) 
+        : base64PDF;
+      
+      console.log('🤖 Enviando PDF como imagen a Claude para análisis visual...');
+    
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 1000,
+          messages: [{
+            role: 'user',
+            content: [{
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: 'application/pdf',
+                data: pdfData
+              }
+            }, {
+              type: 'text',
+              text: `Analiza este formulario F29 chileno y extrae TODOS los datos.
+
+CÓDIGOS F29 PRIORITARIOS:
+- CÓDIGO 511: CRÉD. IVA POR DCTOS. ELECTRÓNICOS
+- CÓDIGO 538: TOTAL DÉBITOS  
+- CÓDIGO 563: BASE IMPONIBLE
+- CÓDIGO 062: PPM NETO DETERMINADO
+- CÓDIGO 077: REMANENTE DE CRÉDITO FISC.
+- CÓDIGO 151: RETENCIÓN
+
+FORMATO RESPUESTA (solo JSON):
+{
+  "rut": "XX.XXX.XXX-X",
+  "folio": "numero_folio",
+  "periodo": "YYYYMM",
+  "razonSocial": "NOMBRE_EMPRESA",
+  "codigo511": numero,
+  "codigo538": numero,
+  "codigo563": numero,
+  "codigo062": numero,
+  "codigo077": numero,
+  "codigo151": numero
+}`
+            }]
+          }]
+        })
+      });
+      
+      // Procesar respuesta de imagen
+      if (response.ok) {
+        const data = await response.json();
+        const content = data.content?.[0]?.text;
+        if (content) {
+          console.log('📝 Claude analizó PDF como imagen:', content.substring(0, 200));
+          const jsonMatch = content.match(/\{[\s\S]*?\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            return createF29Result(parsed, 'claude-visual-analysis');
+          }
+        }
+      }
+      
+      console.log('⚠️ Análisis visual falló, intentando con texto...');
     }
     
-    // Validación mejorada para F29
-    const hasF29Patterns = /\b(511|538|563|062|077|151)\b/.test(extractedText) ||
-                          /formulario.*29/i.test(extractedText) ||
-                          /servicio.*impuestos/i.test(extractedText) ||
-                          /declaraci[oó]n.*mensual/i.test(extractedText) ||
-                          /iva/i.test(extractedText);
-    
-    console.log(`📋 Patrones F29 encontrados: ${hasF29Patterns ? 'SÍ' : 'NO'}`);
-    
-    if (!hasF29Patterns) {
-      console.warn('⚠️ Documento no parece F29, pero continuando análisis...');
-    }
-    
+    // Si llegamos aquí, tenemos texto para analizar
+    console.log(`📋 Muestra de texto: ${extractedText.substring(0, 500)}...`);
     console.log('📡 Enviando texto del F29 a Claude para análisis...');
     
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -370,43 +435,22 @@ async function extractWithClaude(file: File): Promise<F29Data | null> {
         max_tokens: 1000,
         messages: [{
           role: 'user',
-          content: `Eres un experto contador chileno especialista en formularios F29. Analiza este texto extraído de un formulario F29 chileno y extrae los datos EXACTOS.
+          content: `Eres un experto contador chileno. Analiza este texto de F29:
 
-TEXTO DEL FORMULARIO F29:
 ${extractedText.substring(0, 10000)}
 
-MISIÓN CRÍTICA:
-- Encuentra SOLO los valores que realmente existen en el documento
-- NO inventes ni estimes valores
-- Si no encuentras un código específico, usa 0
-- Los códigos aparecen como números de 3 dígitos (ej: 511, 538, 563)
-
-CÓDIGOS F29 PRIORITARIOS (busca exactamente estos):
-- CÓDIGO 511: CRÉD. IVA POR DCTOS. ELECTRÓNICOS (valor asociado)
-- CÓDIGO 538: TOTAL DÉBITOS (valor asociado)  
-- CÓDIGO 563: BASE IMPONIBLE (valor asociado)
-- CÓDIGO 062: PPM NETO DETERMINADO (valor asociado)
-- CÓDIGO 077: REMANENTE DE CRÉDITO FISC. (valor asociado)
-- CÓDIGO 151: RETENCIÓN TASA LEY 21.133 (valor asociado)
-
-DATOS CONTRIBUYENTE:
-- RUT: formato XX.XXX.XXX-X (busca exactamente este patrón)
-- FOLIO: número largo del formulario
-- PERÍODO: YYYYMM o fecha del período tributario
-- RAZÓN SOCIAL: nombre completo de la empresa
-
-FORMATO RESPUESTA (solo JSON, sin explicaciones):
+Extrae los códigos F29 y devuelve SOLO JSON con formato:
 {
-  "rut": "XX.XXX.XXX-X_del_documento",
-  "folio": "numero_folio_real",
-  "periodo": "YYYYMM_real",
-  "razonSocial": "NOMBRE_EMPRESA_REAL",
-  "codigo511": valor_numerico_real_sin_puntos,
-  "codigo538": valor_numerico_real_sin_puntos,
-  "codigo563": valor_numerico_real_sin_puntos,
-  "codigo062": valor_numerico_real_sin_puntos,
-  "codigo077": valor_numerico_real_sin_puntos,
-  "codigo151": valor_numerico_real_sin_puntos
+  "rut": "XX.XXX.XXX-X",
+  "folio": "numero",
+  "periodo": "YYYYMM",
+  "razonSocial": "nombre",
+  "codigo511": numero,
+  "codigo538": numero,
+  "codigo563": numero,
+  "codigo062": numero,  
+  "codigo077": numero,
+  "codigo151": numero
 }`
         }]
       })
@@ -825,6 +869,30 @@ async function extractWithBasicParser(file: File): Promise<F29Data | null> {
     console.error('❌ Error en parser básico:', error);
     return null;
   }
+}
+
+function createF29Result(parsed: any, method: string): F29Data {
+  const result: F29Data = {
+    rut: parsed.rut || '',
+    folio: parsed.folio || '',
+    periodo: parsed.periodo || '',
+    razonSocial: parsed.razonSocial || '',
+    codigo511: parseInt(parsed.codigo511) || 0,
+    codigo538: parseInt(parsed.codigo538) || 0,
+    codigo563: parseInt(parsed.codigo563) || 0,
+    codigo062: parseInt(parsed.codigo062) || 0,
+    codigo077: parseInt(parsed.codigo077) || 0,
+    codigo151: parseInt(parsed.codigo151) || 0,
+    comprasNetas: 0,
+    ivaDeterminado: 0,
+    totalAPagar: 0,
+    margenBruto: 0,
+    confidence: 95,
+    method: method
+  };
+  
+  calculateFields(result);
+  return result;
 }
 
 function calculateFields(result: F29Data) {
