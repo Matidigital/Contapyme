@@ -43,9 +43,9 @@ export async function parseF29(file: File): Promise<F29Data> {
       console.log('🔧 Para configurar: Netlify Dashboard → Environment Variables → Add:');
       console.log('   Key: ANTHROPIC_API_KEY');
       console.log('   Value: sk-ant-api03-...');
-      const result = getGuaranteedData();
-      result.method = 'no-api-key';
-      return result;
+      
+      // NO usar fallback - fallar claramente
+      throw new Error('CONFIGURAR_CLAUDE_API: No se puede extraer datos reales sin Claude AI');
     }
     
     // PASO 1: Intentar Claude AI
@@ -57,17 +57,24 @@ export async function parseF29(file: File): Promise<F29Data> {
       return claudeResult;
     }
     
-    // PASO 2: Si Claude falla, mostrar por qué
-    console.warn('❌ Claude AI falló - usando datos garantizados del PDF de ejemplo');
-    const result = getGuaranteedData();
-    result.method = 'claude-failed';
-    return result;
+    // PASO 2: Si Claude falla, NO usar fallback - mostrar error claro
+    console.error('❌ Claude AI falló - NO se pueden extraer datos reales');
+    throw new Error('CLAUDE_FALLO: No se pudieron extraer datos del PDF. Revisa la configuración de Claude AI.');
     
   } catch (error) {
     console.error('❌ Error en F29 Parser:', error);
-    const result = getGuaranteedData();
-    result.method = 'error-fallback';
-    return result;
+    
+    // Solo usar fallback en caso de error de programación, no de configuración
+    if (error instanceof Error && error.message.includes('CONFIGURAR_CLAUDE_API')) {
+      throw error; // Re-throw para que llegue al frontend
+    }
+    
+    if (error instanceof Error && error.message.includes('CLAUDE_FALLO')) {
+      throw error; // Re-throw para que llegue al frontend  
+    }
+    
+    // Solo para errores inesperados
+    throw new Error('ERROR_INESPERADO: Error técnico en el parser. Contacta soporte.');
   }
 }
 
