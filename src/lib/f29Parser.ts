@@ -45,9 +45,17 @@ export async function parseF29(file: File): Promise<F29Data> {
     
     console.log('🤖 Iniciando análisis con Claude AI...');
     
-    // TEMPORALMENTE DESHABILITAR PDF.js por problemas en Netlify
-    // Ir directo al método texto que funciona
-    console.log('🔄 Usando extracción de texto directo (PDF.js deshabilitado)...');
+    // INTENTAR PDF.js PRIMERO (mejor extracción de texto)
+    console.log('📄 Intentando extracción con PDF.js para mejor precisión...');
+    const pdfResult = await extractWithPDFJS(file);
+    
+    if (pdfResult) {
+      console.log('✅ PDF.js exitoso, Claude analizó correctamente');
+      return pdfResult;
+    }
+    
+    // Si PDF.js falla, usar extracción directa como fallback
+    console.log('🔄 PDF.js falló, usando extracción de texto directo...');
     const claudeResult = await extractWithClaude(file);
     
     if (claudeResult) {
@@ -78,11 +86,13 @@ async function extractWithPDFJS(file: File): Promise<F29Data | null> {
     
     const pdfjs = await import('pdfjs-dist');
     
-    // Configurar worker para Netlify - simplificado
-    pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-      'pdfjs-dist/build/pdf.worker.min.js',
-      import.meta.url
-    ).toString();
+    // Configurar worker para Netlify con CDN fallback
+    try {
+      pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+    } catch (error) {
+      // Fallback sin worker si no está disponible
+      console.log('⚠️ PDF worker no disponible, continuando sin worker...');
+    }
     
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
