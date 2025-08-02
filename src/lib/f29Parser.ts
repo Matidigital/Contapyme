@@ -89,11 +89,43 @@ async function extractWithClaude(file: File): Promise<F29Data | null> {
     
     console.log('🟣 Llamando a Claude AI...');
     
-    // Convertir PDF a base64
-    const arrayBuffer = await file.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    // Claude no puede procesar PDFs directamente, necesitamos extraer texto primero
+    const pdfjs = await import('pdfjs-dist');
     
-    console.log('📡 Enviando request a Claude API...');
+    // Configurar worker
+    if (typeof window === 'undefined') {
+      const pdfjsWorker = await import('pdfjs-dist/build/pdf.worker.entry');
+      pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+    }
+    
+    console.log('📄 Extrayendo texto del PDF...');
+    
+    // Convertir archivo a ArrayBuffer
+    const arrayBuffer = await file.arrayBuffer();
+    
+    // Cargar PDF
+    const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+    console.log(`📄 PDF cargado: ${pdf.numPages} páginas`);
+    
+    // Extraer texto de todas las páginas
+    let fullText = '';
+    for (let i = 1; i <= Math.min(pdf.numPages, 5); i++) { // Máximo 5 páginas
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items
+        .map((item: any) => item.str)
+        .join(' ');
+      fullText += `\n--- PÁGINA ${i} ---\n${pageText}\n`;
+    }
+    
+    console.log(`📝 Texto extraído: ${fullText.length} caracteres`);
+    
+    if (fullText.length < 100) {
+      console.warn('⚠️ Muy poco texto extraído del PDF');
+      return null;
+    }
+    
+    console.log('📡 Enviando texto a Claude API...');
     
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -107,50 +139,44 @@ async function extractWithClaude(file: File): Promise<F29Data | null> {
         max_tokens: 1000,
         messages: [{
           role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: `Analiza este formulario F29 chileno y extrae los datos exactos.
+          content: `Analiza este texto extraído de un formulario F29 chileno y extrae los datos exactos.
 
-Busca en las tablas del formulario estos códigos específicos:
+TEXTO DEL F29:
+${fullText.substring(0, 8000)} // Limitar a 8000 caracteres
+
+Busca en el texto estos códigos específicos y sus valores:
 - 511 (CRÉD. IVA POR DCTOS. ELECTRÓNICOS)
 - 538 (TOTAL DÉBITOS)
-- 563 (BASE IMPONIBLE)
-- 062 (PPM NETO DETERMINADO)  
+- 563 (BASE IMPONIBLE) 
+- 062 (PPM NETO DETERMINADO)
 - 077 (REMANENTE DE CRÉDITO FISC.)
 - 151 (RETENCIÓN)
 
 También extrae:
 - RUT (formato XX.XXX.XXX-X)
 - FOLIO (número largo)
-- PERÍODO (YYYYMM)
-- Razón Social
+- PERÍODO (YYYYMM o formato fecha)
+- Razón Social (nombre de la empresa)
 
-CRÍTICO: Extrae los números REALES del documento, no inventes valores.
+CRÍTICO: 
+- Extrae los números REALES del texto, no inventes valores
+- Los códigos pueden aparecer como "511", "Código 511", "511:", etc.
+- Los valores pueden tener puntos como separadores de miles
+- Si no encuentras un código, usa 0 como valor
 
-Responde SOLO con JSON:
+Responde SOLO con JSON válido:
 {
-  "rut": "texto_real_del_pdf",
-  "folio": "numero_real_del_pdf", 
-  "periodo": "periodo_real_del_pdf",
-  "razonSocial": "empresa_real_del_pdf",
-  "codigo511": numero_real_sin_puntos,
-  "codigo538": numero_real_sin_puntos,
-  "codigo563": numero_real_sin_puntos,
-  "codigo062": numero_real_sin_puntos,
-  "codigo077": numero_real_sin_puntos,
-  "codigo151": numero_real_sin_puntos
+  "rut": "texto_real_encontrado",
+  "folio": "numero_real_encontrado", 
+  "periodo": "periodo_real_encontrado",
+  "razonSocial": "empresa_real_encontrada",
+  "codigo511": numero_sin_puntos,
+  "codigo538": numero_sin_puntos,
+  "codigo563": numero_sin_puntos,
+  "codigo062": numero_sin_puntos,
+  "codigo077": numero_sin_puntos,
+  "codigo151": numero_sin_puntos
 }`
-            },
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'application/pdf',
-                data: base64
-              }
-            }
-          ]
         }]
       })
     });
@@ -239,42 +265,7 @@ Responde SOLO con JSON:
   }
 }
 
-function getGuaranteedData(): F29Data {
-  console.log('⚠️ Claude AI no está funcionando - usando datos de ejemplo del PDF original');
-  
-  // Usar datos del PDF de ejemplo original para que sea consistente
-  const result: F29Data = {
-    rut: '77.754.241-9',
-    folio: '8246153316',
-    periodo: '202505',
-    razonSocial: 'COMERCIALIZADORA TODO CAMAS SPA',
-    
-    // Datos reales del PDF de ejemplo
-    codigo511: 4188643, // CRÉD. IVA POR DCTOS. ELECTRÓNICOS
-    codigo538: 3410651, // TOTAL DÉBITOS  
-    codigo563: 17950795, // BASE IMPONIBLE
-    codigo062: 359016, // PPM NETO DETERMINADO
-    codigo077: 777992, // REMANENTE DE CRÉDITO FISC.
-    codigo151: 25439, // RETENCIÓN TASA LEY 21.133
-    
-    comprasNetas: 0,
-    ivaDeterminado: 0,
-    totalAPagar: 0,
-    margenBruto: 0,
-    
-    confidence: 60, // Baja confianza porque no es del PDF real
-    method: 'fallback-example-data'
-  };
-  
-  // Calcular campos derivados
-  calculateFields(result);
-  
-  console.log('⚠️ IMPORTANTE: Estos NO son los datos de tu PDF');
-  console.log('🔧 Para extraer datos reales, necesitas configurar Claude AI');
-  console.log('✅ Datos de ejemplo aplicados (PDF original)');
-  
-  return result;
-}
+// Esta función ya no se usa - removida para evitar datos falsos
 
 function calculateFields(result: F29Data) {
   // Compras Netas = Código 538 ÷ 0.19
