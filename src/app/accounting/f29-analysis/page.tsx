@@ -102,29 +102,24 @@ export default function F29AnalysisPage() {
 
     try {
       const formData = new FormData();
-      formData.append('f29_files', file);
-      formData.append('company_id', '550e8400-e29b-41d4-a716-446655440001');
-      formData.append('user_id', '550e8400-e29b-41d4-a716-446655440000');
+      formData.append('file', file);
 
       console.log('🚀 Iniciando análisis de F29:', file.name);
 
-      const response = await fetch('/api/f29/batch-upload', {
+      const response = await fetch('/api/parse-f29', {
         method: 'POST',
         body: formData,
       });
 
       const data = await response.json();
+      console.log('📊 Respuesta de API:', data);
 
-      if (data.success && data.results.length > 0) {
-        const uploadResult = data.results[0];
-        
-        if (uploadResult.success && uploadResult.data) {
-          setResult(uploadResult.data);
-        } else {
-          setError(uploadResult.error || 'Error al procesar el archivo');
-        }
+      if (data.success && data.data) {
+        setResult(data.data);
+        console.log('✅ Datos extraídos:', data.data);
       } else {
-        setError(data.message || 'Error en el análisis');
+        setError(data.error || 'Error al procesar el archivo');
+        console.error('❌ Error en análisis:', data.error);
       }
     } catch (err) {
       console.error('Error en análisis F29:', err);
