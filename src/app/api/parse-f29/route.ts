@@ -3,6 +3,7 @@ import { parseF29RealStructure } from '@/lib/f29RealStructureParser';
 import { parseF29Diagnostic } from '@/lib/f29DiagnosticParser';
 import { parseF29Innovative } from '@/lib/f29InnovativeParser';
 import { parseF29Simple } from '@/lib/f29SimpleParser';
+import { parseF29Debug } from '@/lib/f29DebugParser';
 
 // Configuración para archivos grandes
 export const runtime = 'nodejs';
@@ -28,20 +29,20 @@ export async function POST(request: NextRequest) {
     
     console.log(`📄 Procesando archivo: ${file.name} (${Math.round(file.size/1024)}KB)`);
     
-    // ESTRATEGIA NUEVA: Parser especializado para estructura real del F29
-    console.log('🎯 Intentando con parser de estructura real...');
+    // MODO DEBUG TEMPORAL: Ver exactamente qué está pasando
+    console.log('🔍 EJECUTANDO DEBUG TEMPORAL...');
+    const debugResult = await parseF29Debug(file);
+    
+    // También ejecutar el parser real para comparar
+    console.log('🎯 Ejecutando parser real para comparar...');
     const realResult = await parseF29RealStructure(file);
     
-    if (realResult.confidence >= 70) {
-      console.log(`✅ Parser real exitoso: confidence ${realResult.confidence}`);
-      return NextResponse.json({
-        success: true,
-        data: realResult,
-        method: 'real-structure',
-        confidence: realResult.confidence,
-        debugInfo: realResult.debugInfo
-      });
-    }
+    return NextResponse.json({
+      success: true,
+      debug: debugResult,
+      realParser: realResult,
+      message: 'Ejecutando en modo debug - revisa los logs'
+    });
     
     // Si el parser real no funciona bien, probar con el innovador
     console.log('🔄 Parser real insuficiente, probando innovador...');
