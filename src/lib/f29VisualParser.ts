@@ -14,6 +14,7 @@ export interface F29Data {
   codigo049: number; // PRÉSTAMO SOLIDARIO (Ret. 3% Rta 42 N°1)
   codigo537: number; // TOTAL CRÉDITOS
   codigo538: number; // TOTAL DÉBITOS
+  codigo562: number; // COMPRAS NETAS ADICIONALES
   codigo563: number; // BASE IMPONIBLE
   codigo062: number; // PPM NETO DETERMINADO
   codigo077: number; // REMANENTE DE CRÉDITO FISC.
@@ -120,6 +121,7 @@ EXTRAE EXACTAMENTE estos valores:
 - Código 049: PRÉSTAMO SOLIDARIO / Ret. 3% Rta 42 N°1
 - Código 537: TOTAL CRÉDITOS
 - Código 538: TOTAL DÉBITOS
+- Código 562: COMPRAS NETAS ADICIONALES
 - Código 563: BASE IMPONIBLE
 - Código 062: PPM NETO DETERMINADO
 - Código 077: REMANENTE DE CRÉDITO FISCAL
@@ -140,6 +142,7 @@ Responde ÚNICAMENTE con este JSON:
   "codigo049": numero,
   "codigo537": numero,
   "codigo538": numero,
+  "codigo562": numero,
   "codigo563": numero,
   "codigo062": numero,
   "codigo077": numero,
@@ -196,6 +199,7 @@ Responde ÚNICAMENTE con este JSON:
       codigo049: parseInt(parsed.codigo049) || 0,
       codigo537: parseInt(parsed.codigo537) || 0,
       codigo538: parseInt(parsed.codigo538) || 0,
+      codigo562: parseInt(parsed.codigo562) || 0,
       codigo563: parseInt(parsed.codigo563) || 0,
       codigo062: parseInt(parsed.codigo062) || 0,
       codigo077: parseInt(parsed.codigo077) || 0,
@@ -234,9 +238,11 @@ function calculateFields(result: F29Data) {
   // Total Créditos = Código 537 (sin restar remanente)
   result.totalCreditos = result.codigo537;
   
-  // Compras Netas = Total Créditos ÷ 0.19
+  // Compras Netas = (Total Créditos ÷ 0.19) + Código 562
   if (result.totalCreditos > 0) {
-    result.comprasNetas = Math.round(result.totalCreditos / 0.19);
+    result.comprasNetas = Math.round(result.totalCreditos / 0.19) + result.codigo562;
+  } else {
+    result.comprasNetas = result.codigo562;
   }
   
   // IVA Determinado - usar código 089 si está disponible

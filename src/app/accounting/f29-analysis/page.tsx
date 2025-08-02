@@ -20,6 +20,7 @@ interface F29Results {
   codigo049: number; // Préstamo Solidario
   codigo538: number; // Débito Fiscal
   codigo537: number; // Total Créditos Bruto
+  codigo562: number; // Compras Netas Adicionales
   codigo062: number; // PPM
   codigo077: number; // Remanente
   codigo563: number; // Ventas Netas
@@ -165,6 +166,7 @@ export default function F29AnalysisPage() {
       ['PPM', result.codigo062.toString(), '062'],
       ['Remanente', result.codigo077.toString(), '077'],
       ...(result.codigo049 > 0 ? [['Préstamo Solidario', result.codigo049.toString(), '049']] : []),
+      ...(result.codigo562 > 0 ? [['Compras Netas Adicionales', result.codigo562.toString(), '562']] : []),
       ...(result.codigo151 > 0 ? [['Honorarios Retenidos', result.codigo151.toString(), '151']] : []),
       ['Compras Netas (Calculado)', result.comprasNetas.toString(), 'Calc'],
       ['IVA Determinado', result.ivaDeterminado.toString(), 'Calc'],
@@ -411,6 +413,17 @@ export default function F29AnalysisPage() {
                       {formatCurrency(result.codigo049)}
                     </p>
                     <p className="text-xs text-cyan-600">Código 049 • Ret. 3% Rta 42 N°1</p>
+                  </div>
+                )}
+
+                {/* Compras Netas Adicionales - Solo mostrar si existe */}
+                {result.codigo562 > 0 && (
+                  <div className="bg-rose-50 rounded-lg p-4 border border-rose-200">
+                    <h4 className="text-sm font-medium text-rose-700 mb-1">Compras Netas Adicionales</h4>
+                    <p className="text-2xl font-bold text-rose-900">
+                      {formatCurrency(result.codigo562)}
+                    </p>
+                    <p className="text-xs text-rose-600">Código 562</p>
                   </div>
                 )}
 
