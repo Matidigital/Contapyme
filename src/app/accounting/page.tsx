@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import EconomicIndicatorsBanner from '@/components/EconomicIndicatorsBanner'
 
 export default function AccountingPage() {
   // Demo mode - no authentication required
@@ -50,6 +51,9 @@ export default function AccountingPage() {
               </p>
             </div>
           </div>
+
+          {/* Economic Indicators Banner */}
+          <EconomicIndicatorsBanner />
 
           {/* Companies Section */}
           <div className="mb-8">
