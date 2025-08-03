@@ -17,18 +17,16 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { Button, Card } from '@/components/ui';
-import { FixedAsset, FixedAssetCategory, FixedAssetReport } from '@/types';
+import { FixedAsset, FixedAssetReport } from '@/types';
 import AddFixedAssetForm from '@/components/fixed-assets/AddFixedAssetForm';
 
 interface FixedAssetsPageProps {}
 
 export default function FixedAssetsPage({}: FixedAssetsPageProps) {
   const [assets, setAssets] = useState<FixedAsset[]>([]);
-  const [categories, setCategories] = useState<FixedAssetCategory[]>([]);
   const [report, setReport] = useState<FixedAssetReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [showAddForm, setShowAddForm] = useState(false);
 
@@ -39,22 +37,15 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
       // Cargar activos fijos
       const assetsParams = new URLSearchParams();
       if (selectedStatus !== 'all') assetsParams.append('status', selectedStatus);
-      if (selectedCategory !== 'all') assetsParams.append('category', selectedCategory);
       
-      const [assetsRes, categoriesRes, reportRes] = await Promise.all([
+      const [assetsRes, reportRes] = await Promise.all([
         fetch(`/api/fixed-assets?${assetsParams.toString()}`),
-        fetch('/api/fixed-assets/categories'),
         fetch('/api/fixed-assets/reports?type=summary')
       ]);
 
       if (assetsRes.ok) {
         const assetsData = await assetsRes.json();
         setAssets(assetsData.assets || []);
-      }
-
-      if (categoriesRes.ok) {
-        const categoriesData = await categoriesRes.json();
-        setCategories(categoriesData.categories || []);
       }
 
       if (reportRes.ok) {
@@ -67,7 +58,7 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
     } finally {
       setLoading(false);
     }
-  }, [selectedStatus, selectedCategory]);
+  }, [selectedStatus]);
 
   // Manejar éxito en creación de activo
   const handleAssetCreated = () => {
@@ -81,8 +72,8 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
   // Filtrar activos por búsqueda
   const filteredAssets = assets.filter(asset =>
     asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    asset.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (asset.serial_number && asset.serial_number.toLowerCase().includes(searchTerm.toLowerCase()))
+    (asset.serial_number && asset.serial_number.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (asset.brand && asset.brand.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   // Formatear moneda
@@ -234,7 +225,7 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                     <input
                       type="text"
-                      placeholder="Buscar por nombre, categoría o número de serie..."
+                      placeholder="Buscar por nombre, marca o número de serie..."
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
@@ -242,21 +233,6 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                   </div>
                 </div>
 
-                {/* Filtro por categoría */}
-                <div className="lg:w-48">
-                  <select
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                  >
-                    <option value="all">Todas las categorías</option>
-                    {categories.map(category => (
-                      <option key={category.id} value={category.name}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
 
                 {/* Filtro por estado */}
                 <div className="lg:w-40">
@@ -287,12 +263,12 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                   <Package className="mx-auto h-12 w-12 text-gray-400" />
                   <h3 className="mt-2 text-sm font-medium text-gray-900">No hay activos fijos</h3>
                   <p className="mt-1 text-sm text-gray-500">
-                    {searchTerm || selectedCategory !== 'all' || selectedStatus !== 'all' 
+                    {searchTerm || selectedStatus !== 'all' 
                       ? 'No se encontraron activos con los filtros aplicados.'
                       : 'Comienza agregando tu primer activo fijo.'
                     }
                   </p>
-                  {!searchTerm && selectedCategory === 'all' && selectedStatus === 'all' && (
+                  {!searchTerm && selectedStatus === 'all' && (
                     <div className="mt-6">
                       <Button
                         variant="primary"
@@ -311,9 +287,6 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                       <tr>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Activo
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Categoría
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Valor Compra
@@ -350,11 +323,6 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                                   </div>
                                 </div>
                               </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                                {asset.category}
-                              </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                               {formatCurrency(asset.purchase_value)}
@@ -449,7 +417,7 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                     <div key={asset.id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
                       <div>
                         <p className="font-medium text-gray-900">{asset.name}</p>
-                        <p className="text-sm text-gray-600">{asset.category}</p>
+                        <p className="text-sm text-gray-600">Activo Fijo</p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-medium text-orange-600">

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Save, Package, Calendar, DollarSign, Settings } from 'lucide-react';
 import { Button } from '@/components/ui';
-import { CreateFixedAssetData, FixedAssetCategory, Account } from '@/types';
+import { CreateFixedAssetData, Account } from '@/types';
 
 interface AddFixedAssetFormProps {
   isOpen: boolean;
@@ -13,14 +13,12 @@ interface AddFixedAssetFormProps {
 
 export default function AddFixedAssetForm({ isOpen, onClose, onSuccess }: AddFixedAssetFormProps) {
   const [loading, setLoading] = useState(false);
-  const [categories, setCategories] = useState<FixedAssetCategory[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<FixedAssetCategory | null>(null);
   
   const [formData, setFormData] = useState<CreateFixedAssetData>({
     name: '',
     description: '',
-    category: '',
+    category: 'Activo Fijo',
     purchase_value: 0,
     residual_value: 0,
     purchase_date: new Date().toISOString().split('T')[0],
@@ -38,38 +36,13 @@ export default function AddFixedAssetForm({ isOpen, onClose, onSuccess }: AddFix
 
   const [errors, setErrors] = useState<Partial<CreateFixedAssetData>>({});
 
-  // Cargar categorías y cuentas al abrir el modal
+  // Cargar cuentas al abrir el modal
   useEffect(() => {
     if (isOpen) {
-      loadCategories();
       loadAccounts();
     }
   }, [isOpen]);
 
-  // Actualizar valores sugeridos cuando cambia la categoría
-  useEffect(() => {
-    if (selectedCategory) {
-      setFormData(prev => ({
-        ...prev,
-        useful_life_years: selectedCategory.default_useful_life_years || 1,
-        asset_account_code: selectedCategory.suggested_asset_account || '',
-        depreciation_account_code: selectedCategory.suggested_depreciation_account || '',
-        expense_account_code: selectedCategory.suggested_expense_account || ''
-      }));
-    }
-  }, [selectedCategory]);
-
-  const loadCategories = async () => {
-    try {
-      const response = await fetch('/api/fixed-assets/categories');
-      if (response.ok) {
-        const data = await response.json();
-        setCategories(data.categories || []);
-      }
-    } catch (error) {
-      console.error('Error loading categories:', error);
-    }
-  };
 
   const loadAccounts = async () => {
     try {
@@ -98,11 +71,6 @@ export default function AddFixedAssetForm({ isOpen, onClose, onSuccess }: AddFix
     }
   };
 
-  const handleCategoryChange = (categoryName: string) => {
-    const category = categories.find(c => c.name === categoryName);
-    setSelectedCategory(category || null);
-    setFormData(prev => ({ ...prev, category: categoryName }));
-  };
 
   const handleInputChange = (field: keyof CreateFixedAssetData, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -118,10 +86,6 @@ export default function AddFixedAssetForm({ isOpen, onClose, onSuccess }: AddFix
 
     if (!formData.name.trim()) {
       newErrors.name = 'El nombre es requerido';
-    }
-
-    if (!formData.category) {
-      newErrors.category = 'La categoría es requerida';
     }
 
     if (formData.purchase_value <= 0) {
@@ -181,7 +145,7 @@ export default function AddFixedAssetForm({ isOpen, onClose, onSuccess }: AddFix
         setFormData({
           name: '',
           description: '',
-          category: '',
+          category: 'Activo Fijo',
           purchase_value: 0,
           residual_value: 0,
           purchase_date: new Date().toISOString().split('T')[0],
@@ -196,7 +160,6 @@ export default function AddFixedAssetForm({ isOpen, onClose, onSuccess }: AddFix
           location: '',
           responsible_person: ''
         });
-        setSelectedCategory(null);
         setErrors({});
         
         onSuccess();
@@ -270,27 +233,6 @@ export default function AddFixedAssetForm({ isOpen, onClose, onSuccess }: AddFix
                     {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
                   </div>
 
-                  {/* Categoría */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Categoría *
-                    </label>
-                    <select
-                      className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
-                        errors.category ? 'border-red-500' : 'border-gray-300'
-                      }`}
-                      value={formData.category}
-                      onChange={(e) => handleCategoryChange(e.target.value)}
-                    >
-                      <option value="">Seleccionar categoría</option>
-                      {categories.map(category => (
-                        <option key={category.id} value={category.name}>
-                          {category.name} ({category.default_useful_life_years} años)
-                        </option>
-                      ))}
-                    </select>
-                    {errors.category && <p className="mt-1 text-sm text-red-600">{errors.category}</p>}
-                  </div>
 
                   {/* Descripción */}
                   <div>
@@ -509,11 +451,6 @@ export default function AddFixedAssetForm({ isOpen, onClose, onSuccess }: AddFix
                       onChange={(e) => handleInputChange('useful_life_years', parseInt(e.target.value) || 1)}
                     />
                     {errors.useful_life_years && <p className="mt-1 text-sm text-red-600">{errors.useful_life_years}</p>}
-                    {selectedCategory && (
-                      <p className="mt-1 text-xs text-green-600">
-                        Sugerido para {selectedCategory.name}: {selectedCategory.default_useful_life_years} años
-                      </p>
-                    )}
                   </div>
 
                   {/* Depreciación Mensual Estimada */}
