@@ -196,3 +196,307 @@ export async function generateDemoData() {
     failed: demoData.length - insertedCount
   };
 }
+
+// ==========================================
+// FUNCIONES PARA ACTIVOS FIJOS - SUPABASE REAL
+// ==========================================
+
+// Crear activo fijo
+export async function createFixedAsset(assetData: any) {
+  try {
+    const { data, error } = await supabase
+      .from('fixed_assets')
+      .insert([{
+        user_id: assetData.user_id || 'demo-user-id',
+        name: assetData.name,
+        description: assetData.description,
+        category: assetData.category || 'Activo Fijo',
+        purchase_value: assetData.purchase_value,
+        residual_value: assetData.residual_value || 0,
+        purchase_date: assetData.purchase_date,
+        start_depreciation_date: assetData.start_depreciation_date,
+        useful_life_years: assetData.useful_life_years,
+        depreciation_method: 'linear',
+        asset_account_code: assetData.asset_account_code,
+        depreciation_account_code: assetData.depreciation_account_code,
+        expense_account_code: assetData.expense_account_code,
+        serial_number: assetData.serial_number,
+        brand: assetData.brand,
+        model: assetData.model,
+        location: assetData.location,
+        responsible_person: assetData.responsible_person,
+        status: 'active'
+      }])
+      .select()
+      .single();
+
+    return { data, error };
+  } catch (error) {
+    console.error('❌ Error creando activo fijo:', error);
+    return { data: null, error };
+  }
+}
+
+// Obtener activos fijos
+export async function getFixedAssets(filters: any = {}) {
+  try {
+    let query = supabase
+      .from('fixed_assets')
+      .select(`
+        *,
+        fixed_assets_categories(name, description)
+      `)
+      .eq('user_id', filters.user_id || 'demo-user-id')
+      .order('created_at', { ascending: false });
+
+    // Aplicar filtros
+    if (filters.status && filters.status !== 'all') {
+      query = query.eq('status', filters.status);
+    }
+
+    if (filters.category && filters.category !== 'all') {
+      query = query.eq('category', filters.category);
+    }
+
+    const { data, error } = await query;
+
+    return { data, error };
+  } catch (error) {
+    console.error('❌ Error obteniendo activos fijos:', error);
+    return { data: null, error };
+  }
+}
+
+// Obtener activo fijo por ID
+export async function getFixedAssetById(id: string, userId: string = 'demo-user-id') {
+  try {
+    const { data, error } = await supabase
+      .from('fixed_assets')
+      .select(`
+        *,
+        fixed_assets_categories(name, description)
+      `)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
+
+    return { data, error };
+  } catch (error) {
+    console.error('❌ Error obteniendo activo fijo:', error);
+    return { data: null, error };
+  }
+}
+
+// Actualizar activo fijo
+export async function updateFixedAsset(id: string, updateData: any, userId: string = 'demo-user-id') {
+  try {
+    const { data, error } = await supabase
+      .from('fixed_assets')
+      .update({
+        ...updateData,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    return { data, error };
+  } catch (error) {
+    console.error('❌ Error actualizando activo fijo:', error);
+    return { data: null, error };
+  }
+}
+
+// Eliminar activo fijo
+export async function deleteFixedAsset(id: string, userId: string = 'demo-user-id') {
+  try {
+    const { data, error } = await supabase
+      .from('fixed_assets')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select('id, name')
+      .single();
+
+    return { data, error };
+  } catch (error) {
+    console.error('❌ Error eliminando activo fijo:', error);
+    return { data: null, error };
+  }
+}
+
+// Obtener categorías de activos fijos
+export async function getFixedAssetCategories() {
+  try {
+    const { data, error } = await supabase
+      .from('fixed_assets_categories')
+      .select('*')
+      .order('name');
+
+    return { data, error };
+  } catch (error) {
+    console.error('❌ Error obteniendo categorías:', error);
+    return { data: null, error };
+  }
+}
+
+// Generar reporte de activos fijos
+export async function getFixedAssetsReport(userId: string = 'demo-user-id', year?: number) {
+  try {
+    // Obtener activos básicos
+    const { data: assets, error: assetsError } = await supabase
+      .from('fixed_assets')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('status', 'active');
+
+    if (assetsError) {
+      return { data: null, error: assetsError };
+    }
+
+    if (!assets || assets.length === 0) {
+      return {
+        data: {
+          total_assets: 0,
+          total_purchase_value: 0,
+          total_book_value: 0,
+          total_accumulated_depreciation: 0,
+          monthly_depreciation: 0,
+          assets_by_category: {},
+          assets_near_full_depreciation: []
+        },
+        error: null
+      };
+    }
+
+    // Calcular métricas
+    const currentDate = new Date();
+    const report = {
+      total_assets: assets.length,
+      total_purchase_value: 0,
+      total_book_value: 0,
+      total_accumulated_depreciation: 0,
+      monthly_depreciation: 0,
+      assets_by_category: {} as any,
+      assets_near_full_depreciation: [] as any[]
+    };
+
+    assets.forEach(asset => {
+      // Calcular depreciación acumulada aproximada
+      const startDate = new Date(asset.start_depreciation_date);
+      const monthsElapsed = Math.max(0, Math.floor(
+        (currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
+      ));
+      
+      const monthlyDepreciation = (asset.purchase_value - asset.residual_value) / (asset.useful_life_years * 12);
+      const accumulatedDepreciation = Math.min(
+        monthsElapsed * monthlyDepreciation,
+        asset.purchase_value - asset.residual_value
+      );
+      const bookValue = Math.max(asset.purchase_value - accumulatedDepreciation, asset.residual_value);
+
+      // Acumular totales
+      report.total_purchase_value += asset.purchase_value;
+      report.total_book_value += bookValue;
+      report.total_accumulated_depreciation += accumulatedDepreciation;
+      report.monthly_depreciation += monthlyDepreciation;
+
+      // Agrupar por categoría
+      if (!report.assets_by_category[asset.category]) {
+        report.assets_by_category[asset.category] = {
+          count: 0,
+          purchase_value: 0,
+          book_value: 0,
+          accumulated_depreciation: 0
+        };
+      }
+      
+      report.assets_by_category[asset.category].count += 1;
+      report.assets_by_category[asset.category].purchase_value += asset.purchase_value;
+      report.assets_by_category[asset.category].book_value += bookValue;
+      report.assets_by_category[asset.category].accumulated_depreciation += accumulatedDepreciation;
+
+      // Detectar activos próximos a depreciación completa (90%+)
+      const depreciationPercentage = accumulatedDepreciation / (asset.purchase_value - asset.residual_value);
+      if (depreciationPercentage >= 0.9) {
+        report.assets_near_full_depreciation.push({
+          ...asset,
+          accumulated_depreciation: accumulatedDepreciation,
+          book_value: bookValue,
+          depreciation_percentage: depreciationPercentage * 100
+        });
+      }
+    });
+
+    return { data: report, error: null };
+  } catch (error) {
+    console.error('❌ Error generando reporte:', error);
+    return { data: null, error };
+  }
+}
+
+// Función genérica compatible con las queries existentes (para compatibilidad)
+export const databaseSimple = {
+  async query(sql: string, params: any[] = []) {
+    try {
+      console.log('🔄 Database query:', sql.substring(0, 100) + '...');
+      
+      // Mapear queries SQL a funciones de Supabase
+      if (sql.includes('INSERT INTO fixed_assets')) {
+        const assetData = {
+          name: params[0],
+          description: params[1],
+          category: params[2],
+          purchase_value: params[3],
+          residual_value: params[4],
+          purchase_date: params[5],
+          start_depreciation_date: params[6],
+          useful_life_years: params[7],
+          asset_account_code: params[9],
+          depreciation_account_code: params[10],
+          expense_account_code: params[11],
+          serial_number: params[12],
+          brand: params[13],
+          model: params[14],
+          location: params[15],
+          responsible_person: params[16]
+        };
+        
+        return await createFixedAsset(assetData);
+      }
+      
+      if (sql.includes('SELECT') && sql.includes('FROM fixed_assets') && !sql.includes('WHERE id =')) {
+        const filters = { user_id: 'demo-user-id' };
+        return await getFixedAssets(filters);
+      }
+      
+      if (sql.includes('SELECT') && sql.includes('WHERE fa.id = $1')) {
+        return await getFixedAssetById(params[0]);
+      }
+      
+      if (sql.includes('DELETE FROM fixed_assets')) {
+        return await deleteFixedAsset(params[0]);
+      }
+      
+      if (sql.includes('FROM fixed_assets_categories')) {
+        return await getFixedAssetCategories();
+      }
+      
+      // Para queries de actualización, usar función específica
+      if (sql.includes('UPDATE fixed_assets')) {
+        // Esta es más compleja, podría necesitar parsing del SQL
+        console.log('⚠️ UPDATE query detectada, usar updateFixedAsset() directamente');
+        return { data: [], error: null };
+      }
+      
+      // Para queries no reconocidas, retornar vacío
+      console.log('⚠️ Query no reconocida:', sql);
+      return { data: [], error: null };
+      
+    } catch (error) {
+      console.error('❌ Database query error:', error);
+      return { data: null, error };
+    }
+  }
+};

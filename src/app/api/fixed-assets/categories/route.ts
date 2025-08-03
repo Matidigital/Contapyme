@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { databaseSimple } from '@/lib/databaseSimple';
+import { getFixedAssetCategories } from '@/lib/databaseSimple';
 
 // GET /api/fixed-assets/categories - Obtener categorías de activos fijos
 export async function GET(request: NextRequest) {
   try {
-    const query = `
-      SELECT * FROM fixed_assets_categories
-      ORDER BY name ASC
-    `;
-
-    const { data, error } = await databaseSimple.query(query);
+    const { data, error } = await getFixedAssetCategories();
 
     if (error) {
       console.error('Error fetching fixed asset categories:', error);

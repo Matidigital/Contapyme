@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { databaseSimple } from '@/lib/databaseSimple';
+import { getFixedAssetById, updateFixedAsset, deleteFixedAsset } from '@/lib/databaseSimple';
 import { UpdateFixedAssetData } from '@/types';
 
 // GET /api/fixed-assets/[id] - Obtener activo fijo específico
@@ -10,17 +10,7 @@ export async function GET(
   try {
     const { id } = params;
 
-    const query = `
-      SELECT 
-        fa.*,
-        fac.name as category_name,
-        fac.description as category_description
-      FROM fixed_assets fa
-      LEFT JOIN fixed_assets_categories fac ON fa.category = fac.name
-      WHERE fa.id = $1 AND fa.user_id = 'demo-user-id'
-    `;
-
-    const { data, error } = await databaseSimple.query(query, [id]);
+    const { data, error } = await getFixedAssetById(id, 'demo-user-id');
 
     if (error) {
       console.error('Error fetching fixed asset:', error);
@@ -30,14 +20,14 @@ export async function GET(
       );
     }
 
-    if (!data || data.length === 0) {
+    if (!data) {
       return NextResponse.json(
         { error: 'Activo fijo no encontrado' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({ asset: data[0] });
+    return NextResponse.json({ asset: data });
   } catch (error) {
     console.error('Unexpected error:', error);
     return NextResponse.json(
@@ -191,14 +181,7 @@ export async function DELETE(
   try {
     const { id } = params;
 
-    // Eliminar activo fijo (las depreciaciones se eliminan por CASCADE)
-    const deleteQuery = `
-      DELETE FROM fixed_assets 
-      WHERE id = $1 AND user_id = 'demo-user-id'
-      RETURNING id, name
-    `;
-
-    const { data, error } = await databaseSimple.query(deleteQuery, [id]);
+    const { data, error } = await deleteFixedAsset(id, 'demo-user-id');
 
     if (error) {
       console.error('Error deleting fixed asset:', error);
@@ -208,7 +191,7 @@ export async function DELETE(
       );
     }
 
-    if (!data || data.length === 0) {
+    if (!data) {
       return NextResponse.json(
         { error: 'Activo fijo no encontrado o no autorizado' },
         { status: 404 }
@@ -216,7 +199,7 @@ export async function DELETE(
     }
 
     return NextResponse.json({ 
-      message: `Activo fijo "${data[0].name}" eliminado exitosamente` 
+      message: `Activo fijo "${data.name}" eliminado exitosamente` 
     });
 
   } catch (error) {
