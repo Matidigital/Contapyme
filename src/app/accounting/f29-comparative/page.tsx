@@ -22,14 +22,29 @@ interface AnalysisData {
     inicio: string;
     fin: string;
   };
+  validacion_anual?: {
+    tiene_año_completo: boolean;
+    año_analizado: string | null;
+    meses_presentes: number[];
+    rut_validado: string;
+  };
+  metricas_anuales?: {
+    total_ventas_anual: number;
+    total_compras_netas_anual: number;
+    margen_bruto_anual_porcentaje: number;
+    margen_bruto_anual_monto: number;
+  };
   metricas_clave: {
     total_ventas: number;
     promedio_mensual: number;
+    promedio_compras_mensual?: number;
     crecimiento_periodo: number;
     mejor_mes: { period: string; ventas: number };
     peor_mes: { period: string; ventas: number };
   };
   insights_iniciales: string[];
+  error?: string;
+  ruts_encontrados?: string[];
 }
 
 export default function F29ComparativePage() {
@@ -362,37 +377,91 @@ export default function F29ComparativePage() {
 
           {/* Panel de Análisis */}
           <div className="space-y-6">
-            {analysis ? (
+            {analysis && !analysis.error ? (
               <div className="bg-white rounded-lg shadow-md p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
                   <BarChart3 className="mr-2 h-5 w-5" />
                   Análisis Comparativo
                 </h2>
 
-                {/* Métricas Principales */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <p className="text-sm text-blue-600 font-medium">Períodos Analizados</p>
-                    <p className="text-2xl font-bold text-blue-900">{analysis.periodos_analizados}</p>
+                {/* Validación Anual */}
+                {analysis.validacion_anual && (
+                  <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <h4 className="font-medium text-blue-900 mb-2">🔍 Validación Anual</h4>
+                    <div className="space-y-1 text-sm">
+                      <p className="text-blue-700">
+                        <span className="font-medium">RUT:</span> {analysis.validacion_anual.rut_validado}
+                      </p>
+                      {analysis.validacion_anual.tiene_año_completo ? (
+                        <p className="text-green-700 font-medium">
+                          ✅ Año {analysis.validacion_anual.año_analizado} completo (12 meses)
+                        </p>
+                      ) : (
+                        <p className="text-orange-700">
+                          ⚠️ No se encontró un año completo con 12 meses
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <p className="text-sm text-green-600 font-medium">Promedio Mensual</p>
-                    <p className="text-lg font-bold text-green-900">
+                )}
+
+                {/* Métricas Anuales */}
+                {analysis.metricas_anuales && (
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                      <p className="text-sm text-green-600 font-medium">Ventas Netas Totales</p>
+                      <p className="text-xl font-bold text-green-900">
+                        {formatCurrency(analysis.metricas_anuales.total_ventas_anual)}
+                      </p>
+                    </div>
+                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                      <p className="text-sm text-blue-600 font-medium">Compras Netas Totales</p>
+                      <p className="text-xl font-bold text-blue-900">
+                        {formatCurrency(analysis.metricas_anuales.total_compras_netas_anual)}
+                      </p>
+                    </div>
+                    <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                      <p className="text-sm text-purple-600 font-medium">Margen Bruto Anual</p>
+                      <p className="text-xl font-bold text-purple-900">
+                        {analysis.metricas_anuales.margen_bruto_anual_porcentaje.toFixed(1)}%
+                      </p>
+                      <p className="text-sm text-purple-700">
+                        {formatCurrency(analysis.metricas_anuales.margen_bruto_anual_monto)}
+                      </p>
+                    </div>
+                    <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                      <p className="text-sm text-orange-600 font-medium">Períodos Analizados</p>
+                      <p className="text-xl font-bold text-orange-900">{analysis.periodos_analizados}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Métricas Mensuales */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-sm text-gray-600 font-medium">Promedio Ventas Mensual</p>
+                    <p className="text-lg font-bold text-gray-900">
                       {formatCurrency(analysis.metricas_clave.promedio_mensual)}
                     </p>
                   </div>
-                  <div className="bg-purple-50 p-4 rounded-lg">
-                    <p className="text-sm text-purple-600 font-medium">Mejor Mes</p>
-                    <p className="text-sm font-bold text-purple-900">
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-sm text-gray-600 font-medium">Promedio Compras Mensual</p>
+                    <p className="text-lg font-bold text-gray-900">
+                      {formatCurrency(analysis.metricas_clave.promedio_compras_mensual || 0)}
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-sm text-gray-600 font-medium">Mejor Mes</p>
+                    <p className="text-sm font-bold text-gray-900">
                       {formatPeriod(analysis.metricas_clave.mejor_mes.period)}
                     </p>
-                    <p className="text-xs text-purple-700">
+                    <p className="text-xs text-gray-700">
                       {formatCurrency(analysis.metricas_clave.mejor_mes.ventas)}
                     </p>
                   </div>
-                  <div className="bg-orange-50 p-4 rounded-lg">
-                    <p className="text-sm text-orange-600 font-medium">Crecimiento</p>
-                    <p className="text-lg font-bold text-orange-900">
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-sm text-gray-600 font-medium">Crecimiento</p>
+                    <p className="text-lg font-bold text-gray-900">
                       {analysis.metricas_clave.crecimiento_periodo > 0 ? '+' : ''}
                       {analysis.metricas_clave.crecimiento_periodo.toFixed(1)}%
                     </p>
@@ -429,6 +498,29 @@ export default function F29ComparativePage() {
                     Sube más formularios F29 para obtener insights aún más precisos y proyecciones avanzadas.
                   </p>
                 </div>
+              </div>
+            ) : analysis?.error ? (
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                  <AlertCircle className="mr-2 h-5 w-5 text-red-500" />
+                  Error en Análisis
+                </h2>
+                <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                  <p className="text-red-800 font-medium mb-2">{analysis.error}</p>
+                  {analysis.ruts_encontrados && (
+                    <div className="mt-2">
+                      <p className="text-sm text-red-700">RUTs encontrados:</p>
+                      <ul className="list-disc list-inside text-sm text-red-600 mt-1">
+                        {analysis.ruts_encontrados.map((rut, idx) => (
+                          <li key={idx}>{rut}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+                <p className="text-sm text-gray-600 mt-4">
+                  Asegúrate de subir formularios F29 del mismo contribuyente.
+                </p>
               </div>
             ) : (
               <div className="bg-white rounded-lg shadow-md p-6">

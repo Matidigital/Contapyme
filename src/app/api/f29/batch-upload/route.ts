@@ -334,29 +334,81 @@ async function generateQuickAnalysis(successful: ProcessResult[], companyId: str
       .map(r => r.period!)
       .sort();
 
-    const ventasData = successful.map(r => {
-      const ventas = r.extracted_data?.calculated_data?.codigo563 || 0;
+    // Extraer datos para análisis
+    const analysisData = successful.map(r => {
+      const calcs = r.extracted_data?.calculated_data || {};
+      const ventas = calcs.codigo563 || 0;
+      const comprasNetas = calcs.comprasNetas || 0;
+      const rut = calcs.rut || r.extracted_data?.rut || '';
+      const periodo = r.period || '';
+      
       return {
-        period: r.period,
-        ventas: typeof ventas === 'number' ? ventas : parseFloat(ventas.toString()) || 0
+        period: periodo,
+        rut: rut,
+        ventas: typeof ventas === 'number' ? ventas : parseFloat(ventas.toString()) || 0,
+        comprasNetas: typeof comprasNetas === 'number' ? comprasNetas : parseFloat(comprasNetas.toString()) || 0,
+        codigo511: calcs.codigo511 || 0,
+        codigo538: calcs.codigo538 || 0,
+        codigo562: calcs.codigo562 || 0
       };
     }).filter(d => d.period);
 
-    if (ventasData.length < 2) {
+    if (analysisData.length < 2) {
       return null;
     }
 
-    // Análisis básico
-    const totalVentas = ventasData.reduce((sum, d) => sum + d.ventas, 0);
-    const promedioVentas = totalVentas / ventasData.length;
+    // Validar mismo RUT
+    const ruts = analysisData.map(d => d.rut).filter(r => r);
+    const uniqueRuts = [...new Set(ruts)];
+    if (uniqueRuts.length > 1) {
+      return {
+        error: 'Los formularios F29 corresponden a diferentes RUTs',
+        ruts_encontrados: uniqueRuts
+      };
+    }
+
+    // Validar año completo (01-12)
+    const yearGroups = analysisData.reduce((acc, d) => {
+      const year = d.period.substring(0, 4);
+      if (!acc[year]) acc[year] = [];
+      acc[year].push(d);
+      return acc;
+    }, {} as Record<string, typeof analysisData>);
+
+    // Buscar año completo
+    let yearCompleteData = null;
+    let selectedYear = '';
     
-    const ventasOrdenadas = [...ventasData].sort((a, b) => a.ventas - b.ventas);
+    for (const [year, data] of Object.entries(yearGroups)) {
+      const months = data.map(d => parseInt(d.period.substring(4, 6)));
+      const hasAllMonths = Array.from({length: 12}, (_, i) => i + 1)
+        .every(month => months.includes(month));
+      
+      if (hasAllMonths && data.length === 12) {
+        yearCompleteData = data.sort((a, b) => a.period.localeCompare(b.period));
+        selectedYear = year;
+        break;
+      }
+    }
+
+    // Cálculos anuales
+    const totalVentasAnual = analysisData.reduce((sum, d) => sum + d.ventas, 0);
+    const totalComprasNetasAnual = analysisData.reduce((sum, d) => sum + d.comprasNetas, 0);
+    const margenBrutoAnual = totalVentasAnual > 0 
+      ? ((totalVentasAnual - totalComprasNetasAnual) / totalVentasAnual) * 100
+      : 0;
+
+    // Análisis mensual
+    const promedioVentas = totalVentasAnual / analysisData.length;
+    const promedioCompras = totalComprasNetasAnual / analysisData.length;
+    
+    const ventasOrdenadas = [...analysisData].sort((a, b) => a.ventas - b.ventas);
     const mejorMes = ventasOrdenadas[ventasOrdenadas.length - 1];
     const peorMes = ventasOrdenadas[0];
 
-    // Crecimiento simple (primer vs último mes)
-    const crecimiento = ventasData.length >= 2 
-      ? ((ventasData[ventasData.length - 1].ventas - ventasData[0].ventas) / ventasData[0].ventas) * 100
+    // Crecimiento
+    const crecimiento = analysisData.length >= 2 
+      ? ((analysisData[analysisData.length - 1].ventas - analysisData[0].ventas) / analysisData[0].ventas) * 100
       : 0;
 
     return {
@@ -365,20 +417,36 @@ async function generateQuickAnalysis(successful: ProcessResult[], companyId: str
         inicio: periods[0],
         fin: periods[periods.length - 1]
       },
+      validacion_anual: {
+        tiene_año_completo: !!yearCompleteData,
+        año_analizado: selectedYear || null,
+        meses_presentes: yearCompleteData ? yearCompleteData.map(d => parseInt(d.period.substring(4, 6))) : [],
+        rut_validado: uniqueRuts[0] || 'No detectado'
+      },
+      metricas_anuales: {
+        total_ventas_anual: totalVentasAnual,
+        total_compras_netas_anual: totalComprasNetasAnual,
+        margen_bruto_anual_porcentaje: margenBrutoAnual,
+        margen_bruto_anual_monto: totalVentasAnual - totalComprasNetasAnual
+      },
       metricas_clave: {
-        total_ventas: totalVentas,
+        total_ventas: totalVentasAnual,
         promedio_mensual: promedioVentas,
+        promedio_compras_mensual: promedioCompras,
         crecimiento_periodo: crecimiento,
         mejor_mes: mejorMes,
         peor_mes: peorMes
       },
       insights_iniciales: [
-        `Se analizaron ${periods.length} períodos de F29`,
-        `Ventas promedio mensual: $${Math.round(promedioVentas).toLocaleString()}`,
-        `Mejor mes: ${mejorMes.period} con $${Math.round(mejorMes.ventas).toLocaleString()}`,
+        `📊 Se analizaron ${periods.length} períodos de F29`,
+        yearCompleteData ? `✅ Año completo ${selectedYear} validado (12 meses)` : `⚠️ No se encontró un año completo con 12 meses`,
+        `💰 Ventas netas totales: $${Math.round(totalVentasAnual).toLocaleString()}`,
+        `🛒 Compras netas totales: $${Math.round(totalComprasNetasAnual).toLocaleString()}`,
+        `📈 Margen bruto anual: ${margenBrutoAnual.toFixed(1)}% ($${Math.round(totalVentasAnual - totalComprasNetasAnual).toLocaleString()})`,
+        `📅 Mejor mes: ${mejorMes.period} con $${Math.round(mejorMes.ventas).toLocaleString()} en ventas`,
         crecimiento > 0 
-          ? `Crecimiento positivo del ${crecimiento.toFixed(1)}%`
-          : `Decrecimiento del ${Math.abs(crecimiento).toFixed(1)}%`
+          ? `🚀 Crecimiento positivo del ${crecimiento.toFixed(1)}%`
+          : `📉 Decrecimiento del ${Math.abs(crecimiento).toFixed(1)}%`
       ]
     };
 
