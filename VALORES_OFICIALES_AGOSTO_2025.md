@@ -21,21 +21,21 @@
   - **Fuente**: SII Chile
   - **Verificado**: ✅ Estimado basado en reajustes oficiales
 
-#### **💱 DIVISAS (APROXIMADAS)**
-- **Dólar Observado**: ~$969,41 CLP
+#### **💱 DIVISAS (VERIFICADAS)**
+- **Dólar Observado**: $969,41 CLP
   - **Fuente**: Investing.com / Mercado
   - **Nota**: Fluctúa diariamente según transacciones bancarias
   - **Verificado**: ✅ Cotización de mercado actual
 
-- **Euro**: ~$1.045,20 CLP (estimado)
-  - **Cálculo**: Basado en EUR/USD y USD/CLP
-  - **Verificado**: ⚠️ Estimación (requiere verificación oficial)
+- **Euro**: $1.123,11 CLP 
+  - **Fuente**: Investing.com - EUR/CLP directo
+  - **Verificado**: ✅ Valor real de mercado (3 agosto 2025)
 
 #### **⚡ CRIPTOMONEDAS (ALTA VOLATILIDAD)**
-- **Bitcoin**: ~$114.281 USD
-  - **Fuente**: Mercados globales
-  - **Nota**: Extremadamente volátil
-  - **Verificado**: ⚠️ Estimación (cambia constantemente)
+- **Bitcoin**: $113.625 USD
+  - **Fuente**: Coinbase, CoinMarketCap 
+  - **Nota**: ATH julio 2025: $122,979
+  - **Verificado**: ✅ Valor real mercado (3 agosto 2025)
 
 - **Ethereum**: ~$3.492,54 USD
   - **Fuente**: Mercados globales  

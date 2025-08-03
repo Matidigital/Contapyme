@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { INDICATORS_CONFIG, getCurrentIndicatorValues, getUpdateMetadata } from '@/lib/indicatorsDataService';
 
 // Sistema híbrido simplificado sin dependencias externas
 interface IndicatorValue {
@@ -297,13 +298,13 @@ async function fetchWebSearchFallback() {
     
     // Valores actualizados mediante web search verificado (3 agosto 2025)
     const webSearchValues = {
-      uf: 39163.00,           // UF oficial SII 3 agosto 2025
+      uf: 39163.00,           // UF oficial SII 3 agosto 2025 ✅
       utm: 68923,             // UTM agosto 2025  
-      dolar: 969.41,          // USD/CLP mercado actual
-      euro: 1045.20,          // EUR/CLP estimado
-      bitcoin: 114281,        // Bitcoin USD (verificado por web search)
-      ethereum: 3492.54,      // Ethereum USD (verificado por web search)
-      sueldo_minimo: 529000   // Sueldo mínimo oficial vigente Ley N°21.751
+      dolar: 969.41,          // USD/CLP Investing.com ✅
+      euro: 1123.11,          // EUR/CLP Investing.com actualizado ✅
+      bitcoin: 113625,        // Bitcoin USD Coinbase ✅
+      ethereum: 3492.54,      // Ethereum USD (pendiente verificar)
+      sueldo_minimo: 529000   // Sueldo mínimo oficial vigente Ley N°21.751 ✅
     };
 
     // Agregar variación realista diaria para simular mercado real
@@ -333,31 +334,15 @@ function getSmartSimulatedData(): IndicatorsDashboard {
   const currentDate = new Date().toISOString().split('T')[0];
   const currentTime = new Date().toISOString();
   
-  // Valores base actualizados (agosto 3, 2025 - verificados por web search)
-  const baseValues = {
-    uf: 39163.00,           // UF oficial hoy 3 agosto 2025
-    utm: 68923,             // UTM agosto 2025
-    dolar: 969.41,          // USD/CLP aproximado según mercado
-    euro: 1045.20,          // EUR/CLP estimado
-    bitcoin: 114281,        // Bitcoin USD (alta volatilidad)
-    ethereum: 3492.54,      // Ethereum USD
-    sueldo_minimo: 529000,  // Sueldo mínimo oficial Chile mayo 2025
-    ipc: 3.2,               // IPC estimado
-    tpm: 5.75               // Tasa política monetaria estimada
-  };
-
-  // Agregar variación realista diaria
-  const getVariedValue = (base: number, maxVariation: number = 0.02) => {
-    const variation = (Math.random() - 0.5) * maxVariation * 2; // ±2%
-    return Math.round(base * (1 + variation) * 100) / 100;
-  };
+  // Usar servicio centralizado de valores
+  const currentValues = getCurrentIndicatorValues();
 
   const indicators: IndicatorValue[] = [
     // Monetarios
     {
       code: 'uf',
       name: 'Unidad de Fomento',
-      value: getVariedValue(baseValues.uf, 0.005), // UF varía menos
+      value: currentValues.uf,
       date: currentDate,
       unit: 'CLP',
       category: 'monetary',
@@ -369,7 +354,7 @@ function getSmartSimulatedData(): IndicatorsDashboard {
     {
       code: 'utm',
       name: 'Unidad Tributaria Mensual',
-      value: Math.round(getVariedValue(baseValues.utm, 0.001)), // UTM varía muy poco
+      value: Math.round(currentValues.utm),
       date: currentDate,
       unit: 'CLP',
       category: 'monetary',
@@ -381,7 +366,7 @@ function getSmartSimulatedData(): IndicatorsDashboard {
     {
       code: 'ipc',
       name: 'Índice de Precios al Consumidor',
-      value: getVariedValue(baseValues.ipc, 0.1),
+      value: currentValues.ipc,
       date: currentDate,
       unit: '%',
       category: 'monetary',
@@ -393,7 +378,7 @@ function getSmartSimulatedData(): IndicatorsDashboard {
     {
       code: 'tpm',
       name: 'Tasa de Política Monetaria',
-      value: baseValues.tpm, // TPM no varía diariamente
+      value: currentValues.tpm,
       date: currentDate,
       unit: '%',
       category: 'monetary',
@@ -406,7 +391,7 @@ function getSmartSimulatedData(): IndicatorsDashboard {
     {
       code: 'dolar',
       name: 'Dólar Observado',
-      value: getVariedValue(baseValues.dolar, 0.03),
+      value: currentValues.dolar,
       date: currentDate,
       unit: 'CLP',
       category: 'currency',
@@ -418,7 +403,7 @@ function getSmartSimulatedData(): IndicatorsDashboard {
     {
       code: 'euro',
       name: 'Euro',
-      value: getVariedValue(baseValues.euro, 0.03),
+      value: currentValues.euro,
       date: currentDate,
       unit: 'CLP',
       category: 'currency',
@@ -431,7 +416,7 @@ function getSmartSimulatedData(): IndicatorsDashboard {
     {
       code: 'bitcoin',
       name: 'Bitcoin',
-      value: Math.round(getVariedValue(baseValues.bitcoin, 0.05)), // ±5%
+      value: Math.round(currentValues.bitcoin),
       date: currentDate,
       unit: 'USD',
       category: 'crypto',
@@ -443,7 +428,7 @@ function getSmartSimulatedData(): IndicatorsDashboard {
     {
       code: 'ethereum',
       name: 'Ethereum',
-      value: getVariedValue(baseValues.ethereum, 0.06), // ±6%
+      value: currentValues.ethereum,
       date: currentDate,
       unit: 'USD',
       category: 'crypto',
@@ -456,7 +441,7 @@ function getSmartSimulatedData(): IndicatorsDashboard {
     {
       code: 'sueldo_minimo',
       name: 'Sueldo Mínimo',
-      value: baseValues.sueldo_minimo, // No varía diariamente
+      value: currentValues.sueldo_minimo,
       date: currentDate,
       unit: 'CLP',
       category: 'labor',

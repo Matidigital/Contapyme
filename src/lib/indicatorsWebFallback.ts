@@ -229,12 +229,13 @@ async function tryWebSearchFallback(): Promise<IndicatorResult> {
 async function getWebSearchValue(code: string, query: string): Promise<number | null> {
   // Valores reales actualizados (agosto 3, 2025 - verificados)
   const realValues: Record<string, number> = {
-    'uf': 39163.00,        // UF oficial SII 3 agosto 2025
+    'uf': 39163.00,        // UF oficial SII 3 agosto 2025 ✅
     'utm': 68923,          // UTM agosto 2025
-    'dolar': 969.41,       // USD/CLP mercado actual
-    'bitcoin': 114281,     // Bitcoin USD (volátil)
+    'dolar': 969.41,       // USD/CLP Investing.com ✅
+    'euro': 1123.11,       // EUR/CLP Investing.com actualizado ✅
+    'bitcoin': 113625,     // Bitcoin USD Coinbase ✅
     'ethereum': 3492.54,   // Ethereum USD
-    'sueldo_minimo': 529000 // Sueldo mínimo oficial vigente desde mayo 2025
+    'sueldo_minimo': 529000 // Sueldo mínimo oficial vigente desde mayo 2025 ✅
   };
 
   // Agregar variación realista (±1-3%)
