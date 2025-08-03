@@ -69,3 +69,123 @@ export interface FinancialReport {
   data: any
   createdAt: Date
 }
+
+// ===============================
+// TIPOS PARA ACTIVOS FIJOS
+// ===============================
+
+export interface FixedAsset {
+  id: string
+  user_id: string
+  
+  // Información básica
+  name: string
+  description?: string
+  category: string
+  
+  // Valores económicos
+  purchase_value: number
+  residual_value: number
+  depreciable_value: number
+  
+  // Fechas
+  purchase_date: string
+  start_depreciation_date: string
+  
+  // Vida útil y depreciación
+  useful_life_years: number
+  useful_life_months: number
+  depreciation_method: 'linear' | 'accelerated' | 'units_production'
+  
+  // Asociación con plan de cuentas
+  asset_account_code?: string
+  depreciation_account_code?: string
+  expense_account_code?: string
+  
+  // Estado
+  status: 'active' | 'disposed' | 'fully_depreciated'
+  disposal_date?: string
+  disposal_value?: number
+  
+  // Información adicional
+  serial_number?: string
+  brand?: string
+  model?: string
+  location?: string
+  responsible_person?: string
+  
+  // Metadatos
+  created_at: string
+  updated_at: string
+}
+
+export interface FixedAssetDepreciation {
+  id: string
+  fixed_asset_id: string
+  
+  // Período
+  period_year: number
+  period_month: number
+  
+  // Valores
+  monthly_depreciation: number
+  accumulated_depreciation: number
+  book_value: number
+  
+  // Estado
+  is_calculated: boolean
+  calculation_date: string
+}
+
+export interface FixedAssetCategory {
+  id: string
+  name: string
+  description?: string
+  default_useful_life_years?: number
+  suggested_asset_account?: string
+  suggested_depreciation_account?: string
+  suggested_expense_account?: string
+  created_at: string
+}
+
+// Tipos para formularios
+export interface CreateFixedAssetData {
+  name: string
+  description?: string
+  category: string
+  purchase_value: number
+  residual_value: number
+  purchase_date: string
+  start_depreciation_date: string
+  useful_life_years: number
+  asset_account_code?: string
+  depreciation_account_code?: string
+  expense_account_code?: string
+  serial_number?: string
+  brand?: string
+  model?: string
+  location?: string
+  responsible_person?: string
+}
+
+export interface UpdateFixedAssetData extends Partial<CreateFixedAssetData> {
+  id: string
+}
+
+// Tipos para reportes de activos fijos
+export interface FixedAssetReport {
+  total_assets: number
+  total_purchase_value: number
+  total_book_value: number
+  total_accumulated_depreciation: number
+  assets_by_category: {
+    [category: string]: {
+      count: number
+      purchase_value: number
+      book_value: number
+      accumulated_depreciation: number
+    }
+  }
+  monthly_depreciation: number
+  assets_near_full_depreciation: FixedAsset[]
+}

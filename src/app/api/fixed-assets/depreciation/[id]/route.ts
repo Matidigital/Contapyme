@@ -1,0 +1,72 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { databaseSimple } from '@/lib/databaseSimple';
+
+// GET /api/fixed-assets/depreciation/[id] - Obtener cronograma de depreciación
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const { id } = params;
+    const { searchParams } = new URL(request.url);
+    const year = searchParams.get('year');
+
+    // Verificar que el activo pertenece al usuario
+    const assetQuery = `
+      SELECT id, name FROM fixed_assets 
+      WHERE id = $1 AND user_id = auth.uid()
+    `;
+
+    const { data: assetData, error: assetError } = await databaseSimple.query(assetQuery, [id]);
+
+    if (assetError || !assetData || assetData.length === 0) {
+      return NextResponse.json(
+        { error: 'Activo fijo no encontrado o no autorizado' },
+        { status: 404 }
+      );
+    }
+
+    // Obtener cronograma de depreciación
+    let depreciationQuery = `
+      SELECT 
+        fad.*,
+        fa.name as asset_name,
+        fa.purchase_value,
+        fa.residual_value
+      FROM fixed_assets_depreciation fad
+      JOIN fixed_assets fa ON fad.fixed_asset_id = fa.id
+      WHERE fad.fixed_asset_id = $1
+    `;
+
+    const params: any[] = [id];
+
+    if (year) {
+      depreciationQuery += ' AND fad.period_year = $2';
+      params.push(parseInt(year));
+    }
+
+    depreciationQuery += ' ORDER BY fad.period_year ASC, fad.period_month ASC';
+
+    const { data, error } = await databaseSimple.query(depreciationQuery, params);
+
+    if (error) {
+      console.error('Error fetching depreciation schedule:', error);
+      return NextResponse.json(
+        { error: 'Error al obtener cronograma de depreciación' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ 
+      asset: assetData[0],
+      depreciation_schedule: data || [] 
+    });
+
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    return NextResponse.json(
+      { error: 'Error interno del servidor' },
+      { status: 500 }
+    );
+  }
+}
