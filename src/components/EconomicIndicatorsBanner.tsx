@@ -230,81 +230,38 @@ export default function EconomicIndicatorsBanner() {
 
   return (
     <div className="mb-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-bold text-gray-800 flex items-center space-x-2">
-          <span>📊</span>
-          <span>Indicadores Económicos en Tiempo Real</span>
-        </h3>
-        <Link 
-          href="/accounting/indicators"
-          className="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center space-x-1 transition-colors"
-        >
-          <span>Ver detalle</span>
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </Link>
+      {/* Minimal Header */}
+      <div className="text-center mb-4">
+        <p className="text-sm text-gray-500 font-medium">Indicadores Económicos</p>
       </div>
 
-      {/* Running Ticker Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 rounded-2xl shadow-2xl overflow-hidden relative">
-        {/* Background Animation */}
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-green-600/20 animate-pulse"></div>
-        
-        {/* Main Ticker Container - REDUCED PADDING */}
-        <div className="relative overflow-hidden py-3">
-          {/* Running Indicators - FASTER ANIMATION */}
-          <div className="flex animate-scroll-left-fast space-x-6">
+      {/* Minimal Ticker Strip */}
+      <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden relative">        
+        {/* Minimal Ticker Container */}
+        <div className="relative overflow-hidden py-2">
+          {/* Running Indicators - Minimal Design */}
+          <div className="flex animate-scroll-left-fast space-x-8">
             {/* Duplicamos los indicadores para efecto continuo */}
             {[...allIndicators, ...allIndicators, ...allIndicators].map((indicator, index) => (
               <div 
                 key={`${indicator.code}-${index}`}
-                className="flex-shrink-0 flex items-center space-x-3 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2 border border-white/20 min-w-[250px] hover:bg-white/20 transition-all duration-300 cursor-pointer"
+                className="flex-shrink-0 flex items-center space-x-3 px-4 py-1 min-w-[200px] hover:bg-gray-50 transition-colors cursor-pointer"
                 onClick={() => window.open('/accounting/indicators', '_blank')}
               >
-                {/* Icon - SMALLER */}
-                <div className={`w-8 h-8 bg-gradient-to-br ${getCategoryColor(indicator.category)} rounded-lg flex items-center justify-center shadow-lg`}>
-                  <div className="scale-75">
-                    {getCategoryIcon(indicator.category)}
-                  </div>
-                </div>
-                
-                {/* Content */}
-                <div className="flex-1">
-                  <div className="flex items-center space-x-2 mb-1">
-                    <h4 className="text-white font-bold text-sm">{indicator.name}</h4>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      indicator.source === 'real_data' 
-                        ? 'bg-green-500/30 text-green-200 border border-green-400/30' 
-                        : 'bg-blue-500/30 text-blue-200 border border-blue-400/30'
-                    }`}>
-                      {indicator.source === 'real_data' ? 'REAL' : 'SMART'}
-                    </span>
-                  </div>
-                  
-                  <div className="text-white text-lg font-black">
+                {/* Minimal Content */}
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    {indicator.code}
+                  </span>
+                  <span className="text-sm font-semibold text-gray-900">
                     {formatValue(indicator)}
-                  </div>
-                </div>
-
-                {/* Trend Arrow */}
-                <div className="flex flex-col items-center">
-                  {indicator.change !== undefined ? (
-                    <div className={`flex items-center space-x-1 ${
-                      indicator.change >= 0 ? 'text-green-400' : 'text-red-400'
+                  </span>
+                  {indicator.change !== undefined && (
+                    <span className={`text-xs ${
+                      indicator.change >= 0 ? 'text-green-600' : 'text-red-600'
                     }`}>
-                      <span className="text-lg">
-                        {indicator.change >= 0 ? '↗' : '↘'}
-                      </span>
-                      <span className="text-sm font-bold">
-                        {Math.abs(indicator.change).toFixed(1)}%
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
-                      <span className="text-white text-xs">•</span>
-                    </div>
+                      {indicator.change >= 0 ? '↗' : '↘'}
+                    </span>
                   )}
                 </div>
               </div>
@@ -312,56 +269,21 @@ export default function EconomicIndicatorsBanner() {
           </div>
         </div>
 
-        {/* Gradient Overlays for smooth edges */}
-        <div className="absolute top-0 left-0 w-32 h-full bg-gradient-to-r from-slate-900 to-transparent pointer-events-none z-10"></div>
-        <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-slate-900 to-transparent pointer-events-none z-10"></div>
+        {/* Subtle edge fade */}
+        <div className="absolute top-0 left-0 w-8 h-full bg-gradient-to-r from-white to-transparent pointer-events-none"></div>
+        <div className="absolute top-0 right-0 w-8 h-full bg-gradient-to-l from-white to-transparent pointer-events-none"></div>
         
-        {/* Bottom Info Bar - COMPACT */}
-        <div className="bg-black/30 backdrop-blur-sm px-4 py-1 flex items-center justify-between text-xs">
-          <div className="flex items-center space-x-4 text-white/70">
-            <span className={`inline-flex items-center space-x-1 ${
-              updateStatus === 'updating' ? 'text-yellow-400' :
-              updateStatus === 'success' ? 'text-green-400' :
-              updateStatus === 'error' ? 'text-red-400' : 'text-white/70'
-            }`}>
-              {updateStatus === 'updating' && (
-                <>
-                  <div className="w-2 h-2 bg-current rounded-full animate-spin"></div>
-                  <span>Actualizando...</span>
-                </>
-              )}
-              {updateStatus === 'success' && (
-                <>
-                  <div className="w-2 h-2 bg-current rounded-full"></div>
-                  <span>✅ Actualizado</span>
-                </>
-              )}
-              {updateStatus === 'error' && (
-                <>
-                  <div className="w-2 h-2 bg-current rounded-full"></div>
-                  <span>❌ Error al actualizar</span>
-                </>
-              )}
-              {updateStatus === 'idle' && (
-                <>
-                  <div className="w-2 h-2 bg-current rounded-full animate-pulse"></div>
-                  <span>🔄 Auto-actualización activa</span>
-                </>
-              )}
-            </span>
-            <span>•</span>
-            <span>📅 Última actualización: {lastUpdate.toLocaleTimeString('es-CL')}</span>
-          </div>
-          <div className="text-white/70">
-            <span className={`inline-flex items-center space-x-1 ${
-              dataSource === 'real_data' ? 'text-green-400' : 'text-blue-400'
-            }`}>
-              <span className="w-2 h-2 bg-current rounded-full animate-pulse"></span>
-              <span>
-                {dataSource === 'real_data' ? 'Datos oficiales' : 'Simulación inteligente'}
+        {/* Minimal Status */}
+        <div className="bg-gray-50 px-4 py-1 text-center">
+          <span className="text-xs text-gray-400">
+            Actualizado: {lastUpdate.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
+            {updateStatus === 'updating' && (
+              <span className="ml-2 inline-flex items-center">
+                <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse mr-1"></div>
+                actualizando
               </span>
-            </span>
-          </div>
+            )}
+          </span>
         </div>
       </div>
 
