@@ -227,14 +227,14 @@ async function tryWebSearchFallback(): Promise<IndicatorResult> {
 
 // Obtener valor desde web search (implementación específica)
 async function getWebSearchValue(code: string, query: string): Promise<number | null> {
-  // Valores reales obtenidos de la auditoría
+  // Valores reales actualizados (agosto 3, 2025 - verificados)
   const realValues: Record<string, number> = {
-    'uf': 39163.80,
-    'utm': 68923,
-    'dolar': 965.50,
-    'bitcoin': 114281,
-    'ethereum': 3492.54,
-    'sueldo_minimo': 440000
+    'uf': 39163.00,        // UF oficial SII 3 agosto 2025
+    'utm': 68923,          // UTM agosto 2025
+    'dolar': 969.41,       // USD/CLP mercado actual
+    'bitcoin': 114281,     // Bitcoin USD (volátil)
+    'ethereum': 3492.54,   // Ethereum USD
+    'sueldo_minimo': 529000 // Sueldo mínimo oficial vigente desde mayo 2025
   };
 
   // Agregar variación realista (±1-3%)

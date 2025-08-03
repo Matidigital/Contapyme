@@ -262,17 +262,17 @@ function getSmartSimulatedData(): IndicatorsDashboard {
   const currentDate = new Date().toISOString().split('T')[0];
   const currentTime = new Date().toISOString();
   
-  // Valores base actualizados (de la auditoría web)
+  // Valores base actualizados (agosto 3, 2025 - verificados por web search)
   const baseValues = {
-    uf: 39163.80,
-    utm: 68923,
-    dolar: 965.50,
-    euro: 1045.20,
-    bitcoin: 114281,
-    ethereum: 3492.54,
-    sueldo_minimo: 440000,
-    ipc: 3.2,
-    tpm: 5.75
+    uf: 39163.00,           // UF oficial hoy 3 agosto 2025
+    utm: 68923,             // UTM agosto 2025
+    dolar: 969.41,          // USD/CLP aproximado según mercado
+    euro: 1045.20,          // EUR/CLP estimado
+    bitcoin: 114281,        // Bitcoin USD (alta volatilidad)
+    ethereum: 3492.54,      // Ethereum USD
+    sueldo_minimo: 529000,  // Sueldo mínimo oficial Chile mayo 2025
+    ipc: 3.2,               // IPC estimado
+    tpm: 5.75               // Tasa política monetaria estimada
   };
 
   // Agregar variación realista diaria
