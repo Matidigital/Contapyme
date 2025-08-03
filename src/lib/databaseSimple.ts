@@ -500,3 +500,142 @@ export const databaseSimple = {
     }
   }
 };
+
+// ======================================
+// ECONOMIC INDICATORS FUNCTIONS
+// ======================================
+
+export async function getIndicatorsDashboard(): Promise<{ data: any; error: any }> {
+  try {
+    // Obtener indicadores por categoría
+    const { data: monetary, error: monetaryError } = await supabase.rpc('get_indicators_by_category', { cat: 'monetary' });
+    const { data: currency, error: currencyError } = await supabase.rpc('get_indicators_by_category', { cat: 'currency' });
+    const { data: crypto, error: cryptoError } = await supabase.rpc('get_indicators_by_category', { cat: 'crypto' });
+    const { data: labor, error: laborError } = await supabase.rpc('get_indicators_by_category', { cat: 'labor' });
+
+    if (monetaryError || currencyError || cryptoError || laborError) {
+      console.error('Error fetching indicators by category:', { monetaryError, currencyError, cryptoError, laborError });
+      return { data: null, error: monetaryError || currencyError || cryptoError || laborError };
+    }
+
+    const dashboard = {
+      monetary: monetary || [],
+      currency: currency || [],
+      crypto: crypto || [],
+      labor: labor || []
+    };
+
+    return { data: dashboard, error: null };
+  } catch (error) {
+    console.error('Unexpected error in getIndicatorsDashboard:', error);
+    return { data: null, error };
+  }
+}
+
+export async function getIndicatorHistory(code: string, days: number = 30): Promise<{ data: any; error: any }> {
+  try {
+    const fromDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    
+    const { data, error } = await supabase
+      .from('economic_indicators')
+      .select('*')
+      .eq('code', code)
+      .gte('date', fromDate)
+      .order('date', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching indicator history:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Unexpected error in getIndicatorHistory:', error);
+    return { data: null, error };
+  }
+}
+
+export async function updateIndicatorValue(
+  code: string, 
+  value: number, 
+  date: string = new Date().toISOString().split('T')[0]
+): Promise<{ data: any; error: any }> {
+  try {
+    // Obtener configuración del indicador
+    const { data: config, error: configError } = await supabase
+      .from('indicator_config')
+      .select('*')
+      .eq('code', code)
+      .single();
+
+    if (configError) {
+      return { data: null, error: configError };
+    }
+
+    // Insertar o actualizar valor
+    const { data, error } = await supabase
+      .from('economic_indicators')
+      .upsert({
+        code,
+        name: config.name,
+        unit: config.unit,
+        value,
+        date,
+        category: config.category,
+      }, {
+        onConflict: 'code,date'
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating indicator:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Unexpected error in updateIndicatorValue:', error);
+    return { data: null, error };
+  }
+}
+
+export async function getLatestIndicators(): Promise<{ data: any; error: any }> {
+  try {
+    const { data, error } = await supabase
+      .from('economic_indicators')
+      .select(`
+        *,
+        indicator_config!inner(
+          display_order,
+          format_type,
+          decimal_places,
+          is_active
+        )
+      `)
+      .eq('indicator_config.is_active', true)
+      .order('date', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching latest indicators:', error);
+      return { data: null, error };
+    }
+
+    // Agrupar por código para obtener solo el más reciente de cada uno
+    const latest = data.reduce((acc: any, indicator: any) => {
+      if (!acc[indicator.code]) {
+        acc[indicator.code] = indicator;
+      }
+      return acc;
+    }, {});
+
+    const result = Object.values(latest).sort(
+      (a: any, b: any) => a.indicator_config.display_order - b.indicator_config.display_order
+    );
+
+    return { data: result, error: null };
+  } catch (error) {
+    console.error('Unexpected error in getLatestIndicators:', error);
+    return { data: null, error };
+  }
+}

@@ -311,7 +311,7 @@ export default function AccountingPage() {
           </div>
 
           {/* Features Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <Link href="/accounting/configuration" className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow">
               <div className="w-12 h-12 bg-indigo-100 rounded-lg mb-4 flex items-center justify-center">
                 <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -321,6 +321,21 @@ export default function AccountingPage() {
               </div>
               <h3 className="font-semibold text-gray-900 mb-2">Configuración</h3>
               <p className="text-sm text-gray-600">Plan de cuentas IFRS y configuraciones</p>
+            </Link>
+
+            <Link href="/accounting/indicators" className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow border-2 border-blue-200">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg mb-4 flex items-center justify-center">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                </svg>
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">Indicadores Contables</h3>
+              <p className="text-sm text-gray-600">UF, UTM, divisas, criptomonedas en tiempo real</p>
+              <div className="mt-2">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  Nuevo
+                </span>
+              </div>
             </Link>
 
             <Link href="/accounting/transactions" className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow">

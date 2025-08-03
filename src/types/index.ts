@@ -189,3 +189,97 @@ export interface FixedAssetReport {
   monthly_depreciation: number
   assets_near_full_depreciation: FixedAsset[]
 }
+
+// =============================================
+// TIPOS PARA INDICADORES ECONÓMICOS
+// =============================================
+
+export interface EconomicIndicator {
+  id: string;
+  code: string;
+  name: string;
+  unit: string | null;
+  value: number;
+  date: string;
+  source: string;
+  category: 'monetary' | 'currency' | 'crypto' | 'labor';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IndicatorConfig {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  unit: string | null;
+  category: 'monetary' | 'currency' | 'crypto' | 'labor';
+  api_endpoint: string | null;
+  api_enabled: boolean;
+  update_frequency: 'daily' | 'weekly' | 'monthly';
+  display_order: number;
+  is_active: boolean;
+  decimal_places: number;
+  format_type: 'currency' | 'percentage' | 'number';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IndicatorValue {
+  code: string;
+  name: string;
+  value: number;
+  date: string;
+  unit: string | null;
+  category: string;
+  format_type?: string;
+  decimal_places?: number;
+  change?: number; // Variación respecto al período anterior
+  change_percentage?: number; // Variación porcentual
+}
+
+export interface IndicatorHistory {
+  code: string;
+  name: string;
+  unit: string | null;
+  values: Array<{
+    date: string;
+    value: number;
+  }>;
+}
+
+// API Response types para mindicador.cl
+export interface MindicadorResponse {
+  version: string;
+  autor: string;
+  fecha: string;
+  [key: string]: any; // Para los indicadores dinámicos
+}
+
+export interface MindicadorIndicator {
+  codigo: string;
+  nombre: string;
+  unidad_medida: string;
+  fecha: string;
+  valor: number;
+}
+
+export interface CryptoAPIResponse {
+  [key: string]: {
+    usd: number;
+    usd_24h_change: number;
+  };
+}
+
+export interface IndicatorsDashboard {
+  monetary: IndicatorValue[];
+  currency: IndicatorValue[];
+  crypto: IndicatorValue[];
+  labor: IndicatorValue[];
+}
+
+export interface UpdateIndicatorRequest {
+  code: string;
+  manual_value?: number;
+  force_update?: boolean;
+}
