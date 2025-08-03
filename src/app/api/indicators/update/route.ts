@@ -47,7 +47,8 @@ export async function POST(request: NextRequest) {
       'ipc': 'ipc',
       'tpm': 'tpm',
       'tasa_desempleo': 'tasa_desempleo',
-      'bitcoin': 'crypto'
+      'bitcoin': 'crypto',
+      'ethereum': 'crypto'
     };
 
     for (const indicatorCode of indicators || Object.keys(indicatorMappings)) {
