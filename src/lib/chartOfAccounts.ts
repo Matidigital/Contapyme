@@ -176,6 +176,40 @@ export function generateNextCode(parentCode: string, existingCodes: string[]): s
   }
 }
 
+// Generar template CSV para importar plan de cuentas
+export function generateCSVTemplate(): string {
+  const headers = ['Código', 'Nombre', 'Tipo', 'Nivel', 'Es Detalle', 'Activa'];
+  const ejemplos = [
+    ['1', 'ACTIVO', 'Activo', '1', 'No', 'Sí'],
+    ['1.1', 'ACTIVO CORRIENTE', 'Activo', '2', 'No', 'Sí'],
+    ['1.1.01', 'EFECTIVO Y EQUIVALENTES AL EFECTIVO', 'Activo', '3', 'No', 'Sí'],
+    ['1.1.01.001', 'Caja', 'Activo', '4', 'Sí', 'Sí'],
+    ['1.1.01.002', 'Banco Estado', 'Activo', '4', 'Sí', 'Sí'],
+    ['1.2', 'ACTIVO NO CORRIENTE', 'Activo', '2', 'No', 'Sí'],
+    ['2', 'PASIVO', 'Pasivo', '1', 'No', 'Sí'],
+    ['2.1', 'PASIVO CORRIENTE', 'Pasivo', '2', 'No', 'Sí'],
+    ['2.1.01', 'Proveedores Nacionales', 'Pasivo', '3', 'Sí', 'Sí'],
+    ['2.3', 'PATRIMONIO', 'Patrimonio', '2', 'No', 'Sí'],
+    ['2.3.01', 'Capital', 'Patrimonio', '3', 'Sí', 'Sí'],
+    ['3', 'GASTOS', 'Gasto', '1', 'No', 'Sí'],
+    ['3.1', 'GASTOS OPERACIONALES', 'Gasto', '2', 'No', 'Sí'],
+    ['3.1.01', 'Costos de Venta', 'Gasto', '3', 'Sí', 'Sí'],
+    ['4', 'INGRESOS', 'Ingreso', '1', 'No', 'Sí'],
+    ['4.1', 'INGRESOS OPERACIONALES', 'Ingreso', '2', 'No', 'Sí'],
+    ['4.1.01', 'Ventas', 'Ingreso', '3', 'Sí', 'Sí']
+  ];
+
+  const rows = [
+    headers,
+    // Agregar fila de instrucciones
+    ['# INSTRUCCIONES:', 'Complete las cuentas necesarias siguiendo los ejemplos', 'Tipos válidos: Activo, Pasivo, Patrimonio, Gasto, Ingreso', 'Nivel según jerarquía (1-4)', 'Sí=cuenta de detalle, No=cuenta grupo', 'Sí=activa, No=inactiva'],
+    // Agregar ejemplos
+    ...ejemplos
+  ];
+  
+  return rows.map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+}
+
 // Descargar archivo
 export function downloadFile(content: string, filename: string, type: string = 'text/plain') {
   const blob = new Blob([content], { type });

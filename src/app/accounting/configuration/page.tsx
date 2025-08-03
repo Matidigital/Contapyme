@@ -17,7 +17,7 @@ import {
   X
 } from 'lucide-react';
 import { Button, Card } from '@/components/ui';
-import { exportToCSV, exportToJSON, parseCSV, downloadFile } from '@/lib/chartOfAccounts';
+import { exportToCSV, exportToJSON, parseCSV, downloadFile, generateCSVTemplate } from '@/lib/chartOfAccounts';
 import { planDeCuentasChilenoFinal } from '@/lib/planDeCuentasChilenoFinal';
 import { Account } from '@/types';
 
@@ -176,6 +176,16 @@ export default function ConfigurationPage() {
                       >
                         Exportar como JSON
                       </button>
+                      <div className="border-t border-gray-100 my-1"></div>
+                      <button
+                        onClick={() => {
+                          const template = generateCSVTemplate();
+                          downloadFile(template, 'template_plan_de_cuentas.csv', 'text/csv');
+                        }}
+                        className="block w-full text-left px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 font-medium"
+                      >
+                        📋 Descargar Template CSV
+                      </button>
                     </div>
                   </div>
                   <Button
@@ -245,6 +255,12 @@ export default function ConfigurationPage() {
                   <div><span className="font-medium">🔢 Códigos:</span> Jerárquicos (x.y.z)</div>
                   <div><span className="font-medium">📄 Niveles:</span> Hasta 4 niveles jerárquicos</div>
                   <div><span className="font-medium">🇨🇱 Compatible:</span> IFRS + SII Chile</div>
+                </div>
+                <div className="mt-3 p-3 bg-blue-100 rounded border border-blue-200">
+                  <p className="text-xs text-blue-800">
+                    <strong>💡 Template CSV:</strong> Descarga el template CSV con ejemplos y formato correcto para crear tu propio plan de cuentas. 
+                    Incluye columnas: Código, Nombre, Tipo, Nivel, Es Detalle, Activa.
+                  </p>
                 </div>
               </div>
             </div>
