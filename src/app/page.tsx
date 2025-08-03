@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Header } from '@/components/layout'
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui'
+import EconomicIndicatorsBanner from '@/components/EconomicIndicatorsBanner'
 
 export default function Home() {
   return (
@@ -20,7 +21,12 @@ export default function Home() {
         }
       />
 
-      <main className="max-w-6xl mx-auto py-12 px-4">
+      {/* Economic Indicators Banner */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <EconomicIndicatorsBanner />
+      </div>
+
+      <main className="max-w-6xl mx-auto py-8 px-4">
         {/* Hero Section */}
         <div className="text-center mb-12">
           <div className="mb-8">
