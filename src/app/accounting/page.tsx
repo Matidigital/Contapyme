@@ -103,27 +103,33 @@ export default function AccountingPage() {
           <div className="mb-8">
             <h3 className="text-xl font-semibold text-gray-900 mb-6">Herramientas de Análisis</h3>
             
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* F29 Analysis */}
               <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl shadow-lg overflow-hidden">
-                <div className="px-8 py-6 text-white">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                      <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="px-6 py-6 text-white">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="w-10 h-10 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold">Análisis Formulario F29</h3>
-                      <p className="text-indigo-100">Analiza tu situación fiscal con IA</p>
+                      <h3 className="text-lg font-bold">Análisis F29</h3>
+                      <p className="text-indigo-100 text-sm">Situación fiscal con IA</p>
                     </div>
                   </div>
-                  <div className="mt-6">
-                    <Link href="/accounting/f29-analysis" className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-6 py-3 rounded-lg font-medium inline-flex items-center space-x-2 transition-all">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="space-y-3">
+                    <Link href="/accounting/f29-analysis" className="w-full bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg font-medium inline-flex items-center justify-center space-x-2 transition-all text-sm">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                       </svg>
-                      <span>Iniciar Análisis F29</span>
+                      <span>Análisis Individual</span>
+                    </Link>
+                    <Link href="/accounting/f29-comparative" className="w-full bg-white bg-opacity-10 hover:bg-opacity-20 text-white px-4 py-2 rounded-lg font-medium inline-flex items-center justify-center space-x-2 transition-all text-sm">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                      <span>Análisis Comparativo</span>
                     </Link>
                   </div>
                 </div>
@@ -131,25 +137,56 @@ export default function AccountingPage() {
 
               {/* RCV Analysis */}
               <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl shadow-lg overflow-hidden">
-                <div className="px-8 py-6 text-white">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                      <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="px-6 py-6 text-white">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="w-10 h-10 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-6m-4 0H3m2 0h6M7 3h10M9 7h6m-6 4h6m-6 4h6" />
                       </svg>
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold">Análisis RCV - Proveedores</h3>
-                      <p className="text-emerald-100">Identifica tus proveedores principales</p>
+                      <h3 className="text-lg font-bold">Análisis RCV</h3>
+                      <p className="text-emerald-100 text-sm">Proveedores principales</p>
                     </div>
                   </div>
-                  <div className="mt-6">
-                    <Link href="/accounting/rcv-analysis" className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-6 py-3 rounded-lg font-medium inline-flex items-center space-x-2 transition-all">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="space-y-3">
+                    <Link href="/accounting/rcv-analysis" className="w-full bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg font-medium inline-flex items-center justify-center space-x-2 transition-all text-sm">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                       </svg>
                       <span>Analizar RCV</span>
                     </Link>
+                    <div className="w-full bg-white bg-opacity-10 text-white px-4 py-2 rounded-lg text-sm text-center opacity-60">
+                      Gráficos y reportes
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Fixed Assets */}
+              <div className="bg-gradient-to-r from-orange-500 to-red-600 rounded-2xl shadow-lg overflow-hidden">
+                <div className="px-6 py-6 text-white">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="w-10 h-10 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold">Activos Fijos</h3>
+                      <p className="text-orange-100 text-sm">Gestión y depreciación</p>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <Link href="/accounting/fixed-assets" className="w-full bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg font-medium inline-flex items-center justify-center space-x-2 transition-all text-sm">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                      </svg>
+                      <span>Gestionar Activos</span>
+                    </Link>
+                    <div className="w-full bg-white bg-opacity-10 text-white px-4 py-2 rounded-lg text-sm text-center opacity-60">
+                      Dashboard ejecutivo
+                    </div>
                   </div>
                 </div>
               </div>
@@ -274,7 +311,7 @@ export default function AccountingPage() {
           </div>
 
           {/* Features Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             <Link href="/accounting/configuration" className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow">
               <div className="w-12 h-12 bg-indigo-100 rounded-lg mb-4 flex items-center justify-center">
                 <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -284,21 +321,6 @@ export default function AccountingPage() {
               </div>
               <h3 className="font-semibold text-gray-900 mb-2">Configuración</h3>
               <p className="text-sm text-gray-600">Plan de cuentas IFRS y configuraciones</p>
-            </Link>
-
-            <Link href="/accounting/fixed-assets" className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow border-2 border-orange-200">
-              <div className="w-12 h-12 bg-orange-100 rounded-lg mb-4 flex items-center justify-center">
-                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Activos Fijos</h3>
-              <p className="text-sm text-gray-600">Gestión y depreciación de activos fijos</p>
-              <div className="mt-2">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                  Nuevo
-                </span>
-              </div>
             </Link>
 
             <Link href="/accounting/transactions" className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow">
@@ -322,98 +344,6 @@ export default function AccountingPage() {
             </Link>
           </div>
 
-          {/* Activos Fijos Feature Highlight */}
-          <div className="bg-gradient-to-r from-orange-500 to-red-600 rounded-2xl shadow-lg overflow-hidden mb-8">
-            <div className="px-8 py-8 text-white">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
-                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-bold mb-2">🆕 Gestión de Activos Fijos</h3>
-                    <p className="text-orange-100 text-lg">
-                      Control completo de tus activos fijos con depreciación automática
-                    </p>
-                  </div>
-                </div>
-                <div className="hidden lg:block">
-                  <div className="text-right">
-                    <div className="text-sm text-orange-200 mb-1">Características principales:</div>
-                    <div className="space-y-1 text-sm text-orange-100">
-                      <div>✓ Registro detallado de activos</div>
-                      <div>✓ Cálculo automático de depreciación</div>
-                      <div>✓ Integración con plan de cuentas</div>
-                      <div>✓ Reportes de valor libro</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mt-8">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="bg-white bg-opacity-20 rounded-xl p-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-white bg-opacity-30 rounded-lg flex items-center justify-center">
-                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
-                      </div>
-                      <div>
-                        <div className="font-semibold text-white">Inventario Completo</div>
-                        <div className="text-sm text-orange-100">Registra todos tus activos fijos</div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white bg-opacity-20 rounded-xl p-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-white bg-opacity-30 rounded-lg flex items-center justify-center">
-                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <div className="font-semibold text-white">Depreciación Automática</div>
-                        <div className="text-sm text-orange-100">Cálculos según normativa chilena</div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white bg-opacity-20 rounded-xl p-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-white bg-opacity-30 rounded-lg flex items-center justify-center">
-                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <div className="font-semibold text-white">Reportes Detallados</div>
-                        <div className="text-sm text-orange-100">Análisis de valor y rendimiento</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="mt-6 flex space-x-4">
-                  <Link href="/accounting/fixed-assets" className="bg-white text-orange-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors inline-flex items-center space-x-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                    <span>Gestionar Activos Fijos</span>
-                  </Link>
-                  <Link href="/accounting/dashboard" className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-6 py-3 rounded-lg font-medium inline-flex items-center space-x-2 transition-all">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                    </svg>
-                    <span>Ver Dashboard</span>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
