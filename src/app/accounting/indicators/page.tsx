@@ -112,7 +112,8 @@ export default function EconomicIndicatorsPage() {
   };
 
   const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
+    // Fix timezone bug: agregar 'T12:00:00' para evitar conversión UTC
+    const date = new Date(dateString + 'T12:00:00');
     return date.toLocaleDateString('es-CL', {
       day: '2-digit',
       month: '2-digit',
