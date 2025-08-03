@@ -18,13 +18,13 @@ import {
 } from 'lucide-react';
 import { Button, Card } from '@/components/ui';
 import { exportToCSV, exportToJSON, parseCSV, downloadFile } from '@/lib/chartOfAccounts';
-import { planDeCuentasChilenoActualizado } from '@/lib/planDeCuentasChilenoActualizado';
+import { planDeCuentasChilenoFinal } from '@/lib/planDeCuentasChilenoFinal';
 import { Account } from '@/types';
 
 
 export default function ConfigurationPage() {
-  const [accounts, setAccounts] = useState<Account[]>(planDeCuentasChilenoActualizado);
-  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['1', '1.1', '2', '3', '4', '5']));
+  const [accounts, setAccounts] = useState<Account[]>(planDeCuentasChilenoFinal);
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['1', '1.1', '1.2', '2', '2.1', '2.2', '2.3', '3', '3.1', '3.2', '4', '4.1', '4.2']));
   const [searchTerm, setSearchTerm] = useState('');
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -237,14 +237,14 @@ export default function ConfigurationPage() {
               {/* Info Box */}
               <div className="mt-4 p-4 bg-indigo-50 rounded-lg">
                 <p className="text-sm text-indigo-800">
-                  <strong>Plan de Cuentas Chileno Actualizado:</strong> Plan de cuentas basado en archivo CSV real con estructura corregida. 
-                  Distribución: 1=Activo, 2=Pasivo, 3=Patrimonio, 4=Gastos, 5=Ingresos según normativa chilena.
+                  <strong>Plan de Cuentas Chileno Final:</strong> Estructura optimizada con Patrimonio como subcategoría de Pasivo. 
+                  Distribución: 1=Activo (1.1 Corriente, 1.2 No Corriente), 2=Pasivo (2.1 Corriente, 2.2 No Corriente, 2.3 Patrimonio), 3=Gastos (3.1 Operacionales, 3.2 No Operacionales), 4=Ingresos (4.1 Operacionales, 4.2 No Operacionales).
                 </p>
                 <div className="mt-2 text-xs text-indigo-700 grid grid-cols-2 gap-2">
-                  <div><span className="font-medium">📊 Estructura:</span> 5 categorías principales</div>
-                  <div><span className="font-medium">🔢 Códigos:</span> Numéricos estándar</div>
+                  <div><span className="font-medium">📊 Estructura:</span> 4 categorías con subcategorías</div>
+                  <div><span className="font-medium">🔢 Códigos:</span> Jerárquicos (x.y.z)</div>
                   <div><span className="font-medium">📄 Niveles:</span> Hasta 4 niveles jerárquicos</div>
-                  <div><span className="font-medium">🇨🇱 Compatible:</span> SII Chile</div>
+                  <div><span className="font-medium">🇨🇱 Compatible:</span> IFRS + SII Chile</div>
                 </div>
               </div>
             </div>
