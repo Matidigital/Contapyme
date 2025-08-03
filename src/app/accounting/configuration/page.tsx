@@ -18,13 +18,13 @@ import {
 } from 'lucide-react';
 import { Button, Card } from '@/components/ui';
 import { exportToCSV, exportToJSON, parseCSV, downloadFile } from '@/lib/chartOfAccounts';
-import { planDeCuentasChileno } from '@/lib/planDeCuentasChileno';
+import { planDeCuentasChilenoActualizado } from '@/lib/planDeCuentasChilenoActualizado';
 import { Account } from '@/types';
 
 
 export default function ConfigurationPage() {
-  const [accounts, setAccounts] = useState<Account[]>(planDeCuentasChileno);
-  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['1', '1.1', '4']));
+  const [accounts, setAccounts] = useState<Account[]>(planDeCuentasChilenoActualizado);
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['1', '1.1', '2', '3', '4', '5']));
   const [searchTerm, setSearchTerm] = useState('');
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -235,14 +235,16 @@ export default function ConfigurationPage() {
               </div>
 
               {/* Info Box */}
-              <div className="mt-4 p-4 bg-green-50 rounded-lg">
-                <p className="text-sm text-green-800">
-                  <strong>Plan de Cuentas Chileno:</strong> Este es un plan de cuentas real adaptado a la normativa contable chilena. 
-                  Incluye todas las cuentas típicas de una PyME en Chile según estándares locales e IFRS.
+              <div className="mt-4 p-4 bg-indigo-50 rounded-lg">
+                <p className="text-sm text-indigo-800">
+                  <strong>Plan de Cuentas Chileno Actualizado:</strong> Plan de cuentas basado en archivo CSV real con estructura corregida. 
+                  Distribución: 1=Activo, 2=Pasivo, 3=Patrimonio, 4=Gastos, 5=Ingresos según normativa chilena.
                 </p>
-                <div className="mt-2 text-xs text-green-700">
-                  <span className="font-medium">Estructura:</span> 5 categorías principales • {accounts.length} cuentas nivel 1 • 
-                  Códigos numéricos estándar • Compatible con formularios SII
+                <div className="mt-2 text-xs text-indigo-700 grid grid-cols-2 gap-2">
+                  <div><span className="font-medium">📊 Estructura:</span> 5 categorías principales</div>
+                  <div><span className="font-medium">🔢 Códigos:</span> Numéricos estándar</div>
+                  <div><span className="font-medium">📄 Niveles:</span> Hasta 4 niveles jerárquicos</div>
+                  <div><span className="font-medium">🇨🇱 Compatible:</span> SII Chile</div>
                 </div>
               </div>
             </div>
