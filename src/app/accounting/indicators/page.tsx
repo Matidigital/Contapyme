@@ -16,6 +16,7 @@ export default function EconomicIndicatorsPage() {
   const [updating, setUpdating] = useState(false);
   const [selectedIndicator, setSelectedIndicator] = useState<string | null>(null);
   const [error, setError] = useState<string>('');
+  const [dataSource, setDataSource] = useState<string>('hybrid_system');
 
   // Cargar indicadores al montar el componente
   useEffect(() => {
@@ -27,7 +28,8 @@ export default function EconomicIndicatorsPage() {
       setLoading(true);
       setError('');
       
-      const response = await fetch('/api/indicators');
+      // Usar API híbrida que siempre funciona
+      const response = await fetch('/api/indicators/hybrid');
       const data = await response.json();
 
       if (!response.ok) {
@@ -36,6 +38,7 @@ export default function EconomicIndicatorsPage() {
 
       setIndicators(data.indicators);
       setLastUpdated(data.last_updated);
+      setDataSource(data.source || 'hybrid_system');
     } catch (err) {
       console.error('Error fetching indicators:', err);
       setError(err instanceof Error ? err.message : 'Error desconocido');
@@ -49,14 +52,12 @@ export default function EconomicIndicatorsPage() {
       setUpdating(true);
       setError('');
 
-      const response = await fetch('/api/indicators/update', {
+      // Usar API híbrida para actualización
+      const response = await fetch('/api/indicators/hybrid', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          indicators: ['uf', 'utm', 'dolar', 'euro', 'bitcoin', 'ipc', 'tpm']
-        })
+        }
       });
 
       const data = await response.json();
@@ -65,11 +66,17 @@ export default function EconomicIndicatorsPage() {
         throw new Error(data.error || 'Error al actualizar indicadores');
       }
 
-      // Recargar indicadores después de actualizar
-      await fetchIndicators();
+      // Actualizar datos inmediatamente
+      setIndicators(data.indicators);
+      setLastUpdated(data.last_updated);
+      setDataSource(data.source || 'hybrid_system');
       
-      // Mostrar notificación de éxito
-      alert(`✅ ${data.message}\n${data.results.length} indicadores actualizados correctamente`);
+      // Mostrar notificación con información de la fuente
+      const sourceMessage = data.source === 'real_data' 
+        ? '✅ Datos reales obtenidos de APIs oficiales'
+        : '✅ Datos actualizados con simulación inteligente';
+      
+      alert(`${sourceMessage}\n${data.message}`);
       
     } catch (err) {
       console.error('Error updating indicators:', err);
@@ -283,9 +290,24 @@ export default function EconomicIndicatorsPage() {
             </div>
             <div className="flex items-center space-x-4">
               {lastUpdated && (
-                <span className="text-sm text-gray-500">
-                  Actualizado: {formatDate(lastUpdated)}
-                </span>
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-500">
+                    Actualizado: {formatDate(lastUpdated)}
+                  </span>
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    dataSource === 'real_data' 
+                      ? 'bg-green-100 text-green-800' 
+                      : dataSource === 'smart_simulation'
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {dataSource === 'real_data' 
+                      ? '🔄 Datos reales' 
+                      : dataSource === 'smart_simulation'
+                      ? '🧠 Simulación inteligente'
+                      : '🔀 Sistema híbrido'}
+                  </span>
+                </div>
               )}
               <button
                 onClick={updateIndicators}
