@@ -252,20 +252,22 @@ export default function EconomicIndicatorsBanner() {
         {/* Background Animation */}
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-green-600/20 animate-pulse"></div>
         
-        {/* Main Ticker Container */}
-        <div className="relative overflow-hidden py-6">
-          {/* Running Indicators */}
-          <div className="flex animate-scroll-left space-x-8">
+        {/* Main Ticker Container - REDUCED PADDING */}
+        <div className="relative overflow-hidden py-3">
+          {/* Running Indicators - FASTER ANIMATION */}
+          <div className="flex animate-scroll-left-fast space-x-6">
             {/* Duplicamos los indicadores para efecto continuo */}
             {[...allIndicators, ...allIndicators, ...allIndicators].map((indicator, index) => (
               <div 
                 key={`${indicator.code}-${index}`}
-                className="flex-shrink-0 flex items-center space-x-4 bg-white/10 backdrop-blur-sm rounded-xl px-6 py-4 border border-white/20 min-w-[300px] hover:bg-white/20 transition-all duration-300 cursor-pointer"
+                className="flex-shrink-0 flex items-center space-x-3 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2 border border-white/20 min-w-[250px] hover:bg-white/20 transition-all duration-300 cursor-pointer"
                 onClick={() => window.open('/accounting/indicators', '_blank')}
               >
-                {/* Icon */}
-                <div className={`w-12 h-12 bg-gradient-to-br ${getCategoryColor(indicator.category)} rounded-xl flex items-center justify-center shadow-lg`}>
-                  {getCategoryIcon(indicator.category)}
+                {/* Icon - SMALLER */}
+                <div className={`w-8 h-8 bg-gradient-to-br ${getCategoryColor(indicator.category)} rounded-lg flex items-center justify-center shadow-lg`}>
+                  <div className="scale-75">
+                    {getCategoryIcon(indicator.category)}
+                  </div>
                 </div>
                 
                 {/* Content */}
@@ -281,12 +283,8 @@ export default function EconomicIndicatorsBanner() {
                     </span>
                   </div>
                   
-                  <div className="text-white text-xl font-black">
+                  <div className="text-white text-lg font-black">
                     {formatValue(indicator)}
-                  </div>
-                  
-                  <div className="text-white/60 text-xs">
-                    Actualizado hoy
                   </div>
                 </div>
 
@@ -318,8 +316,8 @@ export default function EconomicIndicatorsBanner() {
         <div className="absolute top-0 left-0 w-32 h-full bg-gradient-to-r from-slate-900 to-transparent pointer-events-none z-10"></div>
         <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-slate-900 to-transparent pointer-events-none z-10"></div>
         
-        {/* Bottom Info Bar */}
-        <div className="bg-black/30 backdrop-blur-sm px-6 py-2 flex items-center justify-between text-xs">
+        {/* Bottom Info Bar - COMPACT */}
+        <div className="bg-black/30 backdrop-blur-sm px-4 py-1 flex items-center justify-between text-xs">
           <div className="flex items-center space-x-4 text-white/70">
             <span className={`inline-flex items-center space-x-1 ${
               updateStatus === 'updating' ? 'text-yellow-400' :

@@ -42,6 +42,9 @@ export default function AccountingPage() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
+          {/* Economic Indicators Banner - MOVED TO TOP */}
+          <EconomicIndicatorsBanner />
+
           {/* Welcome Section */}
           <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg shadow-lg mb-8">
             <div className="px-6 py-8 text-white">
@@ -51,9 +54,6 @@ export default function AccountingPage() {
               </p>
             </div>
           </div>
-
-          {/* Economic Indicators Banner */}
-          <EconomicIndicatorsBanner />
 
           {/* Companies Section */}
           <div className="mb-8">

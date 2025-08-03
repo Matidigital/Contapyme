@@ -126,8 +126,14 @@
     animation: scroll-left 45s linear infinite;
   }
 
+  /* Animación más rápida para el ticker */
+  .animate-scroll-left-fast {
+    animation: scroll-left 20s linear infinite;
+  }
+
   /* Pausa la animación al hacer hover */
-  .animate-scroll-left:hover {
+  .animate-scroll-left:hover,
+  .animate-scroll-left-fast:hover {
     animation-play-state: paused;
   }
 
@@ -159,6 +165,9 @@
   @media (max-width: 768px) {
     .animate-scroll-left {
       animation: scroll-left 30s linear infinite;
+    }
+    .animate-scroll-left-fast {
+      animation: scroll-left 15s linear infinite;
     }
   }
 
