@@ -109,3 +109,63 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Animaciones para la pasarela de indicadores económicos */
+@layer utilities {
+  /* Scroll continuo de izquierda a derecha */
+  @keyframes scroll-left {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-100%);
+    }
+  }
+
+  .animate-scroll-left {
+    animation: scroll-left 45s linear infinite;
+  }
+
+  /* Pausa la animación al hacer hover */
+  .animate-scroll-left:hover {
+    animation-play-state: paused;
+  }
+
+  /* Efectos adicionales para indicadores */
+  .indicator-glow {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+  }
+
+  .indicator-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* Gradiente animado para el fondo */
+  @keyframes gradient-shift {
+    0%, 100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient-shift 8s ease infinite;
+  }
+
+  /* Scroll más rápido para mobile */
+  @media (max-width: 768px) {
+    .animate-scroll-left {
+      animation: scroll-left 30s linear infinite;
+    }
+  }
+
+  /* Efectos de glassmorphism */
+  .glass-effect {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.125);
+  }
+}

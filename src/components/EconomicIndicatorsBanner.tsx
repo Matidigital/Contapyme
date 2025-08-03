@@ -187,114 +187,143 @@ export default function EconomicIndicatorsBanner() {
 
   return (
     <div className="mb-8">
-      {/* Main Banner - Rotating Indicators */}
-      <div className={`bg-gradient-to-r ${categoryColor} rounded-2xl shadow-xl overflow-hidden`}>
-        <div className="relative p-6">
-          {/* Background Pattern */}
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-white transform translate-x-16 -translate-y-8"></div>
-            <div className="absolute bottom-0 left-0 w-24 h-24 rounded-full bg-white transform -translate-x-12 translate-y-8"></div>
-          </div>
-          
-          <div className="relative flex items-center justify-between">
-            {/* Indicator Content */}
-            <div className="flex items-center space-x-6">
-              <div className="w-16 h-16 bg-white bg-opacity-20 rounded-2xl flex items-center justify-center transform transition-all duration-500 hover:scale-110">
-                {getCategoryIcon(currentIndicator.category)}
-              </div>
-              
-              <div className="space-y-1">
-                <div className="flex items-center space-x-3">
-                  <h3 className="text-white font-bold text-2xl transition-all duration-500">
-                    {currentIndicator.name}
-                  </h3>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${ 
-                    currentIndicator.source === 'real_data' 
-                      ? 'bg-green-400 bg-opacity-20 text-green-100' 
-                      : 'bg-blue-400 bg-opacity-20 text-blue-100'
-                  }`}>
-                    {currentIndicator.source === 'real_data' ? '🔄 Datos reales' : '🧠 Smart data'}
-                  </span>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-xl font-bold text-gray-800 flex items-center space-x-2">
+          <span>📊</span>
+          <span>Indicadores Económicos en Tiempo Real</span>
+        </h3>
+        <Link 
+          href="/accounting/indicators"
+          className="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center space-x-1 transition-colors"
+        >
+          <span>Ver detalle</span>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
+      </div>
+
+      {/* Running Ticker Banner */}
+      <div className="bg-gradient-to-r from-slate-900 via-blue-900 to-slate-900 rounded-2xl shadow-2xl overflow-hidden relative">
+        {/* Background Animation */}
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-green-600/20 animate-pulse"></div>
+        
+        {/* Main Ticker Container */}
+        <div className="relative overflow-hidden py-6">
+          {/* Running Indicators */}
+          <div className="flex animate-scroll-left space-x-8">
+            {/* Duplicamos los indicadores para efecto continuo */}
+            {[...allIndicators, ...allIndicators, ...allIndicators].map((indicator, index) => (
+              <div 
+                key={`${indicator.code}-${index}`}
+                className="flex-shrink-0 flex items-center space-x-4 bg-white/10 backdrop-blur-sm rounded-xl px-6 py-4 border border-white/20 min-w-[300px] hover:bg-white/20 transition-all duration-300 cursor-pointer"
+                onClick={() => window.open('/accounting/indicators', '_blank')}
+              >
+                {/* Icon */}
+                <div className={`w-12 h-12 bg-gradient-to-br ${getCategoryColor(indicator.category)} rounded-xl flex items-center justify-center shadow-lg`}>
+                  {getCategoryIcon(indicator.category)}
                 </div>
                 
-                <div className="text-white text-4xl font-black tracking-tight transition-all duration-500">
-                  {formatValue(currentIndicator)}
-                </div>
-                
-                <div className="flex items-center space-x-4 text-white text-opacity-80 text-sm">
-                  <span>Hoy, {new Date().toLocaleDateString('es-CL')}</span>
-                  {currentIndicator.change !== undefined && (
-                    <span className={`flex items-center space-x-1 px-2 py-1 rounded-full ${
-                      currentIndicator.change >= 0 
-                        ? 'bg-green-400 bg-opacity-20 text-green-100' 
-                        : 'bg-red-400 bg-opacity-20 text-red-100'
+                {/* Content */}
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2 mb-1">
+                    <h4 className="text-white font-bold text-sm">{indicator.name}</h4>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      indicator.source === 'real_data' 
+                        ? 'bg-green-500/30 text-green-200 border border-green-400/30' 
+                        : 'bg-blue-500/30 text-blue-200 border border-blue-400/30'
                     }`}>
-                      <span>{currentIndicator.change >= 0 ? '↗' : '↘'}</span>
-                      <span>{Math.abs(currentIndicator.change).toFixed(2)}%</span>
+                      {indicator.source === 'real_data' ? 'REAL' : 'SMART'}
                     </span>
+                  </div>
+                  
+                  <div className="text-white text-xl font-black">
+                    {formatValue(indicator)}
+                  </div>
+                  
+                  <div className="text-white/60 text-xs">
+                    Actualizado hoy
+                  </div>
+                </div>
+
+                {/* Trend Arrow */}
+                <div className="flex flex-col items-center">
+                  {indicator.change !== undefined ? (
+                    <div className={`flex items-center space-x-1 ${
+                      indicator.change >= 0 ? 'text-green-400' : 'text-red-400'
+                    }`}>
+                      <span className="text-lg">
+                        {indicator.change >= 0 ? '↗' : '↘'}
+                      </span>
+                      <span className="text-sm font-bold">
+                        {Math.abs(indicator.change).toFixed(1)}%
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
+                      <span className="text-white text-xs">•</span>
+                    </div>
                   )}
                 </div>
               </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-col space-y-3">
-              <Link 
-                href="/accounting/indicators"
-                className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 text-center whitespace-nowrap"
-              >
-                📊 Ver Todos
-              </Link>
-              <button 
-                onClick={() => setCurrentIndex((prev) => (prev + 1) % allIndicators.length)}
-                className="bg-white bg-opacity-10 hover:bg-opacity-20 text-white px-6 py-2 rounded-xl font-medium transition-all duration-300 text-center text-sm"
-              >
-                ⏭️ Siguiente
-              </button>
-            </div>
-          </div>
-
-          {/* Progress Indicators */}
-          <div className="flex justify-center mt-6 space-x-2">
-            {allIndicators.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentIndex(index)}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  index === currentIndex 
-                    ? 'bg-white scale-125' 
-                    : 'bg-white bg-opacity-40 hover:bg-opacity-60'
-                }`}
-              />
             ))}
+          </div>
+        </div>
+
+        {/* Gradient Overlays for smooth edges */}
+        <div className="absolute top-0 left-0 w-32 h-full bg-gradient-to-r from-slate-900 to-transparent pointer-events-none z-10"></div>
+        <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-slate-900 to-transparent pointer-events-none z-10"></div>
+        
+        {/* Bottom Info Bar */}
+        <div className="bg-black/30 backdrop-blur-sm px-6 py-2 flex items-center justify-between text-xs">
+          <div className="flex items-center space-x-4 text-white/70">
+            <span>🔄 Actualización automática</span>
+            <span>•</span>
+            <span>📅 {new Date().toLocaleDateString('es-CL', { 
+              weekday: 'long', 
+              year: 'numeric', 
+              month: 'long', 
+              day: 'numeric' 
+            })}</span>
+          </div>
+          <div className="text-white/70">
+            <span className={`inline-flex items-center space-x-1 ${
+              dataSource === 'real_data' ? 'text-green-400' : 'text-blue-400'
+            }`}>
+              <span className="w-2 h-2 bg-current rounded-full animate-pulse"></span>
+              <span>
+                {dataSource === 'real_data' ? 'Datos oficiales' : 'Simulación inteligente'}
+              </span>
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Quick Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+      {/* Quick Access Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
         {allIndicators.slice(0, 4).map((indicator, index) => (
-          <div 
+          <Link
             key={indicator.code}
-            className={`bg-gradient-to-br ${getCategoryColor(indicator.category)} p-4 rounded-xl shadow-lg cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl ${
-              index === currentIndex ? 'ring-2 ring-white ring-opacity-50 transform scale-105' : ''
-            }`}
-            onClick={() => setCurrentIndex(allIndicators.findIndex(ind => ind.code === indicator.code))}
+            href="/accounting/indicators"
+            className={`bg-gradient-to-br ${getCategoryColor(indicator.category)} p-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 group`}
           >
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-white text-opacity-80 text-xs font-medium uppercase tracking-wide">
-                  {indicator.name.length > 15 ? indicator.name.substring(0, 15) + '...' : indicator.name}
+              <div className="flex-1">
+                <p className="text-white text-opacity-90 text-xs font-medium truncate">
+                  {indicator.name}
                 </p>
-                <p className="text-white font-bold text-lg">
+                <p className="text-white font-bold text-sm">
                   {formatValue(indicator)}
                 </p>
               </div>
-              <div className="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-                {getCategoryIcon(indicator.category)}
+              <div className="w-6 h-6 bg-white bg-opacity-20 rounded-md flex items-center justify-center group-hover:bg-opacity-30 transition-all">
+                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
               </div>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </div>
