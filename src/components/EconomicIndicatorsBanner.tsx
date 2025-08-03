@@ -365,32 +365,6 @@ export default function EconomicIndicatorsBanner() {
         </div>
       </div>
 
-      {/* Quick Access Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
-        {allIndicators.slice(0, 4).map((indicator, index) => (
-          <Link
-            key={indicator.code}
-            href="/accounting/indicators"
-            className={`bg-gradient-to-br ${getCategoryColor(indicator.category)} p-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105 group`}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <p className="text-white text-opacity-90 text-xs font-medium truncate">
-                  {indicator.name}
-                </p>
-                <p className="text-white font-bold text-sm">
-                  {formatValue(indicator)}
-                </p>
-              </div>
-              <div className="w-6 h-6 bg-white bg-opacity-20 rounded-md flex items-center justify-center group-hover:bg-opacity-30 transition-all">
-                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
     </div>
   );
 }
