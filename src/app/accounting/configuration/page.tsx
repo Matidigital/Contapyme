@@ -18,124 +18,12 @@ import {
 } from 'lucide-react';
 import { Button, Card } from '@/components/ui';
 import { exportToCSV, exportToJSON, parseCSV, downloadFile } from '@/lib/chartOfAccounts';
-
+import { planDeCuentasChileno } from '@/lib/planDeCuentasChileno';
 import { Account } from '@/types';
 
-// Datos demo del plan de cuentas
-const demoAccounts: Account[] = [
-  {
-    id: '1',
-    code: '1',
-    name: 'ACTIVOS',
-    account_type: 'asset',
-    level: 1,
-    is_active: true,
-    is_detail: false,
-    children: [
-      {
-        id: '1.1',
-        code: '1.1',
-        name: 'ACTIVOS CORRIENTES',
-        account_type: 'asset',
-        parent_id: '1',
-        level: 2,
-        is_active: true,
-        is_detail: false,
-        children: [
-          {
-            id: '1.1.01',
-            code: '1.1.01',
-            name: 'Efectivo y Equivalentes al Efectivo',
-            account_type: 'asset',
-            parent_id: '1.1',
-            level: 3,
-            is_active: true,
-            is_detail: false,
-            children: [
-              {
-                id: '1.1.01.001',
-                code: '1.1.01.001',
-                name: 'Caja',
-                account_type: 'asset',
-                parent_id: '1.1.01',
-                level: 4,
-                is_active: true,
-                is_detail: true
-              },
-              {
-                id: '1.1.01.002',
-                code: '1.1.01.002',
-                name: 'Banco Estado - Cuenta Corriente',
-                account_type: 'asset',
-                parent_id: '1.1.01',
-                level: 4,
-                is_active: true,
-                is_detail: true
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: '2',
-    code: '2',
-    name: 'PASIVOS',
-    account_type: 'liability',
-    level: 1,
-    is_active: true,
-    is_detail: false,
-    children: [
-      {
-        id: '2.1',
-        code: '2.1',
-        name: 'PASIVOS CORRIENTES',
-        account_type: 'liability',
-        parent_id: '2',
-        level: 2,
-        is_active: true,
-        is_detail: false
-      }
-    ]
-  },
-  {
-    id: '4',
-    code: '4',
-    name: 'INGRESOS',
-    account_type: 'income',
-    level: 1,
-    is_active: true,
-    is_detail: false,
-    children: [
-      {
-        id: '4.1',
-        code: '4.1',
-        name: 'INGRESOS OPERACIONALES',
-        account_type: 'income',
-        parent_id: '4',
-        level: 2,
-        is_active: true,
-        is_detail: false,
-        children: [
-          {
-            id: '4.1.01',
-            code: '4.1.01',
-            name: 'Ventas de Mercaderías',
-            account_type: 'income',
-            parent_id: '4.1',
-            level: 3,
-            is_active: true,
-            is_detail: true
-          }
-        ]
-      }
-    ]
-  }
-];
 
 export default function ConfigurationPage() {
-  const [accounts, setAccounts] = useState<Account[]>(demoAccounts);
+  const [accounts, setAccounts] = useState<Account[]>(planDeCuentasChileno);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['1', '1.1', '4']));
   const [searchTerm, setSearchTerm] = useState('');
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
@@ -347,11 +235,15 @@ export default function ConfigurationPage() {
               </div>
 
               {/* Info Box */}
-              <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  <strong>Plan de Cuentas Demostrativo:</strong> Este es un plan de cuentas basado en IFRS para PyMEs chilenas. 
-                  Puedes editarlo según las necesidades de tu empresa.
+              <div className="mt-4 p-4 bg-green-50 rounded-lg">
+                <p className="text-sm text-green-800">
+                  <strong>Plan de Cuentas Chileno:</strong> Este es un plan de cuentas real adaptado a la normativa contable chilena. 
+                  Incluye todas las cuentas típicas de una PyME en Chile según estándares locales e IFRS.
                 </p>
+                <div className="mt-2 text-xs text-green-700">
+                  <span className="font-medium">Estructura:</span> 5 categorías principales • {accounts.length} cuentas nivel 1 • 
+                  Códigos numéricos estándar • Compatible con formularios SII
+                </div>
               </div>
             </div>
           </Card>
