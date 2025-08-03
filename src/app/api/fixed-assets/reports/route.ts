@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
           WHERE period_year = $2
           GROUP BY fixed_asset_id
         ) monthly_dep ON fa.id = monthly_dep.fixed_asset_id
-        WHERE fa.user_id = auth.uid() AND fa.status = 'active'
+        WHERE fa.user_id = 'demo-user-id' AND fa.status = 'active'
       `;
 
       const { data: summaryData, error: summaryError } = await databaseSimple.query(summaryQuery, [year, year]);
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
           WHERE period_year <= $1
           GROUP BY fixed_asset_id
         ) current_accumulated_dep ON fa.id = current_accumulated_dep.fixed_asset_id
-        WHERE fa.user_id = auth.uid() AND fa.status = 'active'
+        WHERE fa.user_id = 'demo-user-id' AND fa.status = 'active'
         GROUP BY fa.category
         ORDER BY purchase_value DESC
       `;
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
           WHERE period_year <= $1
           GROUP BY fixed_asset_id
         ) current_accumulated_dep ON fa.id = current_accumulated_dep.fixed_asset_id
-        WHERE fa.user_id = auth.uid() 
+        WHERE fa.user_id = 'demo-user-id' 
           AND fa.status = 'active'
           AND fa.depreciable_value > 0
           AND (COALESCE(current_accumulated_dep.accumulated, 0) / fa.depreciable_value) >= 0.9
@@ -156,7 +156,7 @@ export async function GET(request: NextRequest) {
           fad.book_value
         FROM fixed_assets fa
         LEFT JOIN fixed_assets_depreciation fad ON fa.id = fad.fixed_asset_id
-        WHERE fa.user_id = auth.uid() 
+        WHERE fa.user_id = 'demo-user-id' 
           AND fa.status = 'active'
           AND fad.period_year = $1
         ORDER BY fa.name ASC, fad.period_month ASC

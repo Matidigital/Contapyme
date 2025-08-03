@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
         fac.description as category_description
       FROM fixed_assets fa
       LEFT JOIN fixed_assets_categories fac ON fa.category = fac.name
-      WHERE fa.user_id = auth.uid()
+      WHERE fa.user_id = 'demo-user-id'
     `;
 
     const params: any[] = [];
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
         location,
         responsible_person
       ) VALUES (
-        auth.uid(),
+        'demo-user-id',
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
       )
       RETURNING *

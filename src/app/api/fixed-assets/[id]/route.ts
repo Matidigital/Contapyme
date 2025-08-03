@@ -17,7 +17,7 @@ export async function GET(
         fac.description as category_description
       FROM fixed_assets fa
       LEFT JOIN fixed_assets_categories fac ON fa.category = fac.name
-      WHERE fa.id = $1 AND fa.user_id = auth.uid()
+      WHERE fa.id = $1 AND fa.user_id = 'demo-user-id'
     `;
 
     const { data, error } = await databaseSimple.query(query, [id]);
@@ -109,7 +109,7 @@ export async function PUT(
     const updateQuery = `
       UPDATE fixed_assets 
       SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $${paramCounter} AND user_id = auth.uid()
+      WHERE id = $${paramCounter} AND user_id = 'demo-user-id'
       RETURNING *
     `;
 
@@ -194,7 +194,7 @@ export async function DELETE(
     // Eliminar activo fijo (las depreciaciones se eliminan por CASCADE)
     const deleteQuery = `
       DELETE FROM fixed_assets 
-      WHERE id = $1 AND user_id = auth.uid()
+      WHERE id = $1 AND user_id = 'demo-user-id'
       RETURNING id, name
     `;
 

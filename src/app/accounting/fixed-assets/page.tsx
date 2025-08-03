@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Button, Card } from '@/components/ui';
 import { FixedAsset, FixedAssetCategory, FixedAssetReport } from '@/types';
+import AddFixedAssetForm from '@/components/fixed-assets/AddFixedAssetForm';
 
 interface FixedAssetsPageProps {}
 
@@ -67,6 +68,11 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
       setLoading(false);
     }
   }, [selectedStatus, selectedCategory]);
+
+  // Manejar éxito en creación de activo
+  const handleAssetCreated = () => {
+    fetchData(); // Recargar datos
+  };
 
   useEffect(() => {
     fetchData();
@@ -386,7 +392,7 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                                   size="sm"
                                   leftIcon={<Edit2 className="w-4 h-4" />}
                                   onClick={() => {
-                                    // TODO: Abrir modal de edición
+                                    // TODO: Implementar modal de edición
                                     alert('Funcionalidad de edición próximamente');
                                   }}
                                 >
@@ -396,11 +402,23 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                                   variant="ghost"
                                   size="sm"
                                   leftIcon={<Trash2 className="w-4 h-4" />}
-                                  onClick={() => {
-                                    // TODO: Confirmar eliminación
+                                  onClick={async () => {
                                     if (confirm(`¿Estás seguro de eliminar el activo "${asset.name}"?`)) {
-                                      // Eliminar activo
-                                      alert('Funcionalidad de eliminación próximamente');
+                                      try {
+                                        const response = await fetch(`/api/fixed-assets/${asset.id}`, {
+                                          method: 'DELETE'
+                                        });
+                                        
+                                        if (response.ok) {
+                                          fetchData(); // Recargar datos
+                                        } else {
+                                          const errorData = await response.json();
+                                          alert(errorData.error || 'Error al eliminar activo');
+                                        }
+                                      } catch (error) {
+                                        console.error('Error deleting asset:', error);
+                                        alert('Error al eliminar activo');
+                                      }
                                     }
                                   }}
                                 >
@@ -450,25 +468,12 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
         </div>
       </div>
 
-      {/* Modal Agregar Activo (placeholder) */}
-      {showAddForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">Agregar Nuevo Activo</h3>
-            <p className="text-gray-600 mb-4">
-              Funcionalidad de formulario será implementada próximamente.
-            </p>
-            <div className="flex justify-end space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowAddForm(false)}
-              >
-                Cerrar
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modal Agregar Activo */}
+      <AddFixedAssetForm
+        isOpen={showAddForm}
+        onClose={() => setShowAddForm(false)}
+        onSuccess={handleAssetCreated}
+      />
     </div>
   );
 }
