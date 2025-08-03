@@ -23,12 +23,21 @@ export interface Account {
   id: string
   code: string
   name: string
-  type: 'ASSET' | 'LIABILITY' | 'EQUITY' | 'INCOME' | 'EXPENSE'
+  type?: 'ASSET' | 'LIABILITY' | 'EQUITY' | 'INCOME' | 'EXPENSE'
+  account_type?: 'asset' | 'liability' | 'equity' | 'income' | 'expense'
+  description?: string
   parentId?: string
-  companyId: string
-  isActive: boolean
-  createdAt: Date
-  updatedAt: Date
+  parent_id?: string
+  companyId?: string
+  company_id?: string
+  level: number
+  isActive?: boolean
+  is_active?: boolean
+  isDetail?: boolean
+  is_detail?: boolean
+  children?: Account[]
+  createdAt?: Date
+  updatedAt?: Date
 }
 
 export interface Transaction {
