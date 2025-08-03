@@ -32,6 +32,8 @@ export default function EconomicIndicatorsBanner() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [dataSource, setDataSource] = useState<string>('hybrid_system');
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [updateStatus, setUpdateStatus] = useState<'idle' | 'updating' | 'success' | 'error'>('idle');
 
   // Combinar todos los indicadores en un array para rotar
   const allIndicators = [
@@ -46,6 +48,35 @@ export default function EconomicIndicatorsBanner() {
     fetchIndicators();
   }, []);
 
+  // Auto-actualización inteligente
+  useEffect(() => {
+    const updateIntervals = {
+      crypto: 2 * 60 * 1000,      // Crypto: cada 2 minutos (más volátil)
+      currency: 5 * 60 * 1000,    // Divisas: cada 5 minutos
+      monetary: 15 * 60 * 1000,   // UF/UTM: cada 15 minutos (menos volátil)
+      labor: 60 * 60 * 1000       // Sueldo mínimo: cada 1 hora (muy estable)
+    };
+
+    // Actualización general cada 5 minutos
+    const generalInterval = setInterval(() => {
+      fetchIndicators(false); // Sin loading para actualizaciones de fondo
+      console.log('🔄 Actualización automática general');
+    }, 5 * 60 * 1000);
+
+    // Actualización específica para crypto más frecuente
+    const cryptoInterval = setInterval(() => {
+      if (indicators.crypto.length > 0) {
+        fetchIndicators(false);
+        console.log('⚡ Actualización crypto automática');
+      }
+    }, updateIntervals.crypto);
+
+    return () => {
+      clearInterval(generalInterval);
+      clearInterval(cryptoInterval);
+    };
+  }, [indicators.crypto.length]);
+
   // Rotar indicadores cada 3 segundos
   useEffect(() => {
     if (allIndicators.length > 0) {
@@ -56,20 +87,32 @@ export default function EconomicIndicatorsBanner() {
     }
   }, [allIndicators.length]);
 
-  const fetchIndicators = async () => {
+  const fetchIndicators = async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
+      setUpdateStatus('updating');
+      
       const response = await fetch('/api/indicators/hybrid');
       const data = await response.json();
 
       if (response.ok) {
         setIndicators(data.indicators);
         setDataSource(data.source);
+        setLastUpdate(new Date());
+        setUpdateStatus('success');
+        
+        // Limpiar status después de 2 segundos
+        setTimeout(() => setUpdateStatus('idle'), 2000);
+      } else {
+        setUpdateStatus('error');
+        setTimeout(() => setUpdateStatus('idle'), 3000);
       }
     } catch (error) {
       console.error('Error fetching indicators:', error);
+      setUpdateStatus('error');
+      setTimeout(() => setUpdateStatus('idle'), 3000);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -278,14 +321,38 @@ export default function EconomicIndicatorsBanner() {
         {/* Bottom Info Bar */}
         <div className="bg-black/30 backdrop-blur-sm px-6 py-2 flex items-center justify-between text-xs">
           <div className="flex items-center space-x-4 text-white/70">
-            <span>🔄 Actualización automática</span>
+            <span className={`inline-flex items-center space-x-1 ${
+              updateStatus === 'updating' ? 'text-yellow-400' :
+              updateStatus === 'success' ? 'text-green-400' :
+              updateStatus === 'error' ? 'text-red-400' : 'text-white/70'
+            }`}>
+              {updateStatus === 'updating' && (
+                <>
+                  <div className="w-2 h-2 bg-current rounded-full animate-spin"></div>
+                  <span>Actualizando...</span>
+                </>
+              )}
+              {updateStatus === 'success' && (
+                <>
+                  <div className="w-2 h-2 bg-current rounded-full"></div>
+                  <span>✅ Actualizado</span>
+                </>
+              )}
+              {updateStatus === 'error' && (
+                <>
+                  <div className="w-2 h-2 bg-current rounded-full"></div>
+                  <span>❌ Error al actualizar</span>
+                </>
+              )}
+              {updateStatus === 'idle' && (
+                <>
+                  <div className="w-2 h-2 bg-current rounded-full animate-pulse"></div>
+                  <span>🔄 Auto-actualización activa</span>
+                </>
+              )}
+            </span>
             <span>•</span>
-            <span>📅 {new Date().toLocaleDateString('es-CL', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            })}</span>
+            <span>📅 Última actualización: {lastUpdate.toLocaleTimeString('es-CL')}</span>
           </div>
           <div className="text-white/70">
             <span className={`inline-flex items-center space-x-1 ${
