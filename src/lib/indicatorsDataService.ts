@@ -266,7 +266,9 @@ export const CURRENT_BASE_VALUES = {
   ethereum: 3492.54,
   sueldo_minimo: 529000,
   ipc: 3.2,
-  tpm: 5.75
+  tpm: 5.75,
+  sp500: 5547.25,     // S&P 500
+  nasdaq: 17843.73    // NASDAQ
 };
 
 // Validación de valores

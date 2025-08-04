@@ -77,9 +77,25 @@ export async function POST(request: NextRequest) {
 }
 
 async function getHybridIndicators(): Promise<IndicatorsDashboard> {
-  // Intentar datos reales primero, fallback a simulación
+  // Intentar datos reales primero
   const realData = await tryGetRealData();
-  return realData || getSmartSimulatedData();
+  
+  if (realData) {
+    // Si tenemos datos reales, complementar con simulados para categorías faltantes
+    const simulatedData = getSmartSimulatedData();
+    
+    // Fusionar datos reales con simulados, priorizando reales
+    return {
+      monetary: realData.monetary.length > 0 ? realData.monetary : simulatedData.monetary,
+      currency: realData.currency.length > 0 ? realData.currency : simulatedData.currency,
+      crypto: realData.crypto.length > 0 ? realData.crypto : simulatedData.crypto,
+      labor: realData.labor.length > 0 ? realData.labor : simulatedData.labor,
+      stocks: realData.stocks.length > 0 ? realData.stocks : simulatedData.stocks // Stocks siempre de simulación
+    };
+  }
+  
+  // Si no hay datos reales, usar simulación completa
+  return getSmartSimulatedData();
 }
 
 async function tryGetRealData(): Promise<IndicatorsDashboard | null> {
