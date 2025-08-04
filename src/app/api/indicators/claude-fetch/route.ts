@@ -84,14 +84,22 @@ IMPORTANTE:
 
 NO agregues texto adicional, solo el JSON.`;
 
-    // Hacer llamada a Claude con retry logic
+    // Hacer llamada a Claude con retry logic y modelos alternativos
     let claudeResponse;
     let lastError;
     const maxRetries = 3;
+    const models = [
+      'claude-3-5-sonnet-20241022', // Modelo principal más reciente
+      'claude-3-5-haiku-20241022',  // Modelo de respaldo más reciente
+      'claude-3-haiku-20240307'     // Modelo más básico como último recurso
+    ];
+    
+    let modelIndex = 0;
     
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`🤖 Intento ${attempt}/${maxRetries} de llamada a Claude...`);
+        const currentModel = models[modelIndex];
+        console.log(`🤖 Intento ${attempt}/${maxRetries} con modelo ${currentModel}...`);
         
         claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
@@ -101,7 +109,7 @@ NO agregues texto adicional, solo el JSON.`;
             'anthropic-version': '2023-06-01'
           },
           body: JSON.stringify({
-            model: 'claude-3-sonnet-20240229',
+            model: currentModel,
             max_tokens: 1500, // Reducido para ser más conservador
             messages: [
               {
@@ -123,6 +131,25 @@ NO agregues texto adicional, solo el JSON.`;
           };
           
           console.error(`❌ Claude API error (intento ${attempt}):`, claudeResponse.status, errorText);
+          
+          // Si es error 404 (modelo no encontrado), probar siguiente modelo
+          if (claudeResponse.status === 404) {
+            console.error(`❌ Error 404: Modelo ${models[modelIndex]} no encontrado.`);
+            modelIndex++;
+            
+            if (modelIndex < models.length) {
+              console.log(`🔄 Probando siguiente modelo: ${models[modelIndex]}`);
+              continue; // Probar siguiente modelo
+            } else {
+              console.error('❌ Todos los modelos de Claude fallaron con 404.');
+              lastError = {
+                status: claudeResponse.status,
+                message: errorText,
+                modelError: true
+              };
+              break; // No más modelos para probar
+            }
+          }
           
           // Si es error 40x (rate limit o auth), esperar más tiempo
           if (claudeResponse.status >= 400 && claudeResponse.status < 500) {
