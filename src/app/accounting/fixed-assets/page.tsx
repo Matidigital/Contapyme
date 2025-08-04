@@ -50,7 +50,10 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
 
       if (reportRes.ok) {
         const reportData = await reportRes.json();
+        console.log('Report data received:', reportData);
         setReport(reportData.report || null);
+      } else {
+        console.error('Failed to load report:', reportRes.status);
       }
 
     } catch (error) {
@@ -157,7 +160,21 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
         <div className="px-4 py-6 sm:px-0">
           
           {/* Tarjetas de Resumen */}
-          {report && (
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              {[1, 2, 3, 4].map(i => (
+                <Card key={i} className="p-6 animate-pulse">
+                  <div className="flex items-center">
+                    <div className="p-2 bg-gray-200 rounded-lg w-10 h-10"></div>
+                    <div className="ml-4 flex-1">
+                      <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                      <div className="h-6 bg-gray-200 rounded"></div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : report ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <Card className="p-6">
                 <div className="flex items-center">
@@ -179,7 +196,7 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-500">Valor Compra Total</p>
                     <p className="text-2xl font-bold text-gray-900">
-                      {formatCurrency(report.total_purchase_value)}
+                      {formatCurrency(report?.total_purchase_value || 0)}
                     </p>
                   </div>
                 </div>
@@ -193,7 +210,7 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-500">Valor Libro Total</p>
                     <p className="text-2xl font-bold text-gray-900">
-                      {formatCurrency(report.total_book_value)}
+                      {formatCurrency(report?.total_book_value || 0)}
                     </p>
                   </div>
                 </div>
@@ -207,11 +224,25 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-500">Depreciación Mensual</p>
                     <p className="text-2xl font-bold text-gray-900">
-                      {formatCurrency(report.monthly_depreciation)}
+                      {formatCurrency(report?.monthly_depreciation || 0)}
                     </p>
                   </div>
                 </div>
               </Card>
+            </div>
+          ) : (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-8">
+              <div className="flex">
+                <AlertTriangle className="h-5 w-5 text-yellow-400" />
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-yellow-800">
+                    No se pudieron cargar las estadísticas
+                  </h3>
+                  <div className="mt-2 text-sm text-yellow-700">
+                    <p>Las métricas de activos fijos no están disponibles en este momento.</p>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
