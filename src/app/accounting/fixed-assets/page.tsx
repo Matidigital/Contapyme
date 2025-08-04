@@ -41,9 +41,11 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
       const assetsParams = new URLSearchParams();
       if (selectedStatus !== 'all') assetsParams.append('status', selectedStatus);
       
+      // IMPORTANTE: El reporte siempre debe mostrar TODOS los activos,
+      // independientemente del filtro aplicado en la vista
       const [assetsRes, reportRes] = await Promise.all([
         fetch(`/api/fixed-assets?${assetsParams.toString()}`),
-        fetch('/api/fixed-assets/reports?type=summary')
+        fetch('/api/fixed-assets/reports?type=summary') // Sin filtros para el reporte
       ]);
 
       if (assetsRes.ok) {
@@ -67,15 +69,21 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
   }, [selectedStatus]);
 
   // Manejar éxito en creación de activo
-  const handleAssetCreated = () => {
-    fetchData(); // Recargar datos
+  const handleAssetCreated = async () => {
+    // Pequeña demora para asegurar que la DB se actualizó
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await fetchData(); // Recargar datos
+    console.log('✅ Nuevo activo creado, datos actualizados');
   };
 
   // Manejar éxito en edición de activo
-  const handleAssetUpdated = () => {
-    fetchData(); // Recargar datos
+  const handleAssetUpdated = async () => {
+    // Pequeña demora para asegurar que la DB se actualizó
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await fetchData(); // Recargar datos
     setSelectedAsset(null);
     setShowEditForm(false);
+    console.log('✅ Activo actualizado, datos refrescados');
   };
 
   // Abrir modal de edición
@@ -475,7 +483,9 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                                         });
                                         
                                         if (response.ok) {
-                                          fetchData(); // Recargar datos
+                                          // Forzar recarga completa de datos
+                                          await fetchData();
+                                          console.log('✅ Activo eliminado, datos actualizados');
                                         } else {
                                           const errorData = await response.json();
                                           alert(errorData.error || 'Error al eliminar activo');

@@ -338,12 +338,13 @@ export async function getFixedAssetCategories() {
 // Generar reporte de activos fijos
 export async function getFixedAssetsReport(userId: string = 'demo-user', year?: number) {
   try {
-    // Obtener activos básicos
+    // Obtener TODOS los activos para cálculos correctos
+    // Incluimos todos los estados para que los totales sean precisos
     const { data: assets, error: assetsError } = await supabase
       .from('fixed_assets')
       .select('*')
       .eq('user_id', userId)
-      .eq('status', 'active');
+      .in('status', ['active', 'disposed', 'fully_depreciated']); // Incluir todos los estados relevantes
 
     if (assetsError) {
       return { data: null, error: assetsError };
@@ -377,7 +378,17 @@ export async function getFixedAssetsReport(userId: string = 'demo-user', year?: 
     };
 
     assets.forEach(asset => {
-      // Calcular depreciación acumulada aproximada
+      // Para activos dados de baja, usar valores finales
+      if (asset.status === 'disposed' && asset.disposal_date) {
+        const disposalValue = asset.disposal_value || 0;
+        report.total_purchase_value += asset.purchase_value;
+        report.total_book_value += disposalValue; // Valor de venta/disposición
+        report.total_accumulated_depreciation += (asset.purchase_value - disposalValue);
+        // No contribuyen a la depreciación mensual actual
+        return;
+      }
+      
+      // Calcular depreciación acumulada aproximada para activos activos
       const startDate = new Date(asset.start_depreciation_date);
       const monthsElapsed = Math.max(0, Math.floor(
         (currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30)
