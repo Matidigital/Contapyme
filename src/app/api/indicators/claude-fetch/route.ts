@@ -50,82 +50,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Prompt para Claude para obtener valores reales
-    const prompt = `Por favor, proporciona los valores actuales (hoy ${new Date().toLocaleDateString('es-CL')}) de los siguientes indicadores económicos chilenos:
+    // Obtener fecha y hora actual de Chile
+    const now = new Date();
+    const chileTime = new Intl.DateTimeFormat('es-CL', {
+      timeZone: 'America/Santiago',
+      year: 'numeric',
+      month: '2-digit', 
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(now);
 
-${indicators.map(ind => `- ${ind.name} (${ind.code}): ${ind.description || 'valor actual'}`).join('\n')}
+    // Prompt mejorado para obtener datos reales en tiempo real
+    const prompt = `BUSCA Y PROPORCIONA los valores económicos MÁS ACTUALES disponibles al momento de esta consulta.
 
-IMPORTANTE: 
-- Busca los valores más recientes y precisos disponibles
-- Para UF y UTM usa fuentes oficiales del Banco Central de Chile
-- Para divisas usa tasas de cambio actuales del mercado
-- Para criptomonedas usa valores de mercado actuales
-- TODOS los valores deben ser NÚMEROS válidos (no null, no undefined, no strings)
-- Si no conoces un valor exacto, usa una estimación razonable basada en valores históricos
-- Responde SOLO con un JSON válido en este formato exacto:
+FECHA/HORA ACTUAL: ${chileTime} (Chile)
+FECHA ISO: ${now.toISOString()}
 
+INDICADORES A CONSULTAR:
+${indicators.map(ind => `- ${ind.name} (${ind.code}): Buscar valor actual de mercado`).join('\n')}
+
+INSTRUCCIONES CRÍTICAS:
+🔍 DEBES BUSCAR DATOS REALES ACTUALES - NO uses valores de ejemplo o plantillas
+📊 Para cada indicador, busca el precio/valor MÁS RECIENTE disponible en el mercado
+💰 Fuentes recomendadas por categoría:
+   • UF/UTM: Banco Central de Chile, SII.cl
+   • USD/EUR: Banco Central, mercados forex actuales  
+   • Bitcoin/Ethereum: CoinGecko, Binance, precios actuales de mercado
+   • S&P500/NASDAQ: Yahoo Finance, Bloomberg, valores de cierre más recientes
+   • Sueldo mínimo: Ministerio del Trabajo (valor vigente)
+
+⚠️ PROHIBIDO: No copies valores de ejemplo. Cada número debe ser una consulta real.
+⚠️ OBLIGATORIO: Todos los valores deben ser números válidos (sin null, undefined, strings)
+
+FORMATO DE RESPUESTA (solo JSON, sin texto adicional):
 {
   "indicators": [
     {
-      "code": "UF",
-      "value": 37784.50,
-      "source": "Banco Central de Chile",
-      "date": "2025-08-04"
-    },
-    {
-      "code": "UTM", 
-      "value": 66443,
-      "source": "SII Chile",
-      "date": "2025-08-04"
-    },
-    {
-      "code": "USD",
-      "value": 950.45,
-      "source": "Banco Central de Chile",
-      "date": "2025-08-04"
-    },
-    {
-      "code": "EUR",
-      "value": 1032.20,
-      "source": "Banco Central de Chile",
-      "date": "2025-08-04"
-    },
-    {
-      "code": "SUELDO_MIN",
-      "value": 500000,
-      "source": "Dirección del Trabajo",
-      "date": "2025-08-04"
-    },
-    {
-      "code": "BTC",
-      "value": 65432.50,
-      "source": "CoinGecko",
-      "date": "2025-08-04"
-    },
-    {
-      "code": "ETH",
-      "value": 3234.75,
-      "source": "CoinGecko",
-      "date": "2025-08-04"
-    },
-    {
-      "code": "SP500",
-      "value": 5547.25,
-      "source": "Yahoo Finance",
-      "date": "2025-08-04"
-    },
-    {
-      "code": "NASDAQ",
-      "value": 17843.73,
-      "source": "Yahoo Finance",
-      "date": "2025-08-04"
+      "code": "CODIGO_INDICADOR",  
+      "value": NUMERO_REAL_ACTUAL,
+      "source": "Fuente consultada",
+      "date": "${now.toISOString().split('T')[0]}"
     }
   ],
-  "updated_at": "2025-08-04T10:30:00Z",
-  "success": true
+  "updated_at": "${now.toISOString()}",
+  "success": true,
+  "real_time_fetch": true
 }
 
-NO agregues texto adicional, solo el JSON. TODOS los campos "value" DEBEN ser números válidos.`;
+RESPONDE SOLO CON EL JSON. BUSCA VALORES REALES ACTUALES.`;
 
     // Hacer llamada a Claude con retry logic y modelos alternativos
     let claudeResponse;
