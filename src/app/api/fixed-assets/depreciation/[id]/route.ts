@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { databaseSimple } from '@/lib/databaseSimple';
 
+// Hacer la ruta dinámica explícitamente
+export const dynamic = 'force-dynamic';
+
 // GET /api/fixed-assets/depreciation/[id] - Obtener cronograma de depreciación
 export async function GET(
   request: NextRequest,
@@ -8,8 +11,8 @@ export async function GET(
 ) {
   try {
     const { id } = params;
-    const { searchParams } = new URL(request.url);
-    const year = searchParams.get('year');
+    // Usar nextUrl.searchParams en lugar de new URL(request.url)
+    const year = request.nextUrl.searchParams.get('year');
 
     // Verificar que el activo pertenece al usuario
     const assetQuery = `

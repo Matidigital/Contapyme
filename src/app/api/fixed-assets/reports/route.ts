@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFixedAssetsReport } from '@/lib/databaseSimple';
 
+// Hacer la ruta dinámica explícitamente
+export const dynamic = 'force-dynamic';
+
 // GET /api/fixed-assets/reports - Generar reportes de activos fijos
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const reportType = searchParams.get('type') || 'summary';
-    const year = searchParams.get('year') || new Date().getFullYear().toString();
+    // Usar searchParams directamente del request en lugar de URL
+    const reportType = request.nextUrl.searchParams.get('type') || 'summary';
+    const year = request.nextUrl.searchParams.get('year') || new Date().getFullYear().toString();
 
     if (reportType === 'summary') {
       // Usar la nueva función de Supabase

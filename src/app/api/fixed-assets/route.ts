@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { databaseSimple } from '@/lib/databaseSimple';
 import { CreateFixedAssetData, FixedAsset } from '@/types';
 
+// Hacer la ruta dinámica explícitamente
+export const dynamic = 'force-dynamic';
+
 // GET /api/fixed-assets - Obtener todos los activos fijos del usuario
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
-    const category = searchParams.get('category');
+    // Usar nextUrl.searchParams en lugar de new URL(request.url)
+    const status = request.nextUrl.searchParams.get('status');
+    const category = request.nextUrl.searchParams.get('category');
 
     let query = `
       SELECT 

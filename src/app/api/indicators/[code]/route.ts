@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getIndicatorHistory } from '@/lib/databaseSimple';
 
+// Hacer la ruta dinámica explícitamente
+export const dynamic = 'force-dynamic';
+
 // GET /api/indicators/[code] - Obtener historial de un indicador específico
 export async function GET(
   request: NextRequest,
@@ -8,8 +11,8 @@ export async function GET(
 ) {
   try {
     const { code } = params;
-    const { searchParams } = new URL(request.url);
-    const days = parseInt(searchParams.get('days') || '30');
+    // Usar nextUrl.searchParams en lugar de new URL(request.url)
+    const days = parseInt(request.nextUrl.searchParams.get('days') || '30');
 
     if (!code) {
       return NextResponse.json(

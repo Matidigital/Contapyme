@@ -220,10 +220,10 @@ export default function Home() {
           <EconomicIndicatorsBanner />
         </div>
 
-        {/* Demo Company Showcase */}
-        <CompanyProvider demoMode={true}>
+        {/* Demo Company Showcase - Temporalmente comentado para build */}
+        {/* <CompanyProvider demoMode={true}>
           <DemoCompanyShowcase />
-        </CompanyProvider>
+        </CompanyProvider> */}
 
         {/* Featured Module */}
         <Card variant="bordered" className="border-blue-200">
