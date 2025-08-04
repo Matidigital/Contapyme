@@ -20,6 +20,7 @@ interface IndicatorsDashboard {
   currency: IndicatorValue[];
   crypto: IndicatorValue[];
   labor: IndicatorValue[];
+  stocks: IndicatorValue[];
 }
 
 export default function EconomicIndicatorsBanner() {
@@ -27,7 +28,8 @@ export default function EconomicIndicatorsBanner() {
     monetary: [],
     currency: [],
     crypto: [],
-    labor: []
+    labor: [],
+    stocks: []
   });
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -40,7 +42,8 @@ export default function EconomicIndicatorsBanner() {
     ...indicators.monetary,
     ...indicators.currency,
     ...indicators.crypto,
-    ...indicators.labor
+    ...indicators.labor,
+    ...indicators.stocks
   ];
 
   // Cargar indicadores al montar e intentar actualización inmediata con Claude
@@ -217,6 +220,7 @@ export default function EconomicIndicatorsBanner() {
       case 'monetary': return 'from-blue-500 to-indigo-600';
       case 'currency': return 'from-green-500 to-emerald-600';
       case 'crypto': return 'from-orange-500 to-yellow-600';
+      case 'stocks': return 'from-red-500 to-rose-600';
       case 'labor': return 'from-purple-500 to-pink-600';
       default: return 'from-gray-500 to-gray-600';
     }

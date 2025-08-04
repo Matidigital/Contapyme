@@ -107,6 +107,18 @@ IMPORTANTE:
       "value": 3234.75,
       "source": "CoinGecko",
       "date": "2025-08-04"
+    },
+    {
+      "code": "SP500",
+      "value": 5547.25,
+      "source": "Yahoo Finance",
+      "date": "2025-08-04"
+    },
+    {
+      "code": "NASDAQ",
+      "value": 17843.73,
+      "source": "Yahoo Finance",
+      "date": "2025-08-04"
     }
   ],
   "updated_at": "2025-08-04T10:30:00Z",

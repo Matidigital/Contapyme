@@ -276,6 +276,7 @@ export interface IndicatorsDashboard {
   currency: IndicatorValue[];
   crypto: IndicatorValue[];
   labor: IndicatorValue[];
+  stocks: IndicatorValue[];
 }
 
 export interface UpdateIndicatorRequest {
