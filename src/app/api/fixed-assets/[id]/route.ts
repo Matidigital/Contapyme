@@ -69,43 +69,8 @@ export async function PUT(
       );
     }
 
-    // Construir query de actualización dinámicamente
-    const updateFields: string[] = [];
-    const values: any[] = [];
-    let paramCounter = 1;
-
-    const updatableFields = [
-      'name', 'description', 'category', 'purchase_value', 'residual_value',
-      'purchase_date', 'start_depreciation_date', 'useful_life_years',
-      'asset_account_code', 'depreciation_account_code', 'expense_account_code',
-      'serial_number', 'brand', 'model', 'location', 'responsible_person', 'status'
-    ];
-
-    updatableFields.forEach(field => {
-      if (body[field as keyof UpdateFixedAssetData] !== undefined) {
-        updateFields.push(`${field} = $${paramCounter}`);
-        values.push(body[field as keyof UpdateFixedAssetData]);
-        paramCounter++;
-      }
-    });
-
-    if (updateFields.length === 0) {
-      return NextResponse.json(
-        { error: 'No hay campos para actualizar' },
-        { status: 400 }
-      );
-    }
-
-    const updateQuery = `
-      UPDATE fixed_assets 
-      SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $${paramCounter} AND user_id = 'demo-user'
-      RETURNING *
-    `;
-
-    values.push(id);
-
-    const { data, error } = await databaseSimple.query(updateQuery, values);
+    // Usar función directa de actualización
+    const { data, error } = await updateFixedAsset(id, body, 'demo-user');
 
     if (error) {
       console.error('Error updating fixed asset:', error);
@@ -115,52 +80,15 @@ export async function PUT(
       );
     }
 
-    if (!data || data.length === 0) {
+    if (!data) {
       return NextResponse.json(
         { error: 'Activo fijo no encontrado o no autorizado' },
         { status: 404 }
       );
     }
 
-    const updatedAsset = data[0];
-
-    // Si se actualizaron valores relacionados con depreciación, regenerar cronograma
-    const depreciationFields = ['purchase_value', 'residual_value', 'useful_life_years', 'start_depreciation_date'];
-    const needsDepreciationUpdate = depreciationFields.some(field => 
-      body[field as keyof UpdateFixedAssetData] !== undefined
-    );
-
-    if (needsDepreciationUpdate) {
-      try {
-        // Eliminar cronograma anterior
-        await databaseSimple.query(
-          'DELETE FROM fixed_assets_depreciation WHERE fixed_asset_id = $1',
-          [id]
-        );
-
-        // Generar nuevo cronograma
-        const scheduleQuery = `
-          INSERT INTO fixed_assets_depreciation 
-          (fixed_asset_id, period_year, period_month, monthly_depreciation, accumulated_depreciation, book_value)
-          SELECT 
-            $1,
-            period_year,
-            period_month, 
-            monthly_depreciation,
-            accumulated_depreciation,
-            book_value
-          FROM generate_depreciation_schedule($1)
-        `;
-
-        await databaseSimple.query(scheduleQuery, [id]);
-      } catch (scheduleError) {
-        console.error('Error regenerating depreciation schedule:', scheduleError);
-        // No fallar la actualización por esto
-      }
-    }
-
     return NextResponse.json({ 
-      asset: updatedAsset,
+      asset: data,
       message: 'Activo fijo actualizado exitosamente' 
     });
 

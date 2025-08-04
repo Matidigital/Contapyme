@@ -285,7 +285,7 @@ export async function getFixedAssetById(id: string, userId: string = 'demo-user'
 }
 
 // Actualizar activo fijo
-export async function updateFixedAsset(id: string, updateData: any, userId: string = 'demo-user-id') {
+export async function updateFixedAsset(id: string, updateData: any, userId: string = 'demo-user') {
   try {
     const { data, error } = await supabase
       .from('fixed_assets')

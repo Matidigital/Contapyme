@@ -19,6 +19,7 @@ import {
 import { Button, Card } from '@/components/ui';
 import { FixedAsset, FixedAssetReport } from '@/types';
 import AddFixedAssetForm from '@/components/fixed-assets/AddFixedAssetForm';
+import EditFixedAssetForm from '@/components/fixed-assets/EditFixedAssetForm';
 
 interface FixedAssetsPageProps {}
 
@@ -29,6 +30,8 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<FixedAsset | null>(null);
 
   // Cargar datos iniciales
   const fetchData = useCallback(async () => {
@@ -66,6 +69,19 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
   // Manejar éxito en creación de activo
   const handleAssetCreated = () => {
     fetchData(); // Recargar datos
+  };
+
+  // Manejar éxito en edición de activo
+  const handleAssetUpdated = () => {
+    fetchData(); // Recargar datos
+    setSelectedAsset(null);
+    setShowEditForm(false);
+  };
+
+  // Abrir modal de edición
+  const openEditModal = (asset: FixedAsset) => {
+    setSelectedAsset(asset);
+    setShowEditForm(true);
   };
 
   useEffect(() => {
@@ -424,10 +440,7 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                                   variant="ghost"
                                   size="sm"
                                   leftIcon={<Edit2 className="w-4 h-4" />}
-                                  onClick={() => {
-                                    // TODO: Implementar modal de edición
-                                    alert('Funcionalidad de edición próximamente');
-                                  }}
+                                  onClick={() => openEditModal(asset)}
                                 >
                                   Editar
                                 </Button>
@@ -507,6 +520,19 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
         onClose={() => setShowAddForm(false)}
         onSuccess={handleAssetCreated}
       />
+
+      {/* Modal Editar Activo */}
+      {selectedAsset && (
+        <EditFixedAssetForm
+          isOpen={showEditForm}
+          onClose={() => {
+            setShowEditForm(false);
+            setSelectedAsset(null);
+          }}
+          onSuccess={handleAssetUpdated}
+          asset={selectedAsset}
+        />
+      )}
     </div>
   );
 }
