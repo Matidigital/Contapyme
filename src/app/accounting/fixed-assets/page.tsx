@@ -95,15 +95,30 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
 
   // Calcular valor libro actual (aproximado)
   const calculateBookValue = (asset: FixedAsset) => {
-    const monthsSincePurchase = Math.floor(
-      (new Date().getTime() - new Date(asset.start_depreciation_date).getTime()) / (1000 * 60 * 60 * 24 * 30)
-    );
-    const monthlyDepreciation = asset.depreciable_value / asset.useful_life_months;
-    const accumulatedDepreciation = Math.min(
-      monthsSincePurchase * monthlyDepreciation,
-      asset.depreciable_value
-    );
-    return Math.max(asset.purchase_value - accumulatedDepreciation, asset.residual_value);
+    try {
+      const monthsSinceDepreciation = Math.max(0, Math.floor(
+        (new Date().getTime() - new Date(asset.start_depreciation_date).getTime()) / (1000 * 60 * 60 * 24 * 30)
+      ));
+      
+      const depreciableValue = asset.purchase_value - (asset.residual_value || 0);
+      const totalMonths = asset.useful_life_years * 12;
+      const monthlyDepreciation = depreciableValue / totalMonths;
+      
+      const accumulatedDepreciation = Math.min(
+        monthsSinceDepreciation * monthlyDepreciation,
+        depreciableValue
+      );
+      
+      const bookValue = Math.max(
+        asset.purchase_value - accumulatedDepreciation, 
+        asset.residual_value || 0
+      );
+      
+      return bookValue;
+    } catch (error) {
+      console.error('Error calculating book value for asset:', asset.name, error);
+      return asset.purchase_value; // Fallback al valor de compra
+    }
   };
 
   if (loading) {
