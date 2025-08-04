@@ -10,7 +10,7 @@ export async function GET(
   try {
     const { id } = params;
 
-    const { data, error } = await getFixedAssetById(id, 'demo-user-id');
+    const { data, error } = await getFixedAssetById(id, 'demo-user');
 
     if (error) {
       console.error('Error fetching fixed asset:', error);
@@ -99,7 +99,7 @@ export async function PUT(
     const updateQuery = `
       UPDATE fixed_assets 
       SET ${updateFields.join(', ')}, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $${paramCounter} AND user_id = 'demo-user-id'
+      WHERE id = $${paramCounter} AND user_id = 'demo-user'
       RETURNING *
     `;
 
@@ -181,7 +181,7 @@ export async function DELETE(
   try {
     const { id } = params;
 
-    const { data, error } = await deleteFixedAsset(id, 'demo-user-id');
+    const { data, error } = await deleteFixedAsset(id, 'demo-user');
 
     if (error) {
       console.error('Error deleting fixed asset:', error);

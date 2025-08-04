@@ -265,7 +265,7 @@ export async function getFixedAssets(filters: any = {}) {
 }
 
 // Obtener activo fijo por ID
-export async function getFixedAssetById(id: string, userId: string = 'demo-user-id') {
+export async function getFixedAssetById(id: string, userId: string = 'demo-user') {
   try {
     const { data, error } = await supabase
       .from('fixed_assets')
@@ -306,7 +306,7 @@ export async function updateFixedAsset(id: string, updateData: any, userId: stri
 }
 
 // Eliminar activo fijo
-export async function deleteFixedAsset(id: string, userId: string = 'demo-user-id') {
+export async function deleteFixedAsset(id: string, userId: string = 'demo-user') {
   try {
     const { data, error } = await supabase
       .from('fixed_assets')
