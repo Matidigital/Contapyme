@@ -103,7 +103,7 @@ export const INDICATORS_CONFIG: Record<string, IndicatorConfig> = {
   bitcoin: {
     code: 'bitcoin',
     name: 'Bitcoin',
-    baseValue: 113625, // CORREGIDO
+    baseValue: 66500, // Valor más actualizado agosto 2025
     unit: 'USD',
     category: 'crypto',
     format_type: 'currency',
@@ -111,12 +111,12 @@ export const INDICATORS_CONFIG: Record<string, IndicatorConfig> = {
     volatility: 'extreme',
     updateFrequency: 2,
     sources: ['Coinbase', 'CoinMarketCap', 'CoinGecko'],
-    lastVerified: '2025-08-03'
+    lastVerified: '2025-08-04'
   },
   ethereum: {
     code: 'ethereum',
     name: 'Ethereum',
-    baseValue: 3492.54,
+    baseValue: 3200, // Valor más actualizado agosto 2025
     unit: 'USD',
     category: 'crypto',
     format_type: 'currency',
@@ -124,7 +124,7 @@ export const INDICATORS_CONFIG: Record<string, IndicatorConfig> = {
     volatility: 'extreme',
     updateFrequency: 2,
     sources: ['Coinbase', 'CoinMarketCap', 'CoinGecko'],
-    lastVerified: '2025-08-03'
+    lastVerified: '2025-08-04'
   },
 
   // ÍNDICES BURSÁTILES
@@ -261,9 +261,9 @@ export const CURRENT_BASE_VALUES = {
   uf: 39163.00,
   utm: 68923,
   dolar: 969.41,
-  euro: 1123.11,      // CORREGIDO
-  bitcoin: 113625,    // CORREGIDO
-  ethereum: 3492.54,
+  euro: 1123.11,      
+  bitcoin: 66500,     // Actualizado agosto 2025
+  ethereum: 3200,     // Actualizado agosto 2025
   sueldo_minimo: 529000,
   ipc: 3.2,
   tpm: 5.75,
