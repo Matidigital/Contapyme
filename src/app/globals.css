@@ -131,7 +131,13 @@
     animation: scroll-left 20s linear infinite;
   }
 
-  /* Pausa la animación al hacer hover */
+  /* Animación continua sin pausa - para la pasarela */
+  .animate-scroll-continuous {
+    animation: scroll-left 25s linear infinite;
+    /* No pausar nunca, ni siquiera en hover */
+  }
+
+  /* Pausa la animación al hacer hover (excepto continuous) */
   .animate-scroll-left:hover,
   .animate-scroll-left-fast:hover {
     animation-play-state: paused;
@@ -168,6 +174,9 @@
     }
     .animate-scroll-left-fast {
       animation: scroll-left 15s linear infinite;
+    }
+    .animate-scroll-continuous {
+      animation: scroll-left 18s linear infinite;
     }
   }
 

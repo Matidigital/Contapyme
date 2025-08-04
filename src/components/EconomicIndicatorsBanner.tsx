@@ -311,9 +311,9 @@ export default function EconomicIndicatorsBanner() {
         {/* Minimal Ticker Container */}
         <div className="relative overflow-hidden py-2">
           {/* Running Indicators - Minimal Design */}
-          <div className="flex animate-scroll-left-fast space-x-8">
-            {/* Duplicamos los indicadores para efecto continuo */}
-            {[...allIndicators, ...allIndicators, ...allIndicators].map((indicator, index) => (
+          <div className="flex animate-scroll-continuous space-x-8">
+            {/* Duplicamos los indicadores múltiples veces para efecto continuo perfecto */}
+            {[...allIndicators, ...allIndicators, ...allIndicators, ...allIndicators, ...allIndicators].map((indicator, index) => (
               <div 
                 key={`${indicator.code}-${index}`}
                 className="flex-shrink-0 flex items-center space-x-3 px-4 py-1 min-w-[200px] hover:bg-gray-50 transition-colors cursor-pointer"
