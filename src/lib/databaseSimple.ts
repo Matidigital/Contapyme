@@ -207,7 +207,7 @@ export async function createFixedAsset(assetData: any) {
     const { data, error } = await supabase
       .from('fixed_assets')
       .insert([{
-        user_id: assetData.user_id || 'demo-user-id',
+        user_id: assetData.user_id || 'demo-user',
         name: assetData.name,
         description: assetData.description,
         category: assetData.category || 'Activo Fijo',
@@ -442,22 +442,24 @@ export const databaseSimple = {
       // Mapear queries SQL a funciones de Supabase
       if (sql.includes('INSERT INTO fixed_assets')) {
         const assetData = {
-          name: params[0],
-          description: params[1],
-          category: params[2],
-          purchase_value: params[3],
-          residual_value: params[4],
-          purchase_date: params[5],
-          start_depreciation_date: params[6],
-          useful_life_years: params[7],
-          asset_account_code: params[9],
-          depreciation_account_code: params[10],
-          expense_account_code: params[11],
-          serial_number: params[12],
-          brand: params[13],
-          model: params[14],
-          location: params[15],
-          responsible_person: params[16]
+          user_id: params[0],              // DEMO_USER_ID
+          name: params[1],                 // body.name  
+          description: params[2],          // body.description
+          category: params[3],             // body.category
+          purchase_value: params[4],       // body.purchase_value
+          residual_value: params[5],       // body.residual_value
+          purchase_date: params[6],        // body.purchase_date
+          start_depreciation_date: params[7], // body.start_depreciation_date
+          useful_life_years: params[8],    // body.useful_life_years
+          depreciation_method: params[9],  // 'linear'
+          asset_account_code: params[10],  // body.asset_account_code
+          depreciation_account_code: params[11], // body.depreciation_account_code
+          expense_account_code: params[12], // body.expense_account_code
+          serial_number: params[13],       // body.serial_number
+          brand: params[14],               // body.brand
+          model: params[15],               // body.model
+          location: params[16],            // body.location
+          responsible_person: params[17]   // body.responsible_person
         };
         
         return await createFixedAsset(assetData);

@@ -69,23 +69,7 @@ export async function GET(request: NextRequest) {
 // POST /api/fixed-assets - Crear nuevo activo fijo
 export async function POST(request: NextRequest) {
   try {
-    // Verificar si la tabla existe primero
-    const tableExistsQuery = `
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = 'fixed_assets'
-      );
-    `;
-
-    const { data: tableExists, error: tableError } = await databaseSimple.query(tableExistsQuery);
-    
-    if (tableError || !tableExists || !tableExists[0]?.exists) {
-      return NextResponse.json(
-        { error: 'Funcionalidad de activos fijos aún no disponible - tabla no existe en la base de datos' },
-        { status: 503 }
-      );
-    }
+    console.log('Creating new fixed asset...');
 
     const body: CreateFixedAssetData = await request.json();
 
@@ -124,6 +108,9 @@ export async function POST(request: NextRequest) {
         start_depreciation_date,
         useful_life_years,
         depreciation_method,
+        asset_account_code,
+        depreciation_account_code,
+        expense_account_code,
         serial_number,
         brand,
         model,
@@ -132,7 +119,7 @@ export async function POST(request: NextRequest) {
         status
       ) VALUES (
         $1,
-        $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'active'
+        $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 'active'
       )
       RETURNING *
     `;
@@ -148,6 +135,9 @@ export async function POST(request: NextRequest) {
       body.start_depreciation_date || body.purchase_date,
       body.useful_life_years,
       'linear', // Por defecto método lineal
+      body.asset_account_code || null,
+      body.depreciation_account_code || null,
+      body.expense_account_code || null,
       body.serial_number || null,
       body.brand || null,
       body.model || null,
