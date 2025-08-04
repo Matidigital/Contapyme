@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       SELECT 
         *
       FROM fixed_assets fa
-      WHERE (fa.user_id = 'demo-user-id' OR fa.user_id IS NULL)
+      WHERE fa.user_id = 'demo-user-12345678-9abc-def0-1234-56789abcdef0'
     `;
 
     const params: any[] = [];
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
         responsible_person,
         status
       ) VALUES (
-        'demo-user-id',
+        'demo-user-12345678-9abc-def0-1234-56789abcdef0',
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'active'
       )
       RETURNING *

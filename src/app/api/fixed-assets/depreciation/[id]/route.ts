@@ -17,7 +17,7 @@ export async function GET(
     // Verificar que el activo pertenece al usuario
     const assetQuery = `
       SELECT id, name FROM fixed_assets 
-      WHERE id = $1 AND user_id = 'demo-user-id'
+      WHERE id = $1 AND user_id = 'demo-user-12345678-9abc-def0-1234-56789abcdef0'
     `;
 
     const { data: assetData, error: assetError } = await databaseSimple.query(assetQuery, [id]);
