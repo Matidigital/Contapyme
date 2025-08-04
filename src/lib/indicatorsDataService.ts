@@ -127,6 +127,34 @@ export const INDICATORS_CONFIG: Record<string, IndicatorConfig> = {
     lastVerified: '2025-08-03'
   },
 
+  // ÍNDICES BURSÁTILES
+  sp500: {
+    code: 'sp500',
+    name: 'S&P 500',
+    baseValue: 5547.25,
+    unit: 'USD',
+    category: 'stocks',
+    format_type: 'currency',
+    decimal_places: 2,
+    volatility: 'medium',
+    updateFrequency: 5,
+    sources: ['Yahoo Finance', 'Bloomberg', 'MarketWatch'],
+    lastVerified: '2025-08-04'
+  },
+  nasdaq: {
+    code: 'nasdaq',
+    name: 'NASDAQ Composite',
+    baseValue: 17843.73,
+    unit: 'USD', 
+    category: 'stocks',
+    format_type: 'currency',
+    decimal_places: 2,
+    volatility: 'medium',
+    updateFrequency: 5,
+    sources: ['Yahoo Finance', 'Bloomberg', 'MarketWatch'],
+    lastVerified: '2025-08-04'
+  },
+
   // LABORALES
   sueldo_minimo: {
     code: 'sueldo_minimo',

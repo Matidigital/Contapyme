@@ -20,6 +20,7 @@ interface IndicatorsDashboard {
   currency: IndicatorValue[];
   crypto: IndicatorValue[];
   labor: IndicatorValue[];
+  stocks: IndicatorValue[];
 }
 
 // GET /api/indicators/hybrid - Sistema híbrido con datos actualizados
@@ -437,6 +438,31 @@ function getSmartSimulatedData(): IndicatorsDashboard {
       source: 'smart_simulation',
       last_updated: currentTime
     },
+    // Índices Bursátiles
+    {
+      code: 'sp500',
+      name: 'S&P 500',
+      value: currentValues.sp500,
+      date: currentDate,
+      unit: 'USD',
+      category: 'stocks',
+      format_type: 'currency',
+      decimal_places: 2,
+      source: 'smart_simulation',
+      last_updated: currentTime
+    },
+    {
+      code: 'nasdaq',
+      name: 'NASDAQ Composite',
+      value: currentValues.nasdaq,
+      date: currentDate,
+      unit: 'USD',
+      category: 'stocks',
+      format_type: 'currency',
+      decimal_places: 2,
+      source: 'smart_simulation',
+      last_updated: currentTime
+    },
     // Laborales
     {
       code: 'sueldo_minimo',
@@ -460,6 +486,7 @@ function categorizeIndicators(indicators: IndicatorValue[]): IndicatorsDashboard
     monetary: indicators.filter(i => i.category === 'monetary'),
     currency: indicators.filter(i => i.category === 'currency'),
     crypto: indicators.filter(i => i.category === 'crypto'),
-    labor: indicators.filter(i => i.category === 'labor')
+    labor: indicators.filter(i => i.category === 'labor'),
+    stocks: indicators.filter(i => i.category === 'stocks')
   };
 }
