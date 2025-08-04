@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { databaseSimple } from '@/lib/databaseSimple';
+import { DEMO_USER_ID } from '@/lib/constants';
 
 // Hacer la ruta dinámica explícitamente
 export const dynamic = 'force-dynamic';
@@ -17,10 +18,10 @@ export async function GET(
     // Verificar que el activo pertenece al usuario
     const assetQuery = `
       SELECT id, name FROM fixed_assets 
-      WHERE id = $1 AND user_id = '12345678-9abc-def0-1234-56789abcdef0'
+      WHERE id = $1 AND user_id = $2
     `;
 
-    const { data: assetData, error: assetError } = await databaseSimple.query(assetQuery, [id]);
+    const { data: assetData, error: assetError } = await databaseSimple.query(assetQuery, [id, DEMO_USER_ID]);
 
     if (assetError || !assetData || assetData.length === 0) {
       return NextResponse.json(

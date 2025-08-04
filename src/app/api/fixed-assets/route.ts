@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { databaseSimple } from '@/lib/databaseSimple';
 import { CreateFixedAssetData, FixedAsset } from '@/types';
+import { DEMO_USER_ID } from '@/lib/constants';
 
 // Hacer la ruta dinámica explícitamente
 export const dynamic = 'force-dynamic';
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
       SELECT 
         *
       FROM fixed_assets fa
-      WHERE fa.user_id = '12345678-9abc-def0-1234-56789abcdef0'
+      WHERE fa.user_id = $1
     `;
 
     const params: any[] = [];
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
 
     query += ' ORDER BY fa.created_at DESC';
 
-    const { data, error } = await databaseSimple.query(query, params);
+    const { data, error } = await databaseSimple.query(query, [DEMO_USER_ID, ...params]);
 
     if (error) {
       console.error('Error fetching fixed assets:', error);
@@ -139,13 +140,14 @@ export async function POST(request: NextRequest) {
         responsible_person,
         status
       ) VALUES (
-        '12345678-9abc-def0-1234-56789abcdef0',
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'active'
+        $1,
+        $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'active'
       )
       RETURNING *
     `;
 
     const { data, error } = await databaseSimple.query(insertQuery, [
+      DEMO_USER_ID,
       body.name,
       body.description || null,
       body.category,

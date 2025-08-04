@@ -1,7 +1,7 @@
 // Constantes del sistema ContaPyme
 
-// Usuario demo
-export const DEMO_USER_UUID = '12345678-9abc-def0-1234-56789abcdef0';
+// Usuario demo - simplificado para compatibilidad
+export const DEMO_USER_ID = 'demo-user';  // TEXT simple en lugar de UUID
 export const DEMO_USER_EMAIL = 'demo@pymeejemplo.cl';
 export const DEMO_USER_NAME = 'Usuario Demo PyME';
 

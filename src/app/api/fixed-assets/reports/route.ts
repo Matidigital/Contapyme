@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFixedAssetsReport, databaseSimple } from '@/lib/databaseSimple';
+import { DEMO_USER_ID } from '@/lib/constants';
 
 // Hacer la ruta dinámica explícitamente
 export const dynamic = 'force-dynamic';
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
 
     if (reportType === 'summary') {
       // Usar la nueva función de Supabase
-      const { data: report, error } = await getFixedAssetsReport('12345678-9abc-def0-1234-56789abcdef0', parseInt(year));
+      const { data: report, error } = await getFixedAssetsReport(DEMO_USER_ID, parseInt(year));
 
       if (error) {
         console.error('Error fetching report:', error);
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
 
     } else if (reportType === 'depreciation') {
       // Para reporte de depreciación, usar función simplificada
-      const { data: report, error } = await getFixedAssetsReport('12345678-9abc-def0-1234-56789abcdef0', parseInt(year));
+      const { data: report, error } = await getFixedAssetsReport(DEMO_USER_ID, parseInt(year));
 
       if (error) {
         console.error('Error fetching depreciation report:', error);
