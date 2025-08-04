@@ -60,29 +60,60 @@ IMPORTANTE:
 - Para UF y UTM usa fuentes oficiales del Banco Central de Chile
 - Para divisas usa tasas de cambio actuales del mercado
 - Para criptomonedas usa valores de mercado actuales
+- TODOS los valores deben ser NÚMEROS válidos (no null, no undefined, no strings)
+- Si no conoces un valor exacto, usa una estimación razonable basada en valores históricos
 - Responde SOLO con un JSON válido en este formato exacto:
 
 {
   "indicators": [
     {
       "code": "UF",
-      "value": 37284.50,
+      "value": 37784.50,
       "source": "Banco Central de Chile",
-      "date": "2025-01-04"
+      "date": "2025-08-04"
     },
     {
       "code": "UTM", 
-      "value": 65443,
+      "value": 66443,
       "source": "SII Chile",
-      "date": "2025-01-04"
+      "date": "2025-08-04"
+    },
+    {
+      "code": "USD",
+      "value": 950.45,
+      "source": "Banco Central de Chile",
+      "date": "2025-08-04"
+    },
+    {
+      "code": "EUR",
+      "value": 1032.20,
+      "source": "Banco Central de Chile",
+      "date": "2025-08-04"
+    },
+    {
+      "code": "SUELDO_MIN",
+      "value": 500000,
+      "source": "Dirección del Trabajo",
+      "date": "2025-08-04"
+    },
+    {
+      "code": "BTC",
+      "value": 65432.50,
+      "source": "CoinGecko",
+      "date": "2025-08-04"
+    },
+    {
+      "code": "ETH",
+      "value": 3234.75,
+      "source": "CoinGecko",
+      "date": "2025-08-04"
     }
-    // ... etc para todos los indicadores solicitados
   ],
-  "updated_at": "2025-01-04T10:30:00Z",
+  "updated_at": "2025-08-04T10:30:00Z",
   "success": true
 }
 
-NO agregues texto adicional, solo el JSON.`;
+NO agregues texto adicional, solo el JSON. TODOS los campos "value" DEBEN ser números válidos.`;
 
     // Hacer llamada a Claude con retry logic y modelos alternativos
     let claudeResponse;
@@ -197,6 +228,8 @@ NO agregues texto adicional, solo el JSON.`;
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       const jsonString = jsonMatch ? jsonMatch[0] : content;
       parsedResponse = JSON.parse(jsonString);
+      
+      console.log('📝 Claude response parsed:', JSON.stringify(parsedResponse, null, 2));
     } catch (parseError) {
       console.error('Error parsing Claude response:', parseError);
       console.error('Claude response:', content);
@@ -207,6 +240,7 @@ NO agregues texto adicional, solo el JSON.`;
     }
 
     if (!parsedResponse.indicators || !Array.isArray(parsedResponse.indicators)) {
+      console.error('❌ Formato inválido de respuesta:', parsedResponse);
       return NextResponse.json(
         { error: 'Formato de respuesta inválido de Claude' },
         { status: 500 }
@@ -221,9 +255,21 @@ NO agregues texto adicional, solo el JSON.`;
     
     for (const indicator of parsedResponse.indicators) {
       try {
+        // Validar que el indicador tenga un valor válido
+        if (indicator.value === null || indicator.value === undefined || isNaN(indicator.value)) {
+          console.error(`❌ Valor inválido para ${indicator.code}:`, indicator.value);
+          updateResults.push({
+            code: indicator.code,
+            value: null,
+            success: false,
+            error: `Valor inválido: ${indicator.value}`
+          });
+          continue;
+        }
+        
         const { data, error } = await updateIndicatorValue(
           indicator.code,
-          indicator.value,
+          Number(indicator.value), // Asegurar que es número
           indicator.date || new Date().toISOString().split('T')[0]
         );
 
