@@ -116,6 +116,42 @@ export default function EconomicIndicatorsBanner() {
     }
   };
 
+  const updateWithClaude = async () => {
+    try {
+      setUpdateStatus('updating');
+      
+      const response = await fetch('/api/indicators/claude-fetch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          indicators: allIndicators.map(ind => ({
+            code: ind.code,
+            name: ind.name,
+            description: `${ind.name} - valor actual en tiempo real`
+          }))
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Recargar indicadores después de actualización
+        await fetchIndicators(false);
+        setUpdateStatus('success');
+        setTimeout(() => setUpdateStatus('idle'), 3000);
+      } else {
+        setUpdateStatus('error');
+        setTimeout(() => setUpdateStatus('idle'), 3000);
+      }
+    } catch (error) {
+      console.error('Error updating with Claude:', error);
+      setUpdateStatus('error');
+      setTimeout(() => setUpdateStatus('idle'), 3000);
+    }
+  };
+
   const formatValue = (indicator: IndicatorValue): string => {
     const { value, format_type, decimal_places, unit } = indicator;
     
@@ -274,7 +310,7 @@ export default function EconomicIndicatorsBanner() {
         <div className="absolute top-0 right-0 w-8 h-full bg-gradient-to-l from-white to-transparent pointer-events-none"></div>
         
         {/* Minimal Status */}
-        <div className="bg-gray-50 px-4 py-1 text-center">
+        <div className="bg-gray-50 px-4 py-1 flex items-center justify-between">
           <span className="text-xs text-gray-400">
             Actualizado: {lastUpdate.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
             {updateStatus === 'updating' && (
@@ -283,7 +319,22 @@ export default function EconomicIndicatorsBanner() {
                 actualizando
               </span>
             )}
+            {updateStatus === 'success' && (
+              <span className="ml-2 text-green-600">✓</span>
+            )}
+            {updateStatus === 'error' && (
+              <span className="ml-2 text-red-600">⚠</span>
+            )}
           </span>
+          
+          <button
+            onClick={updateWithClaude}
+            disabled={updateStatus === 'updating'}
+            className="text-xs text-purple-600 hover:text-purple-800 disabled:text-gray-400 font-medium transition-colors"
+            title="Actualizar con Claude (valores reales)"
+          >
+            🤖 Claude
+          </button>
         </div>
       </div>
 
