@@ -66,6 +66,7 @@ export default function AddFixedAssetForm({ isOpen, onClose, onSuccess }: AddFix
           is_active: acc.is_active
         }));
         
+        console.log('Accounts loaded and formatted:', accountsData);
         setAccounts(accountsData);
       } else {
         console.error('Failed to load accounts');
@@ -545,7 +546,7 @@ export default function AddFixedAssetForm({ isOpen, onClose, onSuccess }: AddFix
                     >
                       <option value="">Seleccionar cuenta de activo</option>
                       {accounts
-                        .filter(acc => acc.account_type === 'asset' && !acc.code.includes('Dep. Acum'))
+                        .filter(acc => acc.account_type.toLowerCase() === 'activo' && !acc.code.includes('Dep. Acum') && !acc.name.includes('Dep. Acum'))
                         .map(account => (
                           <option key={account.id} value={account.code}>
                             {account.code} - {account.name}
@@ -567,7 +568,7 @@ export default function AddFixedAssetForm({ isOpen, onClose, onSuccess }: AddFix
                     >
                       <option value="">Seleccionar cuenta (opcional)</option>
                       {accounts
-                        .filter(acc => acc.account_type === 'asset' && acc.code.includes('Dep. Acum'))
+                        .filter(acc => acc.account_type.toLowerCase() === 'activo' && (acc.code.includes('Dep. Acum') || acc.name.includes('Dep. Acum')))
                         .map(account => (
                           <option key={account.id} value={account.code}>
                             {account.code} - {account.name}
@@ -588,7 +589,7 @@ export default function AddFixedAssetForm({ isOpen, onClose, onSuccess }: AddFix
                     >
                       <option value="">Seleccionar cuenta (opcional)</option>
                       {accounts
-                        .filter(acc => acc.account_type === 'expense' && acc.code.includes('3.1'))
+                        .filter(acc => acc.account_type.toLowerCase() === 'gasto' && acc.name.includes('Depreciación'))
                         .map(account => (
                           <option key={account.id} value={account.code}>
                             {account.code} - {account.name}
