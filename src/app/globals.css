@@ -133,8 +133,18 @@
 
   /* Animación continua sin pausa - para la pasarela */
   .animate-scroll-continuous {
-    animation: scroll-left 25s linear infinite;
+    animation: scroll-infinite 30s linear infinite;
     /* No pausar nunca, ni siquiera en hover */
+  }
+  
+  /* Animación infinita específica para ticker continuo */
+  @keyframes scroll-infinite {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
   }
 
   /* Pausa la animación al hacer hover (excepto continuous) */
@@ -176,7 +186,7 @@
       animation: scroll-left 15s linear infinite;
     }
     .animate-scroll-continuous {
-      animation: scroll-left 18s linear infinite;
+      animation: scroll-infinite 20s linear infinite;
     }
   }
 

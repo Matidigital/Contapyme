@@ -312,58 +312,51 @@ export default function EconomicIndicatorsBanner() {
         <div className="relative overflow-hidden py-2">
           {/* Running Indicators - Minimal Design */}
           <div className="flex animate-scroll-continuous">
-            {/* Primera copia de indicadores */}
-            <div className="flex space-x-8 pr-8">
+            {/* Duplicamos los indicadores para crear efecto infinito */}
+            <div className="flex shrink-0 gap-8">
               {allIndicators.map((indicator, index) => (
                 <div 
                   key={`${indicator.code}-${index}-1`}
-                  className="flex-shrink-0 flex items-center space-x-3 px-4 py-1 min-w-[200px] hover:bg-gray-50 transition-colors cursor-pointer"
+                  className="flex items-center gap-3 px-4 py-1 min-w-[200px] hover:bg-gray-50 transition-colors cursor-pointer"
                   onClick={() => window.open('/accounting/indicators', '_blank')}
                 >
-                  {/* Minimal Content */}
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                      {indicator.code}
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    {indicator.code}
+                  </span>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {formatValue(indicator)}
+                  </span>
+                  {indicator.change !== undefined && (
+                    <span className={`text-xs ${
+                      indicator.change >= 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {indicator.change >= 0 ? '↗' : '↘'}
                     </span>
-                    <span className="text-sm font-semibold text-gray-900">
-                      {formatValue(indicator)}
-                    </span>
-                    {indicator.change !== undefined && (
-                      <span className={`text-xs ${
-                        indicator.change >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {indicator.change >= 0 ? '↗' : '↘'}
-                      </span>
-                    )}
-                  </div>
+                  )}
                 </div>
               ))}
             </div>
-            
-            {/* Segunda copia idéntica para continuidad perfecta */}
-            <div className="flex space-x-8 pr-8">
+            {/* Segunda copia idéntica */}
+            <div className="flex shrink-0 gap-8">
               {allIndicators.map((indicator, index) => (
                 <div 
                   key={`${indicator.code}-${index}-2`}
-                  className="flex-shrink-0 flex items-center space-x-3 px-4 py-1 min-w-[200px] hover:bg-gray-50 transition-colors cursor-pointer"
+                  className="flex items-center gap-3 px-4 py-1 min-w-[200px] hover:bg-gray-50 transition-colors cursor-pointer"
                   onClick={() => window.open('/accounting/indicators', '_blank')}
                 >
-                  {/* Minimal Content */}
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                      {indicator.code}
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                    {indicator.code}
+                  </span>
+                  <span className="text-sm font-semibold text-gray-900">
+                    {formatValue(indicator)}
+                  </span>
+                  {indicator.change !== undefined && (
+                    <span className={`text-xs ${
+                      indicator.change >= 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {indicator.change >= 0 ? '↗' : '↘'}
                     </span>
-                    <span className="text-sm font-semibold text-gray-900">
-                      {formatValue(indicator)}
-                    </span>
-                    {indicator.change !== undefined && (
-                      <span className={`text-xs ${
-                        indicator.change >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {indicator.change >= 0 ? '↗' : '↘'}
-                      </span>
-                    )}
-                  </div>
+                  )}
                 </div>
               ))}
             </div>
