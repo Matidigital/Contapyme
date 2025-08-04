@@ -13,24 +13,8 @@ export async function GET(request: NextRequest) {
     const status = request.nextUrl.searchParams.get('status');
     const category = request.nextUrl.searchParams.get('category');
 
-    // Verificar si la tabla existe primero
-    const tableExistsQuery = `
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = 'fixed_assets'
-      );
-    `;
-
-    const { data: tableExists, error: tableError } = await databaseSimple.query(tableExistsQuery);
-    
-    if (tableError || !tableExists || !tableExists[0]?.exists) {
-      console.log('Fixed assets table does not exist, returning empty array');
-      return NextResponse.json({ 
-        assets: [],
-        message: 'Tabla de activos fijos no existe aún - funcionalidad en desarrollo' 
-      });
-    }
+    // Ir directo a la query - si la tabla no existe, manejaremos el error
+    console.log('Fetching fixed assets for user:', DEMO_USER_ID);
 
     let query = `
       SELECT 
@@ -57,10 +41,17 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Error fetching fixed assets:', error);
-      // En caso de error, retornar array vacío en lugar de error 500
+      // Si la tabla no existe, retornar mensaje específico
+      if (error.message?.includes('does not exist') || error.code === '42P01') {
+        return NextResponse.json({ 
+          assets: [],
+          message: 'Tabla de activos fijos no existe - ejecutar migración SQL' 
+        });
+      }
+      // Otros errores
       return NextResponse.json({ 
         assets: [],
-        message: 'No se pudieron cargar los activos - funcionalidad en desarrollo' 
+        message: 'Error al cargar activos: ' + error.message 
       });
     }
 
