@@ -34,18 +34,18 @@ export default function EconomicIndicatorsPage() {
     initializeIndicators();
   }, []);
 
-  // Auto-actualización con Claude cada 25 minutos (offset del banner)
+  // Auto-actualización con Claude cada 40 minutos (offset del banner)
   useEffect(() => {
     const claudeInterval = setInterval(() => {
       console.log('🤖 Actualización automática programada con Claude en página');
       updateWithClaude();
-    }, 25 * 60 * 1000); // 25 minutos (offset para no coincidir con banner)
+    }, 40 * 60 * 1000); // 40 minutos (offset para no coincidir con banner)
 
-    // Actualización de respaldo cada 50 minutos
+    // Actualización de respaldo cada 75 minutos
     const fallbackInterval = setInterval(() => {
       console.log('🔄 Actualización de respaldo programada en página');
       updateIndicators();
-    }, 50 * 60 * 1000); // 50 minutos
+    }, 75 * 60 * 1000); // 75 minutos
 
     return () => {
       clearInterval(claudeInterval);
@@ -149,15 +149,21 @@ export default function EconomicIndicatorsPage() {
         throw new Error(data.error || 'Error al actualizar con Claude');
       }
 
-      // Recargar indicadores después de actualización
+      // Recargar indicadores después de actualización exitosa
       await fetchIndicators();
-      
-      // Solo mostrar alert si es actualización manual (no automática)
-      console.log(`🤖 Actualización con Claude completada: ${data.results?.filter(r => r.success).length || 0} indicadores actualizados`);
+      console.log(`✅ Claude actualización exitosa: ${data.results?.filter(r => r.success).length || 0} indicadores actualizados`);
       
     } catch (err) {
-      console.error('Error updating with Claude:', err);
-      setError(err instanceof Error ? err.message : 'Error al actualizar con Claude');
+      console.error('❌ Error con Claude, intentando sistema de respaldo:', err);
+      
+      // Si Claude falla, intentar sistema de respaldo automáticamente
+      try {
+        console.log('🔄 Activando sistema de respaldo...');
+        await updateIndicators(); // Usar el sistema híbrido como respaldo
+      } catch (fallbackError) {
+        console.error('❌ Sistema de respaldo también falló:', fallbackError);
+        setError('Tanto Claude como el sistema de respaldo fallaron. Inténtalo más tarde.');
+      }
     } finally {
       setUpdating(false);
     }
@@ -398,7 +404,7 @@ export default function EconomicIndicatorsPage() {
                     <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <span>🤖 Actualización automática con Claude cada 25 minutos</span>
+                    <span>🤖 Actualización automática con Claude cada 40 minutos</span>
                   </>
                 )}
               </div>

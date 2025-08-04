@@ -68,19 +68,19 @@ export default function EconomicIndicatorsBanner() {
       labor: 2 * 60 * 60 * 1000   // Sueldo mínimo: cada 2 horas (muy estable)
     };
 
-    // Actualización principal con Claude cada 30 minutos (conservador)
+    // Actualización principal con Claude cada 45 minutos (más conservador)
     const claudeInterval = setInterval(() => {
       if (allIndicators.length > 0) {
         updateWithClaude();
         console.log('🤖 Actualización automática con Claude en banner');
       }
-    }, 30 * 60 * 1000);
+    }, 45 * 60 * 1000);
 
-    // Actualización de respaldo híbrida cada 60 minutos (por si Claude falla)
+    // Actualización de respaldo híbrida cada 90 minutos (por si Claude falla)
     const fallbackInterval = setInterval(() => {
       fetchIndicators(false);
       console.log('🔄 Actualización de respaldo híbrida en banner');
-    }, 60 * 60 * 1000);
+    }, 90 * 60 * 1000);
 
     return () => {
       clearInterval(claudeInterval);
@@ -148,17 +148,41 @@ export default function EconomicIndicatorsBanner() {
       const data = await response.json();
 
       if (response.ok) {
-        // Recargar indicadores después de actualización
+        // Recargar indicadores después de actualización exitosa
         await fetchIndicators(false);
         setUpdateStatus('success');
+        console.log('✅ Claude actualización exitosa en banner');
         setTimeout(() => setUpdateStatus('idle'), 3000);
       } else {
-        setUpdateStatus('error');
-        setTimeout(() => setUpdateStatus('idle'), 3000);
+        // Si Claude falla, usar sistema de respaldo
+        console.log('⚠️ Claude falló, usando sistema de respaldo:', data.error);
+        
+        if (response.status === 429) {
+          // Rate limit - esperar más tiempo
+          console.log('⏱️ Rate limit detectado, esperando...');
+          setUpdateStatus('error');
+          setTimeout(() => setUpdateStatus('idle'), 5000);
+        } else if (response.status === 503 || data.fallback_active) {
+          // Claude no disponible - usar respaldo inmediatamente
+          console.log('🔄 Activando sistema de respaldo automáticamente...');
+          await fetchIndicators(false);
+          setUpdateStatus('success');
+          setTimeout(() => setUpdateStatus('idle'), 3000);
+        } else {
+          setUpdateStatus('error');
+          setTimeout(() => setUpdateStatus('idle'), 3000);
+        }
       }
     } catch (error) {
-      console.error('Error updating with Claude:', error);
-      setUpdateStatus('error');
+      console.error('❌ Error de red con Claude, usando respaldo:', error);
+      // En caso de error de red, usar sistema de respaldo
+      try {
+        await fetchIndicators(false);
+        setUpdateStatus('success');
+      } catch (fallbackError) {
+        console.error('❌ Sistema de respaldo también falló:', fallbackError);
+        setUpdateStatus('error');
+      }
       setTimeout(() => setUpdateStatus('idle'), 3000);
     }
   };

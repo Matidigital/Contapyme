@@ -3,9 +3,44 @@ import { updateIndicatorValue } from '@/lib/databaseSimple';
 
 export const dynamic = 'force-dynamic';
 
+// Rate limiting simple en memoria
+const rateLimitMap = new Map();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minuto
+const MAX_REQUESTS_PER_WINDOW = 3; // Máximo 3 requests por minuto
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const windowStart = now - RATE_LIMIT_WINDOW;
+  
+  if (!rateLimitMap.has(ip)) {
+    rateLimitMap.set(ip, []);
+  }
+  
+  const requests = rateLimitMap.get(ip);
+  const recentRequests = requests.filter((time: number) => time > windowStart);
+  
+  if (recentRequests.length >= MAX_REQUESTS_PER_WINDOW) {
+    return false;
+  }
+  
+  recentRequests.push(now);
+  rateLimitMap.set(ip, recentRequests);
+  return true;
+}
+
 // POST /api/indicators/claude-fetch - Obtener indicadores reales usando Claude
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting
+    const ip = request.ip || 'unknown';
+    if (!checkRateLimit(ip)) {
+      console.log('⚠️ Rate limit exceeded for:', ip);
+      return NextResponse.json(
+        { error: 'Demasiadas requests. Inténtalo en un minuto.' },
+        { status: 429 }
+      );
+    }
+
     const { indicators } = await request.json();
     
     if (!indicators || !Array.isArray(indicators)) {
@@ -49,31 +84,72 @@ IMPORTANTE:
 
 NO agregues texto adicional, solo el JSON.`;
 
-    // Hacer llamada a la API de Claude
-    const claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY!,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-3-sonnet-20240229',
-        max_tokens: 2000,
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ]
-      })
-    });
+    // Hacer llamada a Claude con retry logic
+    let claudeResponse;
+    let lastError;
+    const maxRetries = 3;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🤖 Intento ${attempt}/${maxRetries} de llamada a Claude...`);
+        
+        claudeResponse = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': process.env.ANTHROPIC_API_KEY!,
+            'anthropic-version': '2023-06-01'
+          },
+          body: JSON.stringify({
+            model: 'claude-3-sonnet-20240229',
+            max_tokens: 1500, // Reducido para ser más conservador
+            messages: [
+              {
+                role: 'user',
+                content: prompt
+              }
+            ]
+          })
+        });
 
-    if (!claudeResponse.ok) {
-      console.error('Claude API error:', claudeResponse.status);
+        if (claudeResponse.ok) {
+          console.log('✅ Claude API respondió exitosamente');
+          break;
+        } else {
+          const errorText = await claudeResponse.text();
+          lastError = {
+            status: claudeResponse.status,
+            message: errorText
+          };
+          
+          console.error(`❌ Claude API error (intento ${attempt}):`, claudeResponse.status, errorText);
+          
+          // Si es error 40x (rate limit o auth), esperar más tiempo
+          if (claudeResponse.status >= 400 && claudeResponse.status < 500) {
+            const waitTime = attempt * 2000; // 2s, 4s, 6s
+            console.log(`⏱️ Esperando ${waitTime}ms antes del siguiente intento...`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+          }
+        }
+      } catch (fetchError) {
+        console.error(`❌ Error de red en intento ${attempt}:`, fetchError);
+        lastError = fetchError;
+        
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        }
+      }
+    }
+
+    if (!claudeResponse || !claudeResponse.ok) {
+      console.error('❌ Todos los intentos de Claude fallaron:', lastError);
       return NextResponse.json(
-        { error: 'Error al consultar Claude API' },
-        { status: claudeResponse.status }
+        { 
+          error: 'Claude API no disponible temporalmente. Usando sistema de respaldo.',
+          claude_error: lastError,
+          fallback_active: true
+        },
+        { status: 503 }
       );
     }
 
