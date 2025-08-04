@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       WHERE fa.user_id = $1
     `;
 
-    const params: any[] = [];
+    const params: any[] = [DEMO_USER_ID];  // Inicializar con DEMO_USER_ID
     
     if (status && status !== 'all') {
       query += ' AND fa.status = $' + (params.length + 1);
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
 
     query += ' ORDER BY fa.created_at DESC';
 
-    const { data, error } = await databaseSimple.query(query, [DEMO_USER_ID, ...params]);
+    const { data, error } = await databaseSimple.query(query, params);
 
     if (error) {
       console.error('Error fetching fixed assets:', error);
