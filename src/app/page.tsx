@@ -2,6 +2,110 @@ import Link from 'next/link'
 import { Header } from '@/components/layout'
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui'
 import EconomicIndicatorsBanner from '@/components/EconomicIndicatorsBanner'
+import { CompanyProvider, useCompanyData } from '@/contexts/CompanyContext'
+
+// Componente para mostrar empresa demo
+function DemoCompanyShowcase() {
+  const { 
+    getDisplayName, 
+    rut, 
+    giro, 
+    isDemoMode 
+  } = useCompanyData();
+
+  return (
+    <div className="mb-12">
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Explora con Empresa Demo</h2>
+        <p className="text-gray-600">Prueba todas las funcionalidades con datos realistas</p>
+      </div>
+      
+      <Card className="max-w-4xl mx-auto border-green-200">
+        <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="w-16 h-16 bg-green-500 rounded-2xl flex items-center justify-center">
+                <span className="text-white font-bold text-2xl">
+                  {getDisplayName().charAt(0)}
+                </span>
+              </div>
+              <div>
+                <CardTitle className="text-xl">{getDisplayName()}</CardTitle>
+                <CardDescription className="text-base">
+                  RUT: {rut} • {giro}
+                </CardDescription>
+              </div>
+            </div>
+            {isDemoMode && (
+              <div className="text-right">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                  🎯 Modo Demo Activo
+                </span>
+              </div>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="text-center">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg mx-auto mb-3 flex items-center justify-center">
+                <span className="text-2xl">📄</span>
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">F29 Análisis</h3>
+              <p className="text-sm text-gray-600 mb-3">Análisis automático de formularios fiscales con IA</p>
+              <Link href="/accounting/f29-analysis">
+                <Button variant="primary" size="sm" className="w-full">
+                  Probar Análisis
+                </Button>
+              </Link>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-12 h-12 bg-purple-100 rounded-lg mx-auto mb-3 flex items-center justify-center">
+                <span className="text-2xl">📊</span>
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">Análisis Comparativo</h3>
+              <p className="text-sm text-gray-600 mb-3">Compara períodos y obtén insights automáticos</p>
+              <Link href="/accounting/f29-comparative">
+                <Button variant="success" size="sm" className="w-full">
+                  Ver Comparativo
+                </Button>
+              </Link>
+            </div>
+            
+            <div className="text-center">
+              <div className="w-12 h-12 bg-green-100 rounded-lg mx-auto mb-3 flex items-center justify-center">
+                <span className="text-2xl">🏢</span>
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">Dashboard Ejecutivo</h3>
+              <p className="text-sm text-gray-600 mb-3">Vista completa de tu empresa desde un solo lugar</p>
+              <Link href="/dashboard">
+                <Button variant="outline" size="sm" className="w-full">
+                  Ir al Dashboard
+                </Button>
+              </Link>
+            </div>
+          </div>
+          
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-start space-x-3">
+              <div className="w-6 h-6 text-green-500 mt-0.5">
+                ✅
+              </div>
+              <div className="text-sm text-gray-700">
+                <p className="font-medium mb-1">Funcionalidades Completamente Disponibles</p>
+                <p>
+                  Todas las funcionalidades están activas con datos demo realistas. 
+                  Explora libremente - no hay límites en modo demostración.
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 export default function Home() {
   return (
@@ -15,7 +119,7 @@ export default function Home() {
               <Button variant="outline" size="sm">Sistema de Diseño</Button>
             </Link>
             <Link href="/dashboard">
-              <Button variant="primary" size="sm">Dashboard</Button>
+              <Button variant="primary" size="sm">🏢 Dashboard Empresarial</Button>
             </Link>
           </div>
         }
@@ -35,19 +139,14 @@ export default function Home() {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row justify-center gap-4 mb-8">
-            <Link href="/demo">
-              <Button variant="primary" size="lg">
-                🚀 Explorar Demo
-              </Button>
-            </Link>
             <Link href="/dashboard">
-              <Button variant="success" size="lg">
-                📊 Ir al Dashboard
+              <Button variant="primary" size="lg">
+                🏢 Acceder al Dashboard Empresarial
               </Button>
             </Link>
-            <Link href="/working">
-              <Button variant="outline" size="lg">
-                ✅ Ver Estado del Sistema
+            <Link href="/accounting">
+              <Button variant="success" size="lg">
+                📊 Explorar Funcionalidades
               </Button>
             </Link>
           </div>
@@ -120,6 +219,11 @@ export default function Home() {
         <div className="mb-12">
           <EconomicIndicatorsBanner />
         </div>
+
+        {/* Demo Company Showcase */}
+        <CompanyProvider demoMode={true}>
+          <DemoCompanyShowcase />
+        </CompanyProvider>
 
         {/* Featured Module */}
         <Card variant="bordered" className="border-blue-200">
