@@ -186,12 +186,31 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
               <Button
                 variant="outline"
                 leftIcon={<Download className="w-4 h-4" />}
-                onClick={() => {
-                  // TODO: Implementar exportación
-                  alert('Funcionalidad de exportación próximamente');
+                onClick={async () => {
+                  try {
+                    const response = await fetch('/api/fixed-assets/export?format=csv');
+                    
+                    if (response.ok) {
+                      const blob = await response.blob();
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `activos_fijos_${new Date().toISOString().split('T')[0]}.csv`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      window.URL.revokeObjectURL(url);
+                    } else {
+                      const errorData = await response.json();
+                      alert(errorData.error || 'Error al exportar activos fijos');
+                    }
+                  } catch (error) {
+                    console.error('Error exporting assets:', error);
+                    alert('Error al exportar activos fijos');
+                  }
                 }}
               >
-                Exportar
+                Exportar CSV
               </Button>
               <Button
                 variant="primary"

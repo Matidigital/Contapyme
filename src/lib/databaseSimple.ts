@@ -269,10 +269,7 @@ export async function getFixedAssetById(id: string, userId: string = 'demo-user'
   try {
     const { data, error } = await supabase
       .from('fixed_assets')
-      .select(`
-        *,
-        fixed_assets_categories(name, description)
-      `)
+      .select('*')  // Solo seleccionar de fixed_assets, sin JOIN
       .eq('id', id)
       .eq('user_id', userId)
       .single();
