@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateIndicatorValue } from '@/lib/databaseSimple';
+import { updateIndicatorValue, ensureIndicatorConfig } from '@/lib/databaseSimple';
 
 export const dynamic = 'force-dynamic';
 
@@ -213,6 +213,9 @@ NO agregues texto adicional, solo el JSON.`;
       );
     }
 
+    // Asegurar que existe la configuración de indicadores antes de actualizar
+    await ensureIndicatorConfig();
+    
     // Actualizar valores en la base de datos
     const updateResults = [];
     
@@ -232,10 +235,14 @@ NO agregues texto adicional, solo el JSON.`;
           error: error?.message
         });
 
-        if (!error) {
+        if (!error && data) {
           console.log(`✅ Updated ${indicator.code}: $${indicator.value.toLocaleString()}`);
         } else {
           console.error(`❌ Failed to update ${indicator.code}:`, error);
+          // Intentar crear el indicador si el error es que no existe
+          if (error?.code === 'PGRST116') {
+            console.log(`🔄 Intentando crear indicador ${indicator.code} que no existe...`);
+          }
         }
       } catch (updateError) {
         console.error(`Error updating ${indicator.code}:`, updateError);

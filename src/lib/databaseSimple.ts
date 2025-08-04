@@ -595,33 +595,114 @@ export async function updateIndicatorValue(
       .single();
 
     if (configError) {
+      console.error(`❌ No se encontró configuración para indicador ${code}:`, configError);
       return { data: null, error: configError };
     }
 
-    // Insertar o actualizar valor
-    const { data, error } = await supabase
+    // Primero intentar actualizar si existe
+    const { data: existingData, error: selectError } = await supabase
       .from('economic_indicators')
-      .upsert({
-        code,
-        name: config.name,
-        unit: config.unit,
-        value,
-        date,
-        category: config.category,
-      }, {
-        onConflict: 'code,date'
-      })
-      .select()
-      .single();
+      .select('*')
+      .eq('code', code)
+      .eq('date', date)
+      .maybeSingle(); // Usar maybeSingle en lugar de single
 
-    if (error) {
-      console.error('Error updating indicator:', error);
-      return { data: null, error };
+    if (selectError && selectError.code !== 'PGRST116') {
+      console.error('Error checking existing indicator:', selectError);
+      return { data: null, error: selectError };
     }
 
-    return { data, error: null };
+    let result;
+    
+    if (existingData) {
+      // Actualizar registro existente
+      const { data, error } = await supabase
+        .from('economic_indicators')
+        .update({
+          value,
+          name: config.name,
+          unit: config.unit,
+          category: config.category,
+          updated_at: new Date().toISOString()
+        })
+        .eq('code', code)
+        .eq('date', date)
+        .select()
+        .single();
+      
+      result = { data, error };
+    } else {
+      // Insertar nuevo registro
+      const { data, error } = await supabase
+        .from('economic_indicators')
+        .insert({
+          code,
+          name: config.name,
+          unit: config.unit,
+          value,
+          date,
+          category: config.category,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+      
+      result = { data, error };
+    }
+
+    if (result.error) {
+      console.error(`❌ Error ${existingData ? 'updating' : 'inserting'} indicator ${code}:`, result.error);
+      return { data: null, error: result.error };
+    }
+
+    console.log(`✅ Indicador ${code} ${existingData ? 'actualizado' : 'insertado'}: ${value}`);
+    return { data: result.data, error: null };
   } catch (error) {
     console.error('Unexpected error in updateIndicatorValue:', error);
+    return { data: null, error };
+  }
+}
+
+// Función para asegurar que existe la configuración de indicadores
+export async function ensureIndicatorConfig(): Promise<{ data: any; error: any }> {
+  try {
+    // Configuración básica de indicadores
+    const indicatorConfigs = [
+      { code: 'UF', name: 'Unidad de Fomento', unit: 'CLP', category: 'monetary' },
+      { code: 'UTM', name: 'Unidad Tributaria Mensual', unit: 'CLP', category: 'monetary' },
+      { code: 'USD', name: 'Dólar Observado', unit: 'CLP', category: 'currency' },
+      { code: 'EUR', name: 'Euro', unit: 'CLP', category: 'currency' },
+      { code: 'SUELDO_MIN', name: 'Sueldo Mínimo', unit: 'CLP', category: 'labor' },
+      { code: 'BTC', name: 'Bitcoin', unit: 'USD', category: 'crypto' },
+      { code: 'ETH', name: 'Ethereum', unit: 'USD', category: 'crypto' }
+    ];
+
+    for (const config of indicatorConfigs) {
+      // Verificar si existe
+      const { data: existing } = await supabase
+        .from('indicator_config')
+        .select('code')
+        .eq('code', config.code)
+        .maybeSingle();
+
+      if (!existing) {
+        // Insertar si no existe
+        const { error } = await supabase
+          .from('indicator_config')
+          .insert(config);
+        
+        if (error) {
+          console.error(`Error insertando config para ${config.code}:`, error);
+        } else {
+          console.log(`✅ Configuración creada para indicador ${config.code}`);
+        }
+      }
+    }
+
+    return { data: { message: 'Configuración de indicadores verificada' }, error: null };
+  } catch (error) {
+    console.error('Error en ensureIndicatorConfig:', error);
     return { data: null, error };
   }
 }
