@@ -133,7 +133,7 @@
 
   /* Animación continua sin pausa - para la pasarela */
   .animate-scroll-continuous {
-    animation: scroll-infinite 30s linear infinite;
+    animation: scroll-infinite 15s linear infinite;
     /* No pausar nunca, ni siquiera en hover */
   }
   
@@ -186,7 +186,7 @@
       animation: scroll-left 15s linear infinite;
     }
     .animate-scroll-continuous {
-      animation: scroll-infinite 20s linear infinite;
+      animation: scroll-infinite 10s linear infinite;
     }
   }
 
