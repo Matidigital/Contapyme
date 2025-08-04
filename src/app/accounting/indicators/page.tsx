@@ -9,8 +9,7 @@ export default function EconomicIndicatorsPage() {
     monetary: [],
     currency: [],
     crypto: [],
-    labor: [],
-    stocks: []
+    labor: []
   });
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string>('');
@@ -127,8 +126,7 @@ export default function EconomicIndicatorsPage() {
         ...indicators.monetary,
         ...indicators.currency,
         ...indicators.crypto,
-        ...indicators.labor,
-        ...indicators.stocks
+        ...indicators.labor
       ];
 
       const response = await fetch('/api/indicators/claude-fetch', {
@@ -226,12 +224,6 @@ export default function EconomicIndicatorsPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
           </svg>
         );
-      case 'stocks':
-        return (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-          </svg>
-        );
       case 'labor':
         return (
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -252,7 +244,6 @@ export default function EconomicIndicatorsPage() {
       case 'monetary': return 'Indicadores Monetarios';
       case 'currency': return 'Divisas';
       case 'crypto': return 'Criptomonedas';
-      case 'stocks': return 'Índices Bursátiles';
       case 'labor': return 'Empleo y Salarios';
       default: return 'Otros Indicadores';
     }
@@ -263,7 +254,6 @@ export default function EconomicIndicatorsPage() {
       case 'monetary': return 'from-blue-500 to-indigo-600';
       case 'currency': return 'from-green-500 to-emerald-600';
       case 'crypto': return 'from-orange-500 to-yellow-600';
-      case 'stocks': return 'from-red-500 to-rose-600';
       case 'labor': return 'from-purple-500 to-pink-600';
       default: return 'from-gray-500 to-gray-600';
     }
@@ -445,7 +435,6 @@ export default function EconomicIndicatorsPage() {
           {renderIndicatorCategory('monetary', indicators.monetary)}
           {renderIndicatorCategory('currency', indicators.currency)}
           {renderIndicatorCategory('crypto', indicators.crypto)}
-          {renderIndicatorCategory('stocks', indicators.stocks)}
           {renderIndicatorCategory('labor', indicators.labor)}
 
           {/* Info Footer */}
@@ -476,10 +465,6 @@ export default function EconomicIndicatorsPage() {
                     <span className="text-purple-500 mr-2">•</span>
                     <span>Valores de criptomonedas de exchanges globales</span>
                   </li>
-                  <li className="flex items-start">
-                    <span className="text-purple-500 mr-2">•</span>
-                    <span>Índices bursátiles S&P 500 y NASDAQ</span>
-                  </li>
                 </ul>
               </div>
               <div className="space-y-3">
@@ -492,10 +477,6 @@ export default function EconomicIndicatorsPage() {
                   <li className="flex items-start">
                     <span className="text-blue-500 mr-2">•</span>
                     <span>CoinGecko API para criptomonedas</span>
-                  </li>
-                  <li className="flex items-start">
-                    <span className="text-blue-500 mr-2">•</span>
-                    <span>Yahoo Finance para índices bursátiles</span>
                   </li>
                   <li className="flex items-start">
                     <span className="text-blue-500 mr-2">•</span>

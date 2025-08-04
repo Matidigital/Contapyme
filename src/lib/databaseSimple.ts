@@ -549,11 +549,10 @@ export async function getIndicatorsDashboard(): Promise<{ data: any; error: any 
     const { data: currency, error: currencyError } = await supabase.rpc('get_indicators_by_category', { cat: 'currency' });
     const { data: crypto, error: cryptoError } = await supabase.rpc('get_indicators_by_category', { cat: 'crypto' });
     const { data: labor, error: laborError } = await supabase.rpc('get_indicators_by_category', { cat: 'labor' });
-    const { data: stocks, error: stocksError } = await supabase.rpc('get_indicators_by_category', { cat: 'stocks' });
 
-    if (monetaryError || currencyError || cryptoError || laborError || stocksError) {
-      console.error('Error fetching indicators by category:', { monetaryError, currencyError, cryptoError, laborError, stocksError });
-      return { data: null, error: monetaryError || currencyError || cryptoError || laborError || stocksError };
+    if (monetaryError || currencyError || cryptoError || laborError) {
+      console.error('Error fetching indicators by category:', { monetaryError, currencyError, cryptoError, laborError });
+      return { data: null, error: monetaryError || currencyError || cryptoError || laborError };
     }
 
     const dashboard = {
@@ -561,7 +560,6 @@ export async function getIndicatorsDashboard(): Promise<{ data: any; error: any 
       currency: currency || [],
       crypto: crypto || [],
       labor: labor || [],
-      stocks: stocks || []
     };
 
     return { data: dashboard, error: null };
@@ -689,8 +687,6 @@ export async function ensureIndicatorConfig(): Promise<{ data: any; error: any }
       { code: 'SUELDO_MIN', name: 'Sueldo Mínimo', unit: 'CLP', category: 'labor' },
       { code: 'BTC', name: 'Bitcoin', unit: 'USD', category: 'crypto' },
       { code: 'ETH', name: 'Ethereum', unit: 'USD', category: 'crypto' },
-      { code: 'SP500', name: 'S&P 500', unit: 'USD', category: 'stocks' },
-      { code: 'NASDAQ', name: 'NASDAQ Composite', unit: 'USD', category: 'stocks' }
     ];
 
     for (const config of indicatorConfigs) {

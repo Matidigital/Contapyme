@@ -76,8 +76,6 @@ INSTRUCCIONES:
 • EUR: aproximadamente $1,050-$1,150 CLP
 • Bitcoin: valor típico de mercado crypto (~$60,000-$70,000 USD)
 • Ethereum: valor típico de mercado crypto (~$3,000-$3,500 USD)
-• S&P 500: índice típico (~5,400-5,600)
-• NASDAQ: índice típico (~17,000-18,000)
 • Sueldo mínimo: $529,000 CLP (valor oficial vigente)
 
 RESPONDE SOLO JSON (sin explicaciones):

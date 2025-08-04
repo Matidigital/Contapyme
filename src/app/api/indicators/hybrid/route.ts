@@ -20,7 +20,6 @@ interface IndicatorsDashboard {
   currency: IndicatorValue[];
   crypto: IndicatorValue[];
   labor: IndicatorValue[];
-  stocks: IndicatorValue[];
 }
 
 // GET /api/indicators/hybrid - Sistema híbrido con datos actualizados
@@ -89,8 +88,7 @@ async function getHybridIndicators(): Promise<IndicatorsDashboard> {
       monetary: realData.monetary.length > 0 ? realData.monetary : simulatedData.monetary,
       currency: realData.currency.length > 0 ? realData.currency : simulatedData.currency,
       crypto: realData.crypto.length > 0 ? realData.crypto : simulatedData.crypto,
-      labor: realData.labor.length > 0 ? realData.labor : simulatedData.labor,
-      stocks: realData.stocks.length > 0 ? realData.stocks : simulatedData.stocks // Stocks siempre de simulación
+      labor: realData.labor.length > 0 ? realData.labor : simulatedData.labor
     };
   }
   
@@ -454,31 +452,6 @@ function getSmartSimulatedData(): IndicatorsDashboard {
       source: 'smart_simulation',
       last_updated: currentTime
     },
-    // Índices Bursátiles
-    {
-      code: 'sp500',
-      name: 'S&P 500',
-      value: currentValues.sp500,
-      date: currentDate,
-      unit: 'USD',
-      category: 'stocks',
-      format_type: 'currency',
-      decimal_places: 2,
-      source: 'smart_simulation',
-      last_updated: currentTime
-    },
-    {
-      code: 'nasdaq',
-      name: 'NASDAQ Composite',
-      value: currentValues.nasdaq,
-      date: currentDate,
-      unit: 'USD',
-      category: 'stocks',
-      format_type: 'currency',
-      decimal_places: 2,
-      source: 'smart_simulation',
-      last_updated: currentTime
-    },
     // Laborales
     {
       code: 'sueldo_minimo',
@@ -502,7 +475,6 @@ function categorizeIndicators(indicators: IndicatorValue[]): IndicatorsDashboard
     monetary: indicators.filter(i => i.category === 'monetary'),
     currency: indicators.filter(i => i.category === 'currency'),
     crypto: indicators.filter(i => i.category === 'crypto'),
-    labor: indicators.filter(i => i.category === 'labor'),
-    stocks: indicators.filter(i => i.category === 'stocks')
+    labor: indicators.filter(i => i.category === 'labor')
   };
 }
