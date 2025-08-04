@@ -311,13 +311,13 @@ export default function EconomicIndicatorsBanner() {
         {/* Minimal Ticker Container */}
         <div className="relative overflow-hidden py-2">
           {/* Running Indicators - Minimal Design */}
-          <div className="flex animate-scroll-continuous">
-            {/* Duplicamos los indicadores para crear efecto infinito */}
-            <div className="flex shrink-0 gap-8">
+          <div className="flex">
+            <div className="flex animate-scroll-continuous">
+              {/* Primera copia */}
               {allIndicators.map((indicator, index) => (
                 <div 
                   key={`${indicator.code}-${index}-1`}
-                  className="flex items-center gap-3 px-4 py-1 min-w-[200px] hover:bg-gray-50 transition-colors cursor-pointer"
+                  className="flex-shrink-0 flex items-center gap-3 px-6 py-1 hover:bg-gray-50 transition-colors cursor-pointer"
                   onClick={() => window.open('/accounting/indicators', '_blank')}
                 >
                   <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
@@ -335,13 +335,11 @@ export default function EconomicIndicatorsBanner() {
                   )}
                 </div>
               ))}
-            </div>
-            {/* Segunda copia idéntica */}
-            <div className="flex shrink-0 gap-8">
+              {/* Segunda copia idéntica para crear loop infinito */}
               {allIndicators.map((indicator, index) => (
                 <div 
                   key={`${indicator.code}-${index}-2`}
-                  className="flex items-center gap-3 px-4 py-1 min-w-[200px] hover:bg-gray-50 transition-colors cursor-pointer"
+                  className="flex-shrink-0 flex items-center gap-3 px-6 py-1 hover:bg-gray-50 transition-colors cursor-pointer"
                   onClick={() => window.open('/accounting/indicators', '_blank')}
                 >
                   <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
