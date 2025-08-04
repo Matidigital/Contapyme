@@ -487,6 +487,36 @@ export const databaseSimple = {
         return { data: [], error: null };
       }
       
+      // Chart of accounts queries
+      if (sql.includes('FROM chart_of_accounts')) {
+        console.log('🏦 Chart of accounts query detected');
+        
+        // Parsear filtros básicos del WHERE
+        let query = supabase.from('chart_of_accounts').select('*');
+        
+        if (sql.includes('is_active = true')) {
+          query = query.eq('is_active', true);
+        }
+        
+        if (sql.includes('account_type =')) {
+          // Extraer account_type del parámetro
+          const accountType = params[0];
+          if(accountType) query = query.eq('account_type', accountType);
+        }
+        
+        if (sql.includes('level_type =')) {
+          // Buscar el parámetro de level_type
+          const levelTypeParam = params.find(p => 
+            ['1er Nivel', '2do Nivel', '3er Nivel', 'Imputable'].includes(p)
+          );
+          if(levelTypeParam) query = query.eq('level_type', levelTypeParam);
+        }
+        
+        query = query.order('code', { ascending: true });
+        
+        return await query;
+      }
+      
       // Para queries no reconocidas, retornar vacío
       console.log('⚠️ Query no reconocida:', sql);
       return { data: [], error: null };

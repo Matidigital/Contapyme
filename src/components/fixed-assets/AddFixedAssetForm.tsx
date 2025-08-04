@@ -46,34 +46,90 @@ export default function AddFixedAssetForm({ isOpen, onClose, onSuccess }: AddFix
 
   const loadAccounts = async () => {
     try {
-      // Cargar solo cuentas de activo para simplificar
-      // En una implementación real, podrías cargar todas las cuentas
-      const mockAccounts: Account[] = [
-        { id: '1.2.01.001', code: '1.2.01.001', name: 'Muebles y Útiles', level: 4, account_type: 'asset', is_detail: true, is_active: true },
-        { id: '1.2.01.002', code: '1.2.01.002', name: 'Dep. Acum. Muebles y Útiles', level: 4, account_type: 'asset', is_detail: true, is_active: true },
-        { id: '1.2.02.001', code: '1.2.02.001', name: 'Equipos Computacionales', level: 4, account_type: 'asset', is_detail: true, is_active: true },
-        { id: '1.2.02.002', code: '1.2.02.002', name: 'Dep. Acum. Equipos Computacionales', level: 4, account_type: 'asset', is_detail: true, is_active: true },
-        { id: '1.2.03.001', code: '1.2.03.001', name: 'Vehículos', level: 4, account_type: 'asset', is_detail: true, is_active: true },
-        { id: '1.2.03.002', code: '1.2.03.002', name: 'Dep. Acum. Vehículos', level: 4, account_type: 'asset', is_detail: true, is_active: true },
-        { id: '1.2.04.001', code: '1.2.04.001', name: 'Maquinaria y Equipos', level: 4, account_type: 'asset', is_detail: true, is_active: true },
-        { id: '1.2.04.002', code: '1.2.04.002', name: 'Dep. Acum. Maquinaria y Equipos', level: 4, account_type: 'asset', is_detail: true, is_active: true },
-        { id: '1.2.05.001', code: '1.2.05.001', name: 'Instalaciones y Equipos', level: 4, account_type: 'asset', is_detail: true, is_active: true },
-        { id: '1.2.05.002', code: '1.2.05.002', name: 'Dep. Acum. Instalaciones y Equipos', level: 4, account_type: 'asset', is_detail: true, is_active: true },
-        { id: '3.1.08', code: '3.1.08', name: 'Gasto Depreciación Muebles', level: 3, account_type: 'expense', is_detail: true, is_active: true },
-        { id: '3.1.09', code: '3.1.09', name: 'Gasto Depreciación Equipos Comp.', level: 3, account_type: 'expense', is_detail: true, is_active: true },
-        { id: '3.1.10', code: '3.1.10', name: 'Gasto Depreciación Vehículos', level: 3, account_type: 'expense', is_detail: true, is_active: true },
-        { id: '3.1.11', code: '3.1.11', name: 'Gasto Depreciación Maquinaria', level: 3, account_type: 'expense', is_detail: true, is_active: true },
-        { id: '3.1.12', code: '3.1.12', name: 'Gasto Depreciación Instalaciones', level: 3, account_type: 'expense', is_detail: true, is_active: true }
-      ];
-      setAccounts(mockAccounts);
+      console.log('Loading accounts from API...');
+      
+      // Cargar cuentas imputables (nivel detalle) para activos fijos
+      const response = await fetch('/api/chart-of-accounts?level=Imputable');
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Accounts loaded:', data);
+        
+        // Convertir formato de respuesta a formato Account
+        const accountsData = data.accounts.map((acc: any) => ({
+          id: acc.code,
+          code: acc.code,
+          name: acc.name,
+          level: acc.level_type === 'Imputable' ? 4 : 3,
+          account_type: acc.account_type.toLowerCase(),
+          is_detail: acc.level_type === 'Imputable',
+          is_active: acc.is_active
+        }));
+        
+        setAccounts(accountsData);
+      } else {
+        console.error('Failed to load accounts');
+        // Fallback: usar cuentas básicas demo
+        const basicAccounts: Account[] = [
+          { id: '1.2.1.001', code: '1.2.1.001', name: 'Equipos de Computación', level: 4, account_type: 'activo', is_detail: true, is_active: true },
+          { id: '1.2.1.002', code: '1.2.1.002', name: 'Muebles y Enseres', level: 4, account_type: 'activo', is_detail: true, is_active: true },
+          { id: '1.2.1.003', code: '1.2.1.003', name: 'Equipos de Oficina', level: 4, account_type: 'activo', is_detail: true, is_active: true }
+        ];
+        setAccounts(basicAccounts);
+      }
     } catch (error) {
       console.error('Error loading accounts:', error);
+      // Fallback en caso de error
+      setAccounts([]);
     }
   };
 
+  // Auto-completar cuentas relacionadas basado en la cuenta de activo seleccionada
+  const autoCompleteRelatedAccounts = (assetAccountCode: string) => {
+    // Mapeo inteligente basado en la estructura del plan de cuentas
+    const accountMappings: Record<string, { depreciation: string; expense: string }> = {
+      '1.2.1.001': { depreciation: '1.2.2.001', expense: '6.1.1.001' }, // Equipos Computación
+      '1.2.1.002': { depreciation: '1.2.2.002', expense: '6.1.1.002' }, // Muebles y Enseres  
+      '1.2.1.003': { depreciation: '1.2.2.003', expense: '6.1.1.003' }, // Equipos Oficina
+      '1.2.1.004': { depreciation: '1.2.2.004', expense: '6.1.1.004' }, // Vehículos
+    };
+
+    const mapping = accountMappings[assetAccountCode];
+    if (mapping) {
+      setFormData(prev => ({
+        ...prev,
+        depreciation_account_code: mapping.depreciation,
+        expense_account_code: mapping.expense
+      }));
+    } else {
+      // Lógica fallback: intentar generar códigos automáticamente
+      // Si es 1.2.1.XXX, generar 1.2.2.XXX y 6.1.1.XXX
+      if (assetAccountCode.startsWith('1.2.1.')) {
+        const suffix = assetAccountCode.replace('1.2.1.', '');
+        setFormData(prev => ({
+          ...prev,
+          depreciation_account_code: `1.2.2.${suffix}`,
+          expense_account_code: `6.1.1.${suffix}`
+        }));
+      }
+    }
+  };
 
   const handleInputChange = (field: keyof CreateFixedAssetData, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Auto-completar cuentas relacionadas cuando se selecciona cuenta de activo
+    if (field === 'asset_account_code' && typeof value === 'string') {
+      autoCompleteRelatedAccounts(value);
+    }
+    
+    // Auto-completar categoría basada en cuenta de activo
+    if (field === 'asset_account_code' && typeof value === 'string') {
+      const selectedAccount = accounts.find(acc => acc.code === value);
+      if (selectedAccount) {
+        setFormData(prev => ({ ...prev, category: selectedAccount.name }));
+      }
+    }
     
     // Limpiar error del campo
     if (errors[field]) {
