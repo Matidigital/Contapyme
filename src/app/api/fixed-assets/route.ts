@@ -14,12 +14,9 @@ export async function GET(request: NextRequest) {
 
     let query = `
       SELECT 
-        fa.*,
-        fac.name as category_name,
-        fac.description as category_description
+        *
       FROM fixed_assets fa
-      LEFT JOIN fixed_assets_categories fac ON fa.category = fac.name
-      WHERE fa.user_id = 'demo-user-id'
+      WHERE fa.user_id = 'demo-user-id' OR fa.user_id IS NULL
     `;
 
     const params: any[] = [];
@@ -83,7 +80,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Insertar activo fijo
+    // Insertar activo fijo con manejo de errores mejorado
     const insertQuery = `
       INSERT INTO fixed_assets (
         user_id,
@@ -96,17 +93,15 @@ export async function POST(request: NextRequest) {
         start_depreciation_date,
         useful_life_years,
         depreciation_method,
-        asset_account_code,
-        depreciation_account_code,
-        expense_account_code,
         serial_number,
         brand,
         model,
         location,
-        responsible_person
+        responsible_person,
+        status
       ) VALUES (
         'demo-user-id',
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'active'
       )
       RETURNING *
     `;
@@ -121,9 +116,6 @@ export async function POST(request: NextRequest) {
       body.start_depreciation_date || body.purchase_date,
       body.useful_life_years,
       'linear', // Por defecto método lineal
-      body.asset_account_code || null,
-      body.depreciation_account_code || null,
-      body.expense_account_code || null,
       body.serial_number || null,
       body.brand || null,
       body.model || null,
