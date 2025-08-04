@@ -310,53 +310,59 @@ export default function EconomicIndicatorsBanner() {
       <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden relative">        
         {/* Minimal Ticker Container */}
         <div className="relative overflow-hidden py-2">
-          {/* Running Indicators - Minimal Design */}
+          {/* Ticker Wrapper */}
           <div className="flex">
-            <div className="flex animate-scroll-continuous">
-              {/* Primera copia */}
-              {allIndicators.map((indicator, index) => (
-                <div 
-                  key={`${indicator.code}-${index}-1`}
-                  className="flex-shrink-0 flex items-center gap-3 px-6 py-1 hover:bg-gray-50 transition-colors cursor-pointer"
-                  onClick={() => window.open('/accounting/indicators', '_blank')}
-                >
-                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                    {indicator.code}
-                  </span>
-                  <span className="text-sm font-semibold text-gray-900">
-                    {formatValue(indicator)}
-                  </span>
-                  {indicator.change !== undefined && (
-                    <span className={`text-xs ${
-                      indicator.change >= 0 ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {indicator.change >= 0 ? '↗' : '↘'}
+            {/* Animated container */}
+            <div className="animate-scroll-continuous">
+              <div className="ticker-content">
+                {allIndicators.map((indicator, index) => (
+                  <div 
+                    key={`${indicator.code}-${index}`}
+                    className="inline-flex items-center gap-2 px-6 py-1 whitespace-nowrap hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => window.open('/accounting/indicators', '_blank')}
+                  >
+                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                      {indicator.code}
                     </span>
-                  )}
-                </div>
-              ))}
-              {/* Segunda copia idéntica para crear loop infinito */}
-              {allIndicators.map((indicator, index) => (
-                <div 
-                  key={`${indicator.code}-${index}-2`}
-                  className="flex-shrink-0 flex items-center gap-3 px-6 py-1 hover:bg-gray-50 transition-colors cursor-pointer"
-                  onClick={() => window.open('/accounting/indicators', '_blank')}
-                >
-                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                    {indicator.code}
-                  </span>
-                  <span className="text-sm font-semibold text-gray-900">
-                    {formatValue(indicator)}
-                  </span>
-                  {indicator.change !== undefined && (
-                    <span className={`text-xs ${
-                      indicator.change >= 0 ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {indicator.change >= 0 ? '↗' : '↘'}
+                    <span className="text-sm font-semibold text-gray-900">
+                      {formatValue(indicator)}
                     </span>
-                  )}
-                </div>
-              ))}
+                    {indicator.change !== undefined && (
+                      <span className={`text-xs ${
+                        indicator.change >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {indicator.change >= 0 ? '↗' : '↘'}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Duplicate for seamless loop */}
+            <div className="animate-scroll-continuous" aria-hidden="true">
+              <div className="ticker-content">
+                {allIndicators.map((indicator, index) => (
+                  <div 
+                    key={`${indicator.code}-${index}-copy`}
+                    className="inline-flex items-center gap-2 px-6 py-1 whitespace-nowrap hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => window.open('/accounting/indicators', '_blank')}
+                  >
+                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                      {indicator.code}
+                    </span>
+                    <span className="text-sm font-semibold text-gray-900">
+                      {formatValue(indicator)}
+                    </span>
+                    {indicator.change !== undefined && (
+                      <span className={`text-xs ${
+                        indicator.change >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {indicator.change >= 0 ? '↗' : '↘'}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
