@@ -43,39 +43,50 @@ export default function EconomicIndicatorsBanner() {
     ...indicators.labor
   ];
 
-  // Cargar indicadores al montar
+  // Cargar indicadores al montar e intentar actualización inmediata con Claude
   useEffect(() => {
-    fetchIndicators();
+    const initializeIndicators = async () => {
+      // Primero cargar datos existentes rápidamente
+      await fetchIndicators();
+      
+      // Luego intentar actualización con Claude en background
+      setTimeout(() => {
+        console.log('🤖 Iniciando actualización inicial con Claude...');
+        updateWithClaude();
+      }, 2000); // Esperar 2 segundos para no bloquear la carga inicial
+    };
+    
+    initializeIndicators();
   }, []);
 
-  // Auto-actualización inteligente
+  // Auto-actualización inteligente con Claude
   useEffect(() => {
     const updateIntervals = {
-      crypto: 2 * 60 * 1000,      // Crypto: cada 2 minutos (más volátil)
-      currency: 5 * 60 * 1000,    // Divisas: cada 5 minutos
-      monetary: 15 * 60 * 1000,   // UF/UTM: cada 15 minutos (menos volátil)
-      labor: 60 * 60 * 1000       // Sueldo mínimo: cada 1 hora (muy estable)
+      crypto: 5 * 60 * 1000,      // Crypto: cada 5 minutos (volátil pero no queremos abusar de Claude)
+      currency: 10 * 60 * 1000,   // Divisas: cada 10 minutos
+      monetary: 30 * 60 * 1000,   // UF/UTM: cada 30 minutos (menos volátil)
+      labor: 2 * 60 * 60 * 1000   // Sueldo mínimo: cada 2 horas (muy estable)
     };
 
-    // Actualización general cada 5 minutos
-    const generalInterval = setInterval(() => {
-      fetchIndicators(false); // Sin loading para actualizaciones de fondo
-      console.log('🔄 Actualización automática general');
-    }, 5 * 60 * 1000);
-
-    // Actualización específica para crypto más frecuente
-    const cryptoInterval = setInterval(() => {
-      if (indicators.crypto.length > 0) {
-        fetchIndicators(false);
-        console.log('⚡ Actualización crypto automática');
+    // Actualización principal con Claude cada 30 minutos (conservador)
+    const claudeInterval = setInterval(() => {
+      if (allIndicators.length > 0) {
+        updateWithClaude();
+        console.log('🤖 Actualización automática con Claude en banner');
       }
-    }, updateIntervals.crypto);
+    }, 30 * 60 * 1000);
+
+    // Actualización de respaldo híbrida cada 60 minutos (por si Claude falla)
+    const fallbackInterval = setInterval(() => {
+      fetchIndicators(false);
+      console.log('🔄 Actualización de respaldo híbrida en banner');
+    }, 60 * 60 * 1000);
 
     return () => {
-      clearInterval(generalInterval);
-      clearInterval(cryptoInterval);
+      clearInterval(claudeInterval);
+      clearInterval(fallbackInterval);
     };
-  }, [indicators.crypto.length]);
+  }, [allIndicators.length]);
 
   // Rotar indicadores cada 3 segundos
   useEffect(() => {
@@ -310,31 +321,22 @@ export default function EconomicIndicatorsBanner() {
         <div className="absolute top-0 right-0 w-8 h-full bg-gradient-to-l from-white to-transparent pointer-events-none"></div>
         
         {/* Minimal Status */}
-        <div className="bg-gray-50 px-4 py-1 flex items-center justify-between">
+        <div className="bg-gray-50 px-4 py-1 text-center">
           <span className="text-xs text-gray-400">
-            Actualizado: {lastUpdate.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
+            🤖 Actualizado automáticamente: {lastUpdate.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
             {updateStatus === 'updating' && (
               <span className="ml-2 inline-flex items-center">
-                <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse mr-1"></div>
-                actualizando
+                <div className="w-1 h-1 bg-purple-500 rounded-full animate-pulse mr-1"></div>
+                Claude actualizando...
               </span>
             )}
             {updateStatus === 'success' && (
-              <span className="ml-2 text-green-600">✓</span>
+              <span className="ml-2 text-green-600">✓ con Claude</span>
             )}
             {updateStatus === 'error' && (
-              <span className="ml-2 text-red-600">⚠</span>
+              <span className="ml-2 text-orange-600">⚠ respaldo activo</span>
             )}
           </span>
-          
-          <button
-            onClick={updateWithClaude}
-            disabled={updateStatus === 'updating'}
-            className="text-xs text-purple-600 hover:text-purple-800 disabled:text-gray-400 font-medium transition-colors"
-            title="Actualizar con Claude (valores reales)"
-          >
-            🤖 Claude
-          </button>
         </div>
       </div>
 

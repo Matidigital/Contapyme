@@ -18,9 +18,39 @@ export default function EconomicIndicatorsPage() {
   const [error, setError] = useState<string>('');
   const [dataSource, setDataSource] = useState<string>('hybrid_system');
 
-  // Cargar indicadores al montar el componente
+  // Cargar indicadores al montar e iniciar actualizaciones automáticas
   useEffect(() => {
-    fetchIndicators();
+    const initializeIndicators = async () => {
+      // Cargar datos existentes primero
+      await fetchIndicators();
+      
+      // Iniciar actualización con Claude después de cargar
+      setTimeout(() => {
+        console.log('🤖 Iniciando actualización inicial con Claude en página de indicadores...');
+        updateWithClaude();
+      }, 3000);
+    };
+    
+    initializeIndicators();
+  }, []);
+
+  // Auto-actualización con Claude cada 25 minutos (offset del banner)
+  useEffect(() => {
+    const claudeInterval = setInterval(() => {
+      console.log('🤖 Actualización automática programada con Claude en página');
+      updateWithClaude();
+    }, 25 * 60 * 1000); // 25 minutos (offset para no coincidir con banner)
+
+    // Actualización de respaldo cada 50 minutos
+    const fallbackInterval = setInterval(() => {
+      console.log('🔄 Actualización de respaldo programada en página');
+      updateIndicators();
+    }, 50 * 60 * 1000); // 50 minutos
+
+    return () => {
+      clearInterval(claudeInterval);
+      clearInterval(fallbackInterval);
+    };
   }, []);
 
   const fetchIndicators = async () => {
@@ -122,7 +152,8 @@ export default function EconomicIndicatorsPage() {
       // Recargar indicadores después de actualización
       await fetchIndicators();
       
-      alert(`🤖 Actualización con Claude completada!\n✅ ${data.results?.filter(r => r.success).length || 0} indicadores actualizados con valores reales`);
+      // Solo mostrar alert si es actualización manual (no automática)
+      console.log(`🤖 Actualización con Claude completada: ${data.results?.filter(r => r.success).length || 0} indicadores actualizados`);
       
     } catch (err) {
       console.error('Error updating with Claude:', err);
@@ -356,45 +387,21 @@ export default function EconomicIndicatorsPage() {
                   </span>
                 </div>
               )}
-              <button
-                onClick={updateIndicators}
-                disabled={updating}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg font-medium inline-flex items-center space-x-2"
-              >
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
                 {updating ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Actualizando...</span>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+                    <span>🤖 Claude actualizando datos en tiempo real...</span>
                   </>
                 ) : (
                   <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <span>Actualizar Datos</span>
+                    <span>🤖 Actualización automática con Claude cada 25 minutos</span>
                   </>
                 )}
-              </button>
-              
-              <button
-                onClick={updateWithClaude}
-                disabled={updating}
-                className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white px-4 py-2 rounded-lg font-medium inline-flex items-center space-x-2 ml-3"
-              >
-                {updating ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Consultando...</span>
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                    </svg>
-                    <span>🤖 Actualizar con Claude</span>
-                  </>
-                )}
-              </button>
+              </div>
             </div>
           </div>
         </div>
