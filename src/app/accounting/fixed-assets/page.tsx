@@ -72,12 +72,31 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
     fetchData();
   }, [fetchData]);
 
-  // Filtrar activos por búsqueda
-  const filteredAssets = assets.filter(asset =>
-    asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (asset.serial_number && asset.serial_number.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (asset.brand && asset.brand.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Debug: log de estados disponibles
+  useEffect(() => {
+    if (assets.length > 0) {
+      const uniqueStatuses = [...new Set(assets.map(asset => asset.status))];
+      console.log('Estados disponibles en activos:', uniqueStatuses);
+      console.log('Estado seleccionado:', selectedStatus);
+    }
+  }, [assets, selectedStatus]);
+
+  // Filtrar activos por búsqueda y estado
+  const filteredAssets = assets.filter(asset => {
+    // Filtro por texto de búsqueda
+    const matchesSearch = !searchTerm || (
+      asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (asset.serial_number && asset.serial_number.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (asset.brand && asset.brand.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (asset.model && asset.model.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (asset.category && asset.category.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+
+    // Filtro por estado
+    const matchesStatus = selectedStatus === 'all' || asset.status === selectedStatus;
+
+    return matchesSearch && matchesStatus;
+  });
 
   // Formatear moneda
   const formatCurrency = (amount: number) => {
