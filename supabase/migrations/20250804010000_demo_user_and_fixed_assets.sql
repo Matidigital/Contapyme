@@ -46,7 +46,7 @@ BEGIN
             reauthentication_sent_at,
             is_sso_user
         ) VALUES (
-            'demo-user-12345678-9abc-def0-1234-56789abcdef0',  -- UUID fijo para demo
+            '12345678-9abc-def0-1234-56789abcdef0',  -- UUID fijo para demo
             '00000000-0000-0000-0000-000000000000',
             'authenticated',
             'authenticated',
@@ -164,7 +164,7 @@ CREATE POLICY "Users can only see their own fixed assets" ON fixed_assets
 
 -- Política especial para usuario demo (visible para todos en modo demo)
 CREATE POLICY "Demo user assets visible to all" ON fixed_assets
-    FOR ALL USING (user_id = 'demo-user-12345678-9abc-def0-1234-56789abcdef0');
+    FOR ALL USING (user_id = '12345678-9abc-def0-1234-56789abcdef0');
 
 -- PASO 4: Poblar con datos demo realistas
 INSERT INTO fixed_assets (
@@ -187,7 +187,7 @@ INSERT INTO fixed_assets (
 ) VALUES 
 -- Activo 1: Computador de Oficina
 (
-    'demo-user-12345678-9abc-def0-1234-56789abcdef0',
+    '12345678-9abc-def0-1234-56789abcdef0',
     'Computador Dell OptiPlex 3090',
     'Computador de escritorio para tareas administrativas y contables',
     'Equipos de Computación',
@@ -206,7 +206,7 @@ INSERT INTO fixed_assets (
 ),
 -- Activo 2: Mobiliario de Oficina
 (
-    'demo-user-12345678-9abc-def0-1234-56789abcdef0',
+    '12345678-9abc-def0-1234-56789abcdef0',
     'Escritorio Ejecutivo con Cajonera',
     'Escritorio de madera con cajonera integrada para oficina principal',
     'Muebles y Enseres',
@@ -225,7 +225,7 @@ INSERT INTO fixed_assets (
 ),
 -- Activo 3: Equipo de Impresión
 (
-    'demo-user-12345678-9abc-def0-1234-56789abcdef0',
+    '12345678-9abc-def0-1234-56789abcdef0',
     'Impresora Multifuncional HP LaserJet Pro',
     'Impresora láser multifuncional para documentos oficiales y reportes',
     'Equipos de Oficina',
@@ -244,7 +244,7 @@ INSERT INTO fixed_assets (
 ),
 -- Activo 4: Mobiliario Ergonómico
 (
-    'demo-user-12345678-9abc-def0-1234-56789abcdef0',
+    '12345678-9abc-def0-1234-56789abcdef0',
     'Set de 4 Sillas Ergonómicas',
     'Sillas ergonómicas con soporte lumbar para estaciones de trabajo',
     'Muebles y Enseres',
@@ -263,7 +263,7 @@ INSERT INTO fixed_assets (
 ),
 -- Activo 5: Equipo Tecnológico Móvil
 (
-    'demo-user-12345678-9abc-def0-1234-56789abcdef0',
+    '12345678-9abc-def0-1234-56789abcdef0',
     'Laptop Lenovo ThinkPad E15',
     'Laptop para trabajo remoto y presentaciones a clientes',
     'Equipos de Computación',
