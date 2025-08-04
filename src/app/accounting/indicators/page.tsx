@@ -438,21 +438,64 @@ export default function EconomicIndicatorsPage() {
           {renderIndicatorCategory('labor', indicators.labor)}
 
           {/* Info Footer */}
-          <div className="mt-8 bg-blue-50 rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-blue-900 mb-3">📊 Fuentes de Datos</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-800">
-              <div>
-                <strong>Indicadores Chilenos:</strong> mindicador.cl (Banco Central de Chile)
+          <div className="mt-8 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6 border border-blue-200">
+            <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center">
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Sistema de Actualización de Datos
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-3">
+                <h4 className="font-semibold text-gray-800">🤖 Fuente Principal: Claude AI</h4>
+                <ul className="space-y-2 text-sm text-gray-700">
+                  <li className="flex items-start">
+                    <span className="text-purple-500 mr-2">•</span>
+                    <span>Actualización en tiempo real cada 40 minutos</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-purple-500 mr-2">•</span>
+                    <span>Datos oficiales del Banco Central de Chile</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-purple-500 mr-2">•</span>
+                    <span>Tasas de cambio del mercado internacional</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-purple-500 mr-2">•</span>
+                    <span>Valores de criptomonedas de exchanges globales</span>
+                  </li>
+                </ul>
               </div>
-              <div>
-                <strong>Criptomonedas:</strong> CoinGecko API
+              <div className="space-y-3">
+                <h4 className="font-semibold text-gray-800">🔄 Sistema de Respaldo</h4>
+                <ul className="space-y-2 text-sm text-gray-700">
+                  <li className="flex items-start">
+                    <span className="text-blue-500 mr-2">•</span>
+                    <span>API mindicador.cl como fuente secundaria</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-blue-500 mr-2">•</span>
+                    <span>CoinGecko API para criptomonedas</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-blue-500 mr-2">•</span>
+                    <span>Actualización automática cada 75 minutos</span>
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-blue-500 mr-2">•</span>
+                    <span>Historial almacenado desde agosto 2025</span>
+                  </li>
+                </ul>
               </div>
-              <div>
-                <strong>Actualización:</strong> Manual y automática programada
-              </div>
-              <div>
-                <strong>Historial:</strong> Datos desde enero 2025
-              </div>
+            </div>
+            <div className="mt-4 p-3 bg-white bg-opacity-50 rounded-lg">
+              <p className="text-xs text-gray-600 flex items-center">
+                <svg className="w-4 h-4 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Sistema híbrido con alta disponibilidad: Si Claude no está disponible, el sistema automáticamente usa las APIs de respaldo
+              </p>
             </div>
           </div>
         </div>
