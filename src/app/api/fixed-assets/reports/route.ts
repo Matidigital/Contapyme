@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFixedAssetsReport } from '@/lib/databaseSimple';
+import { getFixedAssetsReport, databaseSimple } from '@/lib/databaseSimple';
 
 // Hacer la ruta dinámica explícitamente
 export const dynamic = 'force-dynamic';
@@ -10,6 +10,35 @@ export async function GET(request: NextRequest) {
     // Usar searchParams directamente del request en lugar de URL
     const reportType = request.nextUrl.searchParams.get('type') || 'summary';
     const year = request.nextUrl.searchParams.get('year') || new Date().getFullYear().toString();
+
+    // Verificar si la tabla existe primero
+    const tableExistsQuery = `
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'fixed_assets'
+      );
+    `;
+
+    const { data: tableExists, error: tableError } = await databaseSimple.query(tableExistsQuery);
+    
+    if (tableError || !tableExists || !tableExists[0]?.exists) {
+      // Retornar reporte vacío si la tabla no existe
+      const emptyReport = {
+        total_assets: 0,
+        total_purchase_value: 0,
+        total_book_value: 0,
+        monthly_depreciation: 0,
+        total_accumulated_depreciation: 0,
+        assets_near_full_depreciation: []
+      };
+      
+      return NextResponse.json({ 
+        report: emptyReport, 
+        year: parseInt(year),
+        message: 'Funcionalidad en desarrollo - mostrando datos vacíos'
+      });
+    }
 
     if (reportType === 'summary') {
       // Usar la nueva función de Supabase
