@@ -242,11 +242,8 @@ export async function getFixedAssets(filters: any = {}) {
   try {
     let query = supabase
       .from('fixed_assets')
-      .select(`
-        *,
-        fixed_assets_categories(name, description)
-      `)
-      .eq('user_id', filters.user_id || 'demo-user-id')
+      .select('*')  // Solo seleccionar de fixed_assets, sin JOIN
+      .eq('user_id', filters.user_id || 'demo-user')
       .order('created_at', { ascending: false });
 
     // Aplicar filtros
@@ -342,7 +339,7 @@ export async function getFixedAssetCategories() {
 }
 
 // Generar reporte de activos fijos
-export async function getFixedAssetsReport(userId: string = 'demo-user-id', year?: number) {
+export async function getFixedAssetsReport(userId: string = 'demo-user', year?: number) {
   try {
     // Obtener activos básicos
     const { data: assets, error: assetsError } = await supabase
@@ -467,7 +464,7 @@ export const databaseSimple = {
       }
       
       if (sql.includes('SELECT') && sql.includes('FROM fixed_assets') && !sql.includes('WHERE id =')) {
-        const filters = { user_id: 'demo-user-id' };
+        const filters = { user_id: 'demo-user' };  // Corregido para coincidir con migración
         return await getFixedAssets(filters);
       }
       
