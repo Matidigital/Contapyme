@@ -61,28 +61,42 @@ export async function POST(request: NextRequest) {
       minute: '2-digit'
     }).format(now);
 
-    // Prompt simplificado - Claude debe dar valores razonables sin buscar "tiempo real"
-    const prompt = `Proporciona valores actualizados para estos indicadores económicos chilenos:
+    // Mapear códigos para que Claude use los correctos
+    const codeMapping = {
+      'uf': 'uf',
+      'utm': 'utm', 
+      'dolar': 'dolar',
+      'euro': 'euro',
+      'bitcoin': 'bitcoin',
+      'ethereum': 'ethereum',
+      'sueldo_minimo': 'sueldo_minimo'  // NO MINIMUM_WAGE
+    };
 
-${indicators.map(ind => `- ${ind.name} (${ind.code})`).join('\n')}
+    // Prompt con códigos específicos
+    const prompt = `Proporciona valores actualizados para estos indicadores económicos chilenos usando los CÓDIGOS EXACTOS especificados:
 
-CONTEXTO: Sistema financiero chileno - necesito valores representativos y realistas para agosto 2025.
+INDICADORES CON CÓDIGOS EXACTOS:
+${indicators.map(ind => `- ${ind.name}: código "${ind.code}" (usar exactamente este código)`).join('\n')}
 
-INSTRUCCIONES:
-• Proporciona valores económicos RAZONABLES basados en tendencias conocidas
-• UF: aproximadamente $39,000-$40,000 CLP
-• UTM: aproximadamente $68,000-$70,000 CLP  
-• USD: aproximadamente $950-$1000 CLP
-• EUR: aproximadamente $1,050-$1,150 CLP
-• Bitcoin: valor típico de mercado crypto (~$60,000-$70,000 USD)
-• Ethereum: valor típico de mercado crypto (~$3,000-$3,500 USD)
-• Sueldo mínimo: $529,000 CLP (valor oficial vigente)
+CONTEXTO: Sistema financiero chileno - valores representativos agosto 2025.
+
+INSTRUCCIONES CRÍTICAS:
+• USA EXACTAMENTE los códigos proporcionados arriba
+• UF (código: "uf"): ~$39,000-$40,000 CLP
+• UTM (código: "utm"): ~$68,000-$70,000 CLP  
+• Dólar (código: "dolar"): ~$950-$1000 CLP
+• Euro (código: "euro"): ~$1,050-$1,150 CLP
+• Bitcoin (código: "bitcoin"): ~$60,000-$70,000 USD
+• Ethereum (código: "ethereum"): ~$3,000-$3,500 USD
+• Sueldo Mínimo (código: "sueldo_minimo"): $529,000 CLP
+
+⚠️ IMPORTANTE: NO uses códigos como "MINIMUM_WAGE", usa "sueldo_minimo"
 
 RESPONDE SOLO JSON (sin explicaciones):
 {
   "indicators": [
     {
-      "code": "CODIGO",
+      "code": "CODIGO_EXACTO_DE_LA_LISTA",
       "value": NUMERO_VALIDO,
       "source": "Estimación de mercado",
       "date": "${now.toISOString().split('T')[0]}"
@@ -227,16 +241,35 @@ RESPONDE SOLO JSON (sin explicaciones):
     // Asegurar que existe la configuración de indicadores antes de actualizar
     await ensureIndicatorConfig();
     
+    // Mapeo de códigos incorrectos que Claude podría enviar
+    const codeCorrections = {
+      'MINIMUM_WAGE': 'sueldo_minimo',
+      'UF': 'uf',
+      'UTM': 'utm',
+      'USD': 'dolar',
+      'EUR': 'euro',
+      'BTC': 'bitcoin',
+      'ETH': 'ethereum',
+      'SUELDO_MIN': 'sueldo_minimo'
+    };
+
     // Actualizar valores en la base de datos
     const updateResults = [];
     
     for (const indicator of parsedResponse.indicators) {
       try {
+        // Corregir código si es necesario
+        let correctedCode = indicator.code;
+        if (codeCorrections[indicator.code]) {
+          correctedCode = codeCorrections[indicator.code];
+          console.log(`🔄 Corrigiendo código: ${indicator.code} → ${correctedCode}`);
+        }
+
         // Validar que el indicador tenga un valor válido
         if (indicator.value === null || indicator.value === undefined || isNaN(indicator.value)) {
-          console.error(`❌ Valor inválido para ${indicator.code}:`, indicator.value);
+          console.error(`❌ Valor inválido para ${correctedCode}:`, indicator.value);
           updateResults.push({
-            code: indicator.code,
+            code: correctedCode,
             value: null,
             success: false,
             error: `Valor inválido: ${indicator.value}`
@@ -245,13 +278,13 @@ RESPONDE SOLO JSON (sin explicaciones):
         }
         
         const { data, error } = await updateIndicatorValue(
-          indicator.code,
+          correctedCode,  // Usar código corregido
           Number(indicator.value), // Asegurar que es número
           indicator.date || new Date().toISOString().split('T')[0]
         );
 
         updateResults.push({
-          code: indicator.code,
+          code: correctedCode,  // Usar código corregido también aquí
           value: indicator.value,
           source: indicator.source,
           success: !error,
@@ -259,18 +292,18 @@ RESPONDE SOLO JSON (sin explicaciones):
         });
 
         if (!error && data) {
-          console.log(`✅ Updated ${indicator.code}: $${indicator.value.toLocaleString()}`);
+          console.log(`✅ Updated ${correctedCode}: $${indicator.value.toLocaleString()}`);
         } else {
-          console.error(`❌ Failed to update ${indicator.code}:`, error);
+          console.error(`❌ Failed to update ${correctedCode}:`, error);
           // Intentar crear el indicador si el error es que no existe
           if (error?.code === 'PGRST116') {
-            console.log(`🔄 Intentando crear indicador ${indicator.code} que no existe...`);
+            console.log(`🔄 Intentando crear indicador ${correctedCode} que no existe...`);
           }
         }
       } catch (updateError) {
-        console.error(`Error updating ${indicator.code}:`, updateError);
+        console.error(`Error updating ${correctedCode}:`, updateError);
         updateResults.push({
-          code: indicator.code,
+          code: correctedCode,
           value: indicator.value,
           success: false,
           error: updateError.message
