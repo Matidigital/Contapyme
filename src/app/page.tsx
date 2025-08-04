@@ -4,7 +4,7 @@ import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } fro
 import EconomicIndicatorsBanner from '@/components/EconomicIndicatorsBanner'
 import { CompanyProvider, useCompanyData } from '@/contexts/CompanyContext'
 
-// Componente para mostrar empresa demo
+// Componente para mostrar empresa demo - AHORA FUNCIONAL ✅
 function DemoCompanyShowcase() {
   const { 
     getDisplayName, 
