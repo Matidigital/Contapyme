@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { FixedAsset } from '@/types';
 
@@ -25,8 +25,21 @@ export function useRealtimeAssets(
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
 
+  // Usar refs para callbacks para evitar reconexiones
+  const onAssetInsertedRef = useRef(onAssetInserted);
+  const onAssetUpdatedRef = useRef(onAssetUpdated);
+  const onAssetDeletedRef = useRef(onAssetDeleted);
+
+  // Actualizar refs cuando cambien los callbacks
+  useEffect(() => {
+    onAssetInsertedRef.current = onAssetInserted;
+    onAssetUpdatedRef.current = onAssetUpdated;
+    onAssetDeletedRef.current = onAssetDeleted;
+  }, [onAssetInserted, onAssetUpdated, onAssetDeleted]);
+
   useEffect(() => {
     let channel: any = null;
+    let isUnmounted = false;
 
     const setupRealtimeSubscription = async () => {
       try {
@@ -44,9 +57,11 @@ export function useRealtimeAssets(
               filter: `user_id=eq.${userId}`
             },
             (payload) => {
-              console.log('🆕 Nuevo activo detectado (real-time):', payload.new);
-              setLastUpdate(new Date().toISOString());
-              onAssetInserted?.(payload.new as FixedAsset);
+              if (!isUnmounted) {
+                console.log('🆕 Nuevo activo detectado (real-time):', payload.new);
+                setLastUpdate(new Date().toISOString());
+                onAssetInsertedRef.current?.(payload.new as FixedAsset);
+              }
             }
           )
           .on(
@@ -58,9 +73,11 @@ export function useRealtimeAssets(
               filter: `user_id=eq.${userId}`
             },
             (payload) => {
-              console.log('✏️ Activo actualizado (real-time):', payload.new);
-              setLastUpdate(new Date().toISOString());
-              onAssetUpdated?.(payload.new as FixedAsset);
+              if (!isUnmounted) {
+                console.log('✏️ Activo actualizado (real-time):', payload.new);
+                setLastUpdate(new Date().toISOString());
+                onAssetUpdatedRef.current?.(payload.new as FixedAsset);
+              }
             }
           )
           .on(
@@ -72,33 +89,39 @@ export function useRealtimeAssets(
               filter: `user_id=eq.${userId}`
             },
             (payload) => {
-              console.log('🗑️ Activo eliminado (real-time):', payload.old);
-              setLastUpdate(new Date().toISOString());
-              onAssetDeleted?.(payload.old.id);
+              if (!isUnmounted) {
+                console.log('🗑️ Activo eliminado (real-time):', payload.old);
+                setLastUpdate(new Date().toISOString());
+                onAssetDeletedRef.current?.(payload.old.id);
+              }
             }
           )
           .subscribe((status) => {
-            console.log('📡 Estado de subscripción real-time:', status);
-            
-            if (status === 'SUBSCRIBED') {
-              setIsConnected(true);
-              setConnectionError(null);
-              console.log('✅ Subscripción real-time activa');
-            } else if (status === 'CHANNEL_ERROR') {
-              setIsConnected(false);
-              setConnectionError('Error en el canal de comunicación');
-              console.error('❌ Error en subscripción real-time');
-            } else if (status === 'TIMED_OUT') {
-              setIsConnected(false);
-              setConnectionError('Timeout de conexión');
-              console.error('⏰ Timeout en subscripción real-time');
+            if (!isUnmounted) {
+              console.log('📡 Estado de subscripción real-time:', status);
+              
+              if (status === 'SUBSCRIBED') {
+                setIsConnected(true);
+                setConnectionError(null);
+                console.log('✅ Subscripción real-time activa');
+              } else if (status === 'CHANNEL_ERROR') {
+                setIsConnected(false);
+                setConnectionError('Error en el canal de comunicación');
+                console.error('❌ Error en subscripción real-time');
+              } else if (status === 'TIMED_OUT') {
+                setIsConnected(false);
+                setConnectionError('Timeout de conexión');
+                console.error('⏰ Timeout en subscripción real-time');
+              }
             }
           });
 
       } catch (error: any) {
-        console.error('❌ Error configurando real-time:', error);
-        setConnectionError(error.message || 'Error desconocido');
-        setIsConnected(false);
+        if (!isUnmounted) {
+          console.error('❌ Error configurando real-time:', error);
+          setConnectionError(error.message || 'Error desconocido');
+          setIsConnected(false);
+        }
       }
     };
 
@@ -106,13 +129,14 @@ export function useRealtimeAssets(
 
     // Cleanup al desmontar
     return () => {
+      isUnmounted = true;
       if (channel) {
         console.log('🔌 Desconectando subscripción real-time...');
         channel.unsubscribe();
         setIsConnected(false);
       }
     };
-  }, [userId, onAssetInserted, onAssetUpdated, onAssetDeleted]);
+  }, [userId]); // Eliminar dependencias de callbacks para evitar reconexiones constantes
 
   return {
     isConnected,

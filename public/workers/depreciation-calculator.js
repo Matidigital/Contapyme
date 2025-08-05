@@ -48,21 +48,38 @@ function calculateDepreciation(asset, currentDate = new Date()) {
   }
 }
 
-// Calcular reporte completo de activos
+// Calcular reporte completo de activos - Formato compatible con API
 function calculateAssetsReport(assets, currentDate = new Date()) {
+  // Validar entrada
+  if (!Array.isArray(assets) || assets.length === 0) {
+    return {
+      total_assets: 0,
+      total_purchase_value: 0,
+      total_book_value: 0,
+      total_accumulated_depreciation: 0,
+      monthly_depreciation: 0,
+      assets_near_full_depreciation: [],
+      fully_depreciated_assets: 0,
+      active_assets: 0,
+      disposed_assets: 0,
+      average_age_months: 0,
+      calculations: []
+    };
+  }
+
   const results = assets.map(asset => calculateDepreciation(asset, currentDate));
   
   const report = {
-    totalAssets: assets.length,
-    totalPurchaseValue: 0,
-    totalBookValue: 0,
-    totalAccumulatedDepreciation: 0,
-    monthlyDepreciation: 0,
-    assetsNearFullDepreciation: [],
-    fullyDepreciatedAssets: 0,
-    activeAssets: 0,
-    disposedAssets: 0,
-    averageAge: 0,
+    total_assets: assets.length,
+    total_purchase_value: 0,
+    total_book_value: 0,
+    total_accumulated_depreciation: 0,
+    monthly_depreciation: 0,
+    assets_near_full_depreciation: [],
+    fully_depreciated_assets: 0,
+    active_assets: 0,
+    disposed_assets: 0,
+    average_age_months: 0,
     calculations: results
   };
   
@@ -72,38 +89,42 @@ function calculateAssetsReport(assets, currentDate = new Date()) {
     const asset = assets[index];
     
     if (!calc.error) {
-      report.totalPurchaseValue += asset.purchase_value;
-      report.totalBookValue += calc.bookValue;
-      report.totalAccumulatedDepreciation += calc.accumulatedDepreciation;
-      report.monthlyDepreciation += calc.monthlyDepreciation;
+      report.total_purchase_value += asset.purchase_value;
+      report.total_book_value += calc.bookValue;
+      report.total_accumulated_depreciation += calc.accumulatedDepreciation;
+      report.monthly_depreciation += calc.monthlyDepreciation;
       
       if (calc.depreciationPercentage >= 90) {
-        report.assetsNearFullDepreciation.push({
-          ...asset,
+        report.assets_near_full_depreciation.push({
+          id: asset.id,
+          name: asset.name,
           depreciationPercentage: calc.depreciationPercentage,
-          bookValue: calc.bookValue
+          bookValue: calc.bookValue,
+          purchase_value: asset.purchase_value,
+          status: asset.status,
+          category: asset.category
         });
       }
       
       if (calc.isFullyDepreciated) {
-        report.fullyDepreciatedAssets++;
+        report.fully_depreciated_assets++;
       }
       
       totalAge += calc.monthsSinceStart;
     }
     
     // Contar por estado
-    if (asset.status === 'active') report.activeAssets++;
-    else if (asset.status === 'disposed') report.disposedAssets++;
+    if (asset.status === 'active') report.active_assets++;
+    else if (asset.status === 'disposed') report.disposed_assets++;
   });
   
-  report.averageAge = assets.length > 0 ? Math.round(totalAge / assets.length) : 0;
+  report.average_age_months = assets.length > 0 ? Math.round(totalAge / assets.length) : 0;
   
   // Redondear valores finales
-  report.totalPurchaseValue = Math.round(report.totalPurchaseValue);
-  report.totalBookValue = Math.round(report.totalBookValue);
-  report.totalAccumulatedDepreciation = Math.round(report.totalAccumulatedDepreciation);
-  report.monthlyDepreciation = Math.round(report.monthlyDepreciation);
+  report.total_purchase_value = Math.round(report.total_purchase_value);
+  report.total_book_value = Math.round(report.total_book_value);
+  report.total_accumulated_depreciation = Math.round(report.total_accumulated_depreciation);
+  report.monthly_depreciation = Math.round(report.monthly_depreciation);
   
   return report;
 }
