@@ -119,12 +119,16 @@ export default function F29ComparativePage() {
     setAnalysis(null);
 
     try {
+      console.log('🚀 Procesando', files.length, 'archivos F29 con parser real...');
+      
+      // Crear FormData con todos los archivos para el parser real
       const formData = new FormData();
-      files.forEach(file => formData.append('f29_files', file));
-      formData.append('company_id', demoCompanyId);
-      formData.append('user_id', demoUserId);
+      files.slice(0, 24).forEach((file, index) => {
+        formData.append(`file-${index}`, file);
+      });
 
-      const response = await fetch('/api/f29/batch-upload', {
+      // Usar la nueva API de procesamiento batch con parser real
+      const response = await fetch('/api/f29/parse-batch', {
         method: 'POST',
         body: formData,
       });
@@ -134,17 +138,38 @@ export default function F29ComparativePage() {
       }
 
       const data = await response.json();
+      console.log('📊 Respuesta de procesamiento batch:', data);
       
       if (data.success) {
+        // Mostrar resultados reales del procesamiento
         setResults(data.results || []);
-        setAnalysis(data.analysis || null);
+        
+        // Generar análisis comparativo con datos reales extraídos
+        if (data.results && data.results.length > 0) {
+          const realAnalysis = generateAnalysisFromResults(data.results, data.summary);
+          setAnalysis(realAnalysis);
+          
+          // Auto-trigger advanced analysis después de 2 segundos
+          setTimeout(() => {
+            performAdvancedAnalysis();
+          }, 2000);
+        }
+        
+        // Mostrar estadísticas del procesamiento
+        if (data.summary) {
+          console.log(`✅ Procesamiento completado: ${data.summary.processed_successfully}/${data.summary.total_files} archivos (${data.summary.success_rate}% éxito, ${data.summary.average_confidence}% confianza promedio)`);
+        }
+        
       } else {
-        throw new Error(data.error || 'Error desconocido');
+        throw new Error(data.error || 'Error en procesamiento batch');
       }
 
     } catch (error) {
-      console.error('❌ Error en upload:', error);
-      alert(`Error: ${error instanceof Error ? error.message : 'Error desconocido'}`);
+      console.error('❌ Error en procesamiento batch:', error);
+      alert(`Error procesando archivos: ${error instanceof Error ? error.message : 'Error desconocido'}. Mostrando datos demo como respaldo.`);
+      
+      // En caso de error, usar datos demo como fallback
+      await handleGenerateDemoData();
     } finally {
       setUploading(false);
     }
@@ -232,6 +257,114 @@ export default function F29ComparativePage() {
     return `${monthNames[parseInt(month)]} ${year}`;
   };
 
+  // Función para generar análisis comparativo desde datos reales extraídos
+  const generateAnalysisFromResults = (results: any[], summary: any): AnalysisData => {
+    console.log('🧮 Generando análisis desde datos reales:', results);
+    
+    // Filtrar solo los resultados exitosos con datos válidos
+    const validResults = results.filter(r => r.success && r.data);
+    
+    if (validResults.length === 0) {
+      throw new Error('No hay datos válidos para análizar');
+    }
+
+    // Extraer datos financieros de cada F29
+    const f29DataPoints = validResults.map(result => ({
+      period: result.period || result.data.periodo,
+      ventas_netas: result.data.codigo563 || 0,
+      debito_fiscal: result.data.codigo538 || 0,
+      credito_fiscal: result.data.codigo537 || 0,
+      compras_netas: result.data.comprasNetas || 0,
+      iva_determinado: result.data.ivaDeterminado || 0,
+      total_a_pagar: result.data.totalAPagar || 0,
+      confidence: result.confidence_score || 0,
+      rut: result.data.rut
+    }));
+
+    // Ordenar por período
+    f29DataPoints.sort((a, b) => (a.period || '').localeCompare(b.period || ''));
+
+    // Calcular métricas agregadas
+    const totalVentas = f29DataPoints.reduce((sum, f) => sum + f.ventas_netas, 0);
+    const totalCompras = f29DataPoints.reduce((sum, f) => sum + f.compras_netas, 0);
+    const promedioMensual = totalVentas / f29DataPoints.length;
+    const promedioComprasMensual = totalCompras / f29DataPoints.length;
+
+    // Encontrar mejor y peor mes
+    const mejorMes = f29DataPoints.reduce((max, current) => 
+      current.ventas_netas > max.ventas_netas ? current : max
+    );
+    const peorMes = f29DataPoints.reduce((min, current) => 
+      current.ventas_netas < min.ventas_netas ? current : min
+    );
+
+    // Calcular crecimiento del período
+    const primerMes = f29DataPoints[0];
+    const ultimoMes = f29DataPoints[f29DataPoints.length - 1];
+    const crecimientoPeriodo = primerMes.ventas_netas > 0 
+      ? ((ultimoMes.ventas_netas - primerMes.ventas_netas) / primerMes.ventas_netas) * 100
+      : 0;
+
+    // Generar insights basados en datos reales
+    const insights = [];
+    
+    if (crecimientoPeriodo > 0) {
+      insights.push(`📈 Crecimiento ${crecimientoPeriodo > 0 ? 'positivo' : 'negativo'} del ${Math.abs(crecimientoPeriodo).toFixed(1)}% durante el período`);
+    }
+    
+    const mejorVsPeor = peorMes.ventas_netas > 0 
+      ? ((mejorMes.ventas_netas - peorMes.ventas_netas) / peorMes.ventas_netas) * 100
+      : 0;
+    
+    if (mejorVsPeor > 0) {
+      insights.push(`🎯 ${formatPeriod(mejorMes.period)} fue tu mejor mes con ${formatCurrency(mejorMes.ventas_netas)} (+${mejorVsPeor.toFixed(0)}% vs peor mes)`);
+    }
+
+    // Análisis de margen bruto promedio
+    const margenPromedio = totalVentas > 0 ? ((totalVentas - totalCompras) / totalVentas) * 100 : 0;
+    if (margenPromedio > 0) {
+      insights.push(`💰 Margen bruto promedio del ${margenPromedio.toFixed(1)}%`);
+    }
+
+    // Confianza promedio del procesamiento
+    const confianzaPromedio = f29DataPoints.reduce((sum, f) => sum + f.confidence, 0) / f29DataPoints.length;
+    insights.push(`🎯 Confianza promedio del parsing: ${confianzaPromedio.toFixed(1)}%`);
+
+    // Detectar estacionalidad básica
+    const mesesConDatos = f29DataPoints.length;
+    if (mesesConDatos >= 6) {
+      insights.push(`📊 Análisis basado en ${mesesConDatos} períodos reales procesados`);
+    }
+
+    // Generar rango temporal
+    const periodos = f29DataPoints.map(f => f.period).filter(p => p);
+    const rangoTemporal = {
+      inicio: periodos.length > 0 ? Math.min(...periodos) : '202401',
+      fin: periodos.length > 0 ? Math.max(...periodos) : '202412'
+    };
+
+    return {
+      periodos_analizados: f29DataPoints.length,
+      rango_temporal: rangoTemporal,
+      metricas_clave: {
+        total_ventas: totalVentas,
+        promedio_mensual: promedioMensual,
+        promedio_compras_mensual: promedioComprasMensual,
+        crecimiento_periodo: crecimientoPeriodo,
+        mejor_mes: {
+          period: mejorMes.period,
+          ventas: mejorMes.ventas_netas
+        },
+        peor_mes: {
+          period: peorMes.period,
+          ventas: peorMes.ventas_netas
+        }
+      },
+      insights_iniciales: insights,
+      ruts_encontrados: [...new Set(f29DataPoints.map(f => f.rut).filter(r => r))]
+    };
+  };
+
   // Función para realizar análisis avanzado con Worker
   const performAdvancedAnalysis = async () => {
     if (!analysis || !isWorkerReady) return;
@@ -240,30 +373,60 @@ export default function F29ComparativePage() {
     setAdvancedAnalysis(null);
 
     try {
-      // Obtener datos F29 reales desde la API
-      const response = await fetch('/api/f29/comparative-data', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          company_id: demoCompanyId,
-          user_id: demoUserId
-        })
-      });
-
       let f29Data = [];
-      if (response.ok) {
-        const data = await response.json();
-        f29Data = data.f29_data || [];
+
+      // Si tenemos resultados de procesamiento real, usar esos datos
+      if (results && results.length > 0 && results.some(r => r.success && r.data)) {
+        console.log('📊 Usando datos reales procesados para análisis avanzado');
+        
+        const validResults = results.filter(r => r.success && r.data);
+        f29Data = validResults.map(result => ({
+          period: result.period || result.data.periodo,
+          ventas_netas: result.data.codigo563 || 0,
+          compras_netas: result.data.comprasNetas || 0,
+          debito_fiscal: result.data.codigo538 || 0,
+          credito_fiscal: result.data.codigo537 || 0,
+          iva_determinado: result.data.ivaDeterminado || 0,
+          total_a_pagar: result.data.totalAPagar || 0,
+          confidence: result.confidence_score || 0,
+          rut: result.data.rut
+        }));
+        
+      } else {
+        // Fallback: intentar obtener datos desde la API o usar demo
+        console.log('🔄 Intentando obtener datos desde API como fallback');
+        
+        try {
+          const response = await fetch('/api/f29/comparative-data', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              company_id: demoCompanyId,
+              user_id: demoUserId
+            })
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            f29Data = data.f29_data || [];
+          }
+        } catch (apiError) {
+          console.warn('⚠️ Error obteniendo datos de API:', apiError);
+        }
+
+        // Si aún no hay datos, usar demostración
+        if (f29Data.length === 0) {
+          console.log('🎭 Usando datos de demostración para análisis avanzado');
+          f29Data = generateDemoF29Data();
+        }
       }
 
-      // Si no hay datos reales, usar datos de demostración
-      if (f29Data.length === 0) {
-        f29Data = generateDemoF29Data();
-      }
-
-      console.log('🧠 Iniciando análisis avanzado con Worker...', { dataPoints: f29Data.length });
+      console.log('🧠 Iniciando análisis avanzado con Worker...', { 
+        dataPoints: f29Data.length,
+        source: results.some(r => r.success && r.data) ? 'real' : 'demo'
+      });
       
       const advancedResults = await performFullAnalysis(f29Data);
       
@@ -278,6 +441,23 @@ export default function F29ComparativePage() {
     } finally {
       setAnalyzingWithWorker(false);
     }
+  };
+
+  // Convertir datos reales al formato esperado por el Worker
+  const convertRealDataForWorker = (realData: any[]) => {
+    console.log('🔄 Convirtiendo datos reales para Worker:', realData);
+    
+    return realData.map(f29 => ({
+      period: f29.period,
+      ventas_netas: f29.ventas_netas || 0,
+      compras_netas: f29.compras_netas || 0,
+      debito_fiscal: f29.debito_fiscal || 0,
+      credito_fiscal: f29.credito_fiscal || 0,
+      iva_determinado: f29.iva_determinado || 0,
+      total_a_pagar: f29.total_a_pagar || 0,
+      confidence: f29.confidence || 0,
+      rut: f29.rut
+    }));
   };
 
   // Generar datos F29 de demostración para el Worker
