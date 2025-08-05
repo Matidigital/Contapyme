@@ -197,10 +197,17 @@ export default function F29AnalysisPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Animated Background Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-400 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-blob" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-400 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-blob animation-delay-2000" />
+        <div className="absolute top-40 left-40 w-80 h-80 bg-cyan-400 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-blob animation-delay-4000" />
+      </div>
+      
       <Header 
         title="Análisis F29 Individual"
-        subtitle="Analiza un formulario F29 y obtén métricas detalladas"
+        subtitle="Analiza un formulario F29 y obtén métricas detalladas con IA"
         showBackButton={true}
         backHref="/accounting"
         actions={
@@ -210,44 +217,65 @@ export default function F29AnalysisPage() {
         }
       />
 
-      <div className="max-w-4xl mx-auto py-8 px-4 space-y-8">
+      <div className="relative z-10 max-w-5xl mx-auto py-8 px-4 space-y-8">
+        {/* Hero Section */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800 rounded-full text-sm font-medium mb-6">
+            <span className="mr-2">🚀</span>
+            Análisis Automático • IA Avanzada • 95% Precisión
+          </div>
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 leading-tight">
+            Transforma tu F29 en
+            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"> insights estratégicos</span>
+          </h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Sube tu formulario PDF y obtén análisis detallado con métricas financieras, 
+            recomendaciones fiscales y cálculos automáticos en segundos.
+          </p>
+        </div>
+
         {/* Upload Section */}
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm border-2 border-blue-100 hover:border-blue-200 transition-colors">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <FileText className="w-5 h-5 text-blue-600" />
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
+                <FileText className="w-5 h-5 text-white" />
+              </div>
               <span>Cargar Formulario F29</span>
             </CardTitle>
             <CardDescription>
-              Sube un archivo PDF de tu formulario F29 para análisis automático
+              Arrastra y suelta tu archivo PDF o selecciónalo para comenzar el análisis automático
             </CardDescription>
           </CardHeader>
           <CardContent>
             {!file ? (
               <div
-                className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
+                className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-300 ${
                   dragActive 
-                    ? 'border-blue-400 bg-blue-50' 
-                    : 'border-gray-300 hover:border-blue-400'
+                    ? 'border-blue-400 bg-gradient-to-br from-blue-50 to-purple-50 scale-[1.02]' 
+                    : 'border-gray-300 hover:border-blue-400 hover:bg-gradient-to-br hover:from-blue-50 hover:to-indigo-50'
                 }`}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
               >
-                <div className="w-16 h-16 bg-blue-100 rounded-full mx-auto mb-4 flex items-center justify-center">
-                  <Upload className="w-8 h-8 text-blue-600" />
+                <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl mx-auto mb-6 flex items-center justify-center transform hover:scale-110 transition-transform duration-300">
+                  <Upload className="w-10 h-10 text-white" />
                 </div>
-                <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                <h4 className="text-xl font-bold text-gray-900 mb-3">
                   Arrastra tu F29 aquí
                 </h4>
-                <p className="text-gray-600 mb-4">
-                  o haz clic para seleccionar archivo
+                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                  o haz clic para seleccionar archivo. Análisis automático con IA en segundos.
                 </p>
                 <Button 
                   variant="primary"
+                  size="lg"
                   onClick={() => fileInputRef.current?.click()}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-8 py-3"
                 >
+                  <FileText className="w-5 h-5 mr-2" />
                   Seleccionar Archivo PDF
                 </Button>
                 <input
@@ -257,21 +285,32 @@ export default function F29AnalysisPage() {
                   onChange={handleFileSelect}
                   className="hidden"
                 />
-                <p className="text-xs text-gray-500 mt-2">
-                  Solo archivos PDF • Máximo 10MB
-                </p>
+                <div className="mt-6 flex items-center justify-center space-x-6 text-sm text-gray-500">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span>Solo archivos PDF</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span>Máximo 10MB</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span>95% Precisión</span>
+                  </div>
+                </div>
               </div>
             ) : (
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <FileText className="w-5 h-5 text-blue-600" />
+              <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-2xl p-6 border border-green-200">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-blue-500 rounded-xl flex items-center justify-center">
+                      <FileText className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900">{file.name}</p>
-                      <p className="text-sm text-gray-500">
-                        {(file.size / 1024 / 1024).toFixed(2)} MB
+                      <p className="font-semibold text-gray-900">{file.name}</p>
+                      <p className="text-sm text-gray-600">
+                        {(file.size / 1024 / 1024).toFixed(2)} MB • Listo para análisis
                       </p>
                     </div>
                   </div>
@@ -279,30 +318,46 @@ export default function F29AnalysisPage() {
                     variant="ghost"
                     size="sm"
                     onClick={removeFile}
+                    className="hover:bg-red-100 hover:text-red-600"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-5 h-5" />
                   </Button>
                 </div>
                 
-                <div className="mt-4 flex space-x-3">
-                  <Button
-                    variant="primary"
-                    onClick={handleAnalysis}
-                    loading={uploading}
-                    disabled={uploading}
-                    fullWidth
-                  >
-                    {uploading ? 'Analizando...' : 'Iniciar Análisis'}
-                  </Button>
-                </div>
+                <Button
+                  variant="primary"
+                  onClick={handleAnalysis}
+                  loading={uploading}
+                  disabled={uploading}
+                  fullWidth
+                  size="lg"
+                  className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
+                >
+                  {uploading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                      Analizando con IA...
+                    </>
+                  ) : (
+                    <>
+                      <BarChart3 className="w-5 h-5 mr-2" />
+                      Iniciar Análisis Inteligente
+                    </>
+                  )}
+                </Button>
               </div>
             )}
 
             {error && (
-              <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
-                <div className="flex items-center space-x-2">
-                  <AlertCircle className="w-5 h-5 text-red-600" />
-                  <p className="text-red-800">{error}</p>
+              <div className="mt-6 bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 rounded-xl p-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                    <AlertCircle className="w-5 h-5 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-red-900">Error en el análisis</p>
+                    <p className="text-red-700 text-sm">{error}</p>
+                  </div>
                 </div>
               </div>
             )}
@@ -311,20 +366,27 @@ export default function F29AnalysisPage() {
 
         {/* Results Section */}
         {result && (
-          <Card>
-            <CardHeader>
+          <Card className="bg-white/90 backdrop-blur-sm border-2 border-green-200">
+            <CardHeader className="bg-gradient-to-r from-green-50 to-blue-50">
               <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="w-5 h-5 text-green-600" />
-                  <span>Análisis Completado</span>
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center">
+                    <CheckCircle className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <span className="text-xl font-bold">Análisis Completado</span>
+                    <p className="text-sm text-gray-600 font-normal">
+                      Período: {result.periodo} • RUT: {result.rut}
+                    </p>
+                  </div>
                 </div>
-                <span className={`text-sm font-medium ${getConfidenceColor(result.confidence)}`}>
-                  {getConfidenceLabel(result.confidence)} ({result.confidence}%)
-                </span>
+                <div className="text-right">
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getConfidenceColor(result.confidence)} bg-white/80`}>
+                    {getConfidenceLabel(result.confidence)} ({result.confidence}%)
+                  </span>
+                  <p className="text-xs text-gray-500 mt-1">Método: {result.method}</p>
+                </div>
               </CardTitle>
-              <CardDescription>
-                Período: {result.periodo} • RUT: {result.rut} • Método: {result.method}
-              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -475,29 +537,29 @@ export default function F29AnalysisPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="mt-6 flex flex-wrap gap-3">
+              <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Button 
                   variant="outline" 
-                  size="sm"
                   onClick={handleExportResults}
+                  className="border-green-200 hover:bg-green-50 hover:border-green-300"
                 >
-                  <Download className="w-4 h-4 mr-1" />
+                  <Download className="w-4 h-4 mr-2" />
                   Exportar Resultados
                 </Button>
                 <Button 
                   variant="outline" 
-                  size="sm"
                   onClick={toggleDetailedAnalysis}
+                  className="border-blue-200 hover:bg-blue-50 hover:border-blue-300"
                 >
-                  <Eye className="w-4 h-4 mr-1" />
+                  <Eye className="w-4 h-4 mr-2" />
                   {showDetailedAnalysis ? 'Ocultar Detalle' : 'Ver Análisis Detallado'}
                 </Button>
                 <Button 
                   variant="primary" 
-                  size="sm"
                   onClick={() => window.open('/accounting/f29-comparative', '_blank')}
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
                 >
-                  <TrendingUp className="w-4 h-4 mr-1" />
+                  <TrendingUp className="w-4 h-4 mr-2" />
                   Análisis Comparativo
                 </Button>
               </div>
@@ -708,9 +770,17 @@ export default function F29AnalysisPage() {
         )}
 
         {/* Quick Actions */}
-        <Card>
+        <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200">
           <CardHeader>
-            <CardTitle>Acciones Rápidas</CardTitle>
+            <CardTitle className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+                <span className="text-white text-sm">⚡</span>
+              </div>
+              <span>Acciones Rápidas</span>
+            </CardTitle>
+            <CardDescription>
+              Continúa explorando las funcionalidades avanzadas de ContaPyme
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -718,27 +788,55 @@ export default function F29AnalysisPage() {
                 variant="outline" 
                 fullWidth
                 onClick={() => window.open('/accounting/f29-comparative', '_blank')}
+                className="border-purple-200 hover:bg-purple-50 hover:border-purple-300 group"
               >
-                📊 Análisis Comparativo
+                <TrendingUp className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                Análisis Comparativo
               </Button>
               <Button 
                 variant="outline" 
                 fullWidth
                 onClick={() => window.open('/accounting/f29-guide', '_blank')}
+                className="border-blue-200 hover:bg-blue-50 hover:border-blue-300 group"
               >
-                📚 Guía de Optimización
+                <FileText className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                Guía de Optimización
               </Button>
               <Button 
                 variant="outline" 
                 fullWidth
                 onClick={() => window.location.href = '/accounting'}
+                className="border-green-200 hover:bg-green-50 hover:border-green-300 group"
               >
-                🏠 Volver a Contabilidad
+                <CheckCircle className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                Volver a Contabilidad
               </Button>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Custom animations */}
+      <style jsx>{`
+        @keyframes blob {
+          0% { transform: translate(0px, 0px) scale(1); }
+          33% { transform: translate(30px, -50px) scale(1.1); }
+          66% { transform: translate(-20px, 20px) scale(0.9); }
+          100% { transform: translate(0px, 0px) scale(1); }
+        }
+        
+        .animate-blob {
+          animation: blob 7s infinite;
+        }
+        
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+      `}</style>
     </div>
   );
 }
