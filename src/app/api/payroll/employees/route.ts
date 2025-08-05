@@ -34,6 +34,13 @@ export async function GET(request: NextRequest) {
           base_salary,
           salary_type,
           status
+        ),
+        payroll_config (
+          afp_code,
+          health_institution_code,
+          family_allowances,
+          legal_gratification_type,
+          has_unemployment_insurance
         )
       `)
       .eq('company_id', companyId)

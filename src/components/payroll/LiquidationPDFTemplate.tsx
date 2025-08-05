@@ -82,9 +82,12 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
                       (liquidationData.commissions || 0);
 
   const totalDescuentos = (liquidationData.afp_amount || 0) + 
+                         (liquidationData.afp_commission_amount || 0) +
                          (liquidationData.health_amount || 0) + 
+                         (liquidationData.additional_health_amount || 0) +
                          (liquidationData.sis_amount || 0) + 
-                         (liquidationData.income_tax_amount || 0);
+                         (liquidationData.income_tax_amount || 0) +
+                         (liquidationData.total_other_deductions || 0);
 
   const liquidoAPagar = totalImponible - totalDescuentos;
 
@@ -341,11 +344,32 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
             fontSize: '11px',
             borderBottom: '1px solid #ccc'
           }}>
-            AFP HABITAT (10%): <span style={{ float: 'right', fontWeight: 'bold' }}>
+            AFP {liquidationData.afp_code || 'HABITAT'} (10%): <span style={{ float: 'right', fontWeight: 'bold' }}>
               ${(liquidationData.afp_amount || 0).toLocaleString('es-CL')}
             </span>
           </td>
         </tr>
+
+        {/* Comisión AFP */}
+        {(liquidationData.afp_commission_amount || 0) > 0 && (
+          <tr>
+            <td style={{ 
+              padding: '8px', 
+              fontSize: '11px',
+              borderRight: '2px solid #000',
+              borderBottom: '1px solid #ccc'
+            }}></td>
+            <td style={{ 
+              padding: '8px', 
+              fontSize: '11px',
+              borderBottom: '1px solid #ccc'
+            }}>
+              COMISIÓN AFP ({((liquidationData.afp_commission_percentage || 0)).toFixed(2)}%): <span style={{ float: 'right', fontWeight: 'bold' }}>
+                ${(liquidationData.afp_commission_amount || 0).toLocaleString('es-CL')}
+              </span>
+            </td>
+          </tr>
+        )}
 
         {/* Gratificación Legal */}
         {legalGratification > 0 && (
@@ -406,16 +430,31 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
               padding: '8px', 
               fontSize: '11px',
               borderBottom: '1px solid #ccc'
-            }}>
-              {liquidationData.health_institution_code || 'FONASA'} (7%): <span style={{ float: 'right', fontWeight: 'bold' }}>
-                ${(liquidationData.health_amount || 0).toLocaleString('es-CL')}
-              </span>
-            </td>
+            }}></td>
           </tr>
         )}
 
-        {/* Seguro Cesantía si aplica */}
-        {liquidationData.has_unemployment_insurance && (liquidationData.sis_amount || 0) > 0 && (
+        {/* Salud - Siempre mostrar */}
+        <tr>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px',
+            borderRight: '2px solid #000',
+            borderBottom: '1px solid #ccc'
+          }}></td>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px',
+            borderBottom: '1px solid #ccc'
+          }}>
+            {liquidationData.health_institution_code === 'FONASA' ? 'FONASA' : 'ISAPRE'} (7%): <span style={{ float: 'right', fontWeight: 'bold' }}>
+              ${(liquidationData.health_amount || 0).toLocaleString('es-CL')}
+            </span>
+          </td>
+        </tr>
+
+        {/* Adicional Salud ISAPRE si aplica */}
+        {liquidationData.health_institution_code !== 'FONASA' && (liquidationData.additional_health_amount || 0) > 0 && (
           <tr>
             <td style={{ 
               padding: '8px', 
@@ -428,7 +467,28 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
               fontSize: '11px',
               borderBottom: '1px solid #ccc'
             }}>
-              SEGURO CESANTÍA: <span style={{ float: 'right', fontWeight: 'bold' }}>
+              ADICIONAL SALUD ISAPRE: <span style={{ float: 'right', fontWeight: 'bold' }}>
+                ${(liquidationData.additional_health_amount || 0).toLocaleString('es-CL')}
+              </span>
+            </td>
+          </tr>
+        )}
+
+        {/* Seguro Cesantía - Solo para contratos indefinidos */}
+        {liquidationData.contract_type === 'indefinido' && (liquidationData.sis_amount || 0) > 0 && (
+          <tr>
+            <td style={{ 
+              padding: '8px', 
+              fontSize: '11px',
+              borderRight: '2px solid #000',
+              borderBottom: '1px solid #ccc'
+            }}></td>
+            <td style={{ 
+              padding: '8px', 
+              fontSize: '11px',
+              borderBottom: '1px solid #ccc'
+            }}>
+              SEGURO CESANTÍA (0,6%): <span style={{ float: 'right', fontWeight: 'bold' }}>
                 ${(liquidationData.sis_amount || 0).toLocaleString('es-CL')}
               </span>
             </td>

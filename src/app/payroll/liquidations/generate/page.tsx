@@ -122,6 +122,8 @@ export default function GenerateLiquidationPage() {
       const contract = selectedEmployeeData.employment_contracts[0];
 
       // Usar servicio SIMPLE - solo cálculos locales
+      const payrollConfig = selectedEmployeeData.payroll_config?.[0];
+      
       const requestData = {
         employee: {
           id: selectedEmployeeData.id,
@@ -130,12 +132,12 @@ export default function GenerateLiquidationPage() {
           last_name: selectedEmployeeData.last_name,
           base_salary: contract.base_salary,
           contract_type: contract.contract_type,
-          // Configuración previsional (usar defaults si no existe)
-          afp_code: 'HABITAT',
-          health_institution_code: 'FONASA',
-          family_allowances: 0,
-          legal_gratification_type: 'none',
-          has_unemployment_insurance: true
+          // Configuración previsional real del empleado
+          afp_code: payrollConfig?.afp_code || 'HABITAT',
+          health_institution_code: payrollConfig?.health_institution_code || 'FONASA',
+          family_allowances: payrollConfig?.family_allowances || 0,
+          legal_gratification_type: payrollConfig?.legal_gratification_type || 'none',
+          has_unemployment_insurance: payrollConfig?.has_unemployment_insurance !== false
         },
         period: {
           year: formData.period_year,
