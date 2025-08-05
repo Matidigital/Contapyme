@@ -309,7 +309,10 @@ export default function JournalPage() {
             <Button 
               variant="secondary" 
               size="sm"
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => {
+                console.log('🔘 Botón Crear Asiento clickeado');
+                setShowCreateModal(true);
+              }}
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -778,13 +781,33 @@ export default function JournalPage() {
         </Card>
 
         {/* Modal de Creación de Asientos */}
-        {showCreateModal && <CreateJournalEntryModal />}
+        {showCreateModal && (
+          <>
+            {console.log('🔄 Renderizando modal:', showCreateModal)}
+            <CreateJournalEntryModal 
+              showCreateModal={showCreateModal}
+              setShowCreateModal={setShowCreateModal}
+              loadEntries={loadEntries}
+            />
+          </>
+        )}
       </div>
     </div>
   );
+}
 
-  // Componente Modal de Creación de Asientos
-  function CreateJournalEntryModal() {
+// Componente Modal de Creación de Asientos
+function CreateJournalEntryModal({ 
+  showCreateModal, 
+  setShowCreateModal, 
+  loadEntries 
+}: { 
+  showCreateModal: boolean; 
+  setShowCreateModal: (show: boolean) => void; 
+  loadEntries: () => void; 
+}) {
+    console.log('🎯 Modal CreateJournalEntryModal iniciado');
+    
     const [entryData, setEntryData] = useState({
       entry_date: new Date().toISOString().split('T')[0],
       description: '',
