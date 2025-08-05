@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Header } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { ArrowLeft, Save, User, Phone, Mail, Home, Calendar, AlertCircle, Calculator, Settings, DollarSign } from 'lucide-react';
-import RutInput from '@/components/payroll/RutInput';
+import RutInputFixed from '@/components/payroll/RutInputFixed';
 
 interface EmployeeFormData {
   // Información Personal
@@ -148,8 +148,8 @@ export default function NewEmployeePage() {
     try {
       // Preparar datos para la API
       const apiData = {
-        // Company info (demo values)
-        company_id: '550e8400-e29b-41d4-a716-446655440001',
+        // Company info (valores correctos de la base de datos)
+        company_id: '8033ee69-b420-4d91-ba0e-482f46cd6fce',
         created_by: '550e8400-e29b-41d4-a716-446655440000',
         
         // Employee data
@@ -293,7 +293,7 @@ export default function NewEmployeePage() {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         RUT *
                       </label>
-                      <RutInput
+                      <RutInputFixed
                         value={formData.rut}
                         onChange={(value) => setFormData(prev => ({ ...prev, rut: value }))}
                         onValidChange={setIsRutValid}
