@@ -21,11 +21,56 @@ import { Header } from '@/components/layout';
 import { FixedAsset, FixedAssetReport } from '@/types';
 import AddFixedAssetForm from '@/components/fixed-assets/AddFixedAssetForm';
 import EditFixedAssetForm from '@/components/fixed-assets/EditFixedAssetForm';
+import { useOptimisticAssets } from '@/hooks/useOptimisticAssets';
+import { useRealtimeAssets } from '@/hooks/useRealtimeAssets';
+import { useDepreciationWorker } from '@/hooks/useDepreciationWorker';
 
 interface FixedAssetsPageProps {}
 
 export default function FixedAssetsPage({}: FixedAssetsPageProps) {
-  const [assets, setAssets] = useState<FixedAsset[]>([]);
+  const { 
+    assets, 
+    loading: assetsLoading, 
+    createAssetOptimistic,
+    updateAssetOptimistic,
+    deleteAssetOptimistic,
+    refreshAssets,
+    setAssets
+  } = useOptimisticAssets();
+
+  // Web Worker para cálculos pesados
+  const { 
+    isWorkerReady, 
+    workerError, 
+    calculateAssetsReport: calculateReportWorker,
+    calculateSingleDepreciation
+  } = useDepreciationWorker();
+
+  // Real-time subscriptions para sincronización automática
+  const { isConnected, connectionError, lastUpdate } = useRealtimeAssets(
+    // onAssetInserted - cuando otro usuario crea un activo
+    (newAsset) => {
+      console.log('🔄 Sincronizando nuevo activo desde otra sesión:', newAsset.name);
+      setAssets(prev => {
+        // Evitar duplicados
+        if (prev.find(a => a.id === newAsset.id)) return prev;
+        return [newAsset, ...prev];
+      });
+    },
+    // onAssetUpdated - cuando otro usuario modifica un activo
+    (updatedAsset) => {
+      console.log('🔄 Sincronizando activo modificado desde otra sesión:', updatedAsset.name);
+      setAssets(prev => prev.map(asset => 
+        asset.id === updatedAsset.id ? updatedAsset : asset
+      ));
+    },
+    // onAssetDeleted - cuando otro usuario elimina un activo
+    (deletedAssetId) => {
+      console.log('🔄 Sincronizando activo eliminado desde otra sesión:', deletedAssetId);
+      setAssets(prev => prev.filter(asset => asset.id !== deletedAssetId));
+    }
+  );
+  
   const [report, setReport] = useState<FixedAssetReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,32 +79,39 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
   const [showEditForm, setShowEditForm] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<FixedAsset | null>(null);
 
-  // Cargar datos iniciales
+  // Cargar datos iniciales con Web Worker
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // Cargar activos fijos
-      const assetsParams = new URLSearchParams();
-      if (selectedStatus !== 'all') assetsParams.append('status', selectedStatus);
+      // Refrescar activos usando optimistic hook
+      await refreshAssets();
       
-      // IMPORTANTE: El reporte siempre debe mostrar TODOS los activos,
-      // independientemente del filtro aplicado en la vista
-      const [assetsRes, reportRes] = await Promise.all([
-        fetch(`/api/fixed-assets?${assetsParams.toString()}`),
-        fetch('/api/fixed-assets/reports?type=summary') // Sin filtros para el reporte
-      ]);
-
-      if (assetsRes.ok) {
-        const assetsData = await assetsRes.json();
-        setAssets(assetsData.assets || []);
-      }
-
-      if (reportRes.ok) {
-        const reportData = await reportRes.json();
-        console.log('Report data received:', reportData);
-        setReport(reportData.report || null);
+      // Si hay activos y Worker está disponible, calcular reporte con Worker
+      if (assets.length > 0 && isWorkerReady) {
+        console.log('🧮 Calculando reporte con Web Worker...');
+        try {
+          const workerReport = await calculateReportWorker(assets);
+          setReport(workerReport);
+          console.log('✅ Reporte calculado con Web Worker exitosamente');
+        } catch (workerError) {
+          console.warn('Worker falló, usando API tradicional:', workerError);
+          // Fallback a API tradicional
+          const reportRes = await fetch('/api/fixed-assets/reports?type=summary');
+          if (reportRes.ok) {
+            const reportData = await reportRes.json();
+            setReport(reportData.report || null);
+          }
+        }
       } else {
-        console.error('Failed to load report:', reportRes.status);
+        // Cargar reporte usando API tradicional
+        const reportRes = await fetch('/api/fixed-assets/reports?type=summary');
+        if (reportRes.ok) {
+          const reportData = await reportRes.json();
+          console.log('Report data received from API:', reportData);
+          setReport(reportData.report || null);
+        } else {
+          console.error('Failed to load report:', reportRes.status);
+        }
       }
 
     } catch (error) {
@@ -67,38 +119,26 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
     } finally {
       setLoading(false);
     }
-  }, [selectedStatus]);
+  }, [refreshAssets, assets, isWorkerReady, calculateReportWorker]);
 
-  // Manejar éxito en creación de activo
-  const handleAssetCreated = async () => {
-    console.log('🔄 Actualizando datos tras crear activo...');
-    
-    // Demora más larga para consistencia de base de datos
-    await new Promise(resolve => setTimeout(resolve, 1200));
-    
-    // Force refresh - recargar datos dos veces para garantizar actualización
-    await fetchData();
-    await new Promise(resolve => setTimeout(resolve, 300));
-    await fetchData();
-    
-    console.log('✅ Activo creado y datos completamente actualizados');
+  // Manejar éxito en creación de activo (optimistic ya se encarga)
+  const handleAssetCreated = () => {
+    console.log('✅ Activo creado con optimistic update');
+    // Solo refrescar reporte después de un momento
+    setTimeout(() => {
+      fetchData(); // Solo para actualizar el reporte
+    }, 1000);
   };
 
-  // Manejar éxito en edición de activo
-  const handleAssetUpdated = async () => {
-    console.log('🔄 Actualizando datos tras editar activo...');
-    
-    // Demora para consistencia de base de datos
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Force refresh con doble carga
-    await fetchData();
-    await new Promise(resolve => setTimeout(resolve, 200));
-    await fetchData();
-    
+  // Manejar éxito en edición de activo (optimistic ya se encarga)
+  const handleAssetUpdated = () => {
+    console.log('✅ Activo actualizado con optimistic update');
     setSelectedAsset(null);
     setShowEditForm(false);
-    console.log('✅ Activo editado y datos completamente actualizados');
+    // Solo refrescar reporte después de un momento
+    setTimeout(() => {
+      fetchData(); // Solo para actualizar el reporte
+    }, 800);
   };
 
   // Abrir modal de edición
@@ -151,8 +191,42 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
     return new Date(dateString).toLocaleDateString('es-CL');
   };
 
-  // Calcular valor libro actual (aproximado)
-  const calculateBookValue = (asset: FixedAsset) => {
+  // Calcular valor libro usando Web Worker (o fallback local)
+  const calculateBookValue = async (asset: FixedAsset): Promise<number> => {
+    try {
+      if (isWorkerReady) {
+        const calc = await calculateSingleDepreciation(asset);
+        return calc.bookValue;
+      } else {
+        // Fallback local
+        const monthsSinceDepreciation = Math.max(0, Math.floor(
+          (new Date().getTime() - new Date(asset.start_depreciation_date).getTime()) / (1000 * 60 * 60 * 24 * 30)
+        ));
+        
+        const depreciableValue = asset.purchase_value - (asset.residual_value || 0);
+        const totalMonths = asset.useful_life_years * 12;
+        const monthlyDepreciation = depreciableValue / totalMonths;
+        
+        const accumulatedDepreciation = Math.min(
+          monthsSinceDepreciation * monthlyDepreciation,
+          depreciableValue
+        );
+        
+        const bookValue = Math.max(
+          asset.purchase_value - accumulatedDepreciation, 
+          asset.residual_value || 0
+        );
+        
+        return bookValue;
+      }
+    } catch (error) {
+      console.error('Error calculating book value for asset:', asset.name, error);
+      return asset.purchase_value;
+    }
+  };
+
+  // Calcular valor libro síncrono (para compatibilidad inmediata)
+  const calculateBookValueSync = (asset: FixedAsset) => {
     try {
       const monthsSinceDepreciation = Math.max(0, Math.floor(
         (new Date().getTime() - new Date(asset.start_depreciation_date).getTime()) / (1000 * 60 * 60 * 24 * 30)
@@ -210,6 +284,37 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
             <div className="hidden md:flex items-center space-x-2 px-3 py-1 bg-gradient-to-r from-orange-100 to-red-100 rounded-full text-xs font-medium text-orange-800">
               <Package className="w-3 h-3" />
               <span>CRUD Completo</span>
+            </div>
+            <div className={`hidden lg:flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium ${
+              isConnected 
+                ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-800' 
+                : 'bg-gradient-to-r from-gray-100 to-slate-100 text-gray-600'
+            }`}>
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
+              <span>{isConnected ? 'Tiempo Real' : 'Desconectado'}</span>
+            </div>
+            <div className={`hidden xl:flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium ${
+              isWorkerReady 
+                ? 'bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800' 
+                : workerError
+                ? 'bg-gradient-to-r from-red-100 to-orange-100 text-red-800'
+                : 'bg-gradient-to-r from-gray-100 to-slate-100 text-gray-600'
+            }`}>
+              <div className={`w-2 h-2 rounded-full ${
+                isWorkerReady 
+                  ? 'bg-blue-500 animate-pulse' 
+                  : workerError 
+                  ? 'bg-red-500'
+                  : 'bg-gray-400'
+              }`}></div>
+              <span>
+                {isWorkerReady 
+                  ? '⚡ Worker' 
+                  : workerError 
+                  ? '❌ Worker' 
+                  : '⏳ Worker'
+                }
+              </span>
             </div>
             <Button
               variant="outline"
@@ -450,10 +555,16 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-100">
                       {filteredAssets.map((asset) => {
-                        const bookValue = calculateBookValue(asset);
+                        const bookValue = calculateBookValueSync(asset);
                         
                         return (
-                          <tr key={asset.id} className="hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 transition-all duration-300">
+                          <tr key={asset.id} className={`hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 transition-all duration-300 ${
+                            (asset as any).isOptimistic 
+              ? (asset as any).isReverting 
+                ? 'bg-red-50 opacity-60 animate-pulse' 
+                : 'bg-blue-50 opacity-90'
+              : ''
+                          }`}>
                             <td className="px-6 py-5 whitespace-nowrap">
                               <div className="flex items-center space-x-3">
                                 <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -522,33 +633,19 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                                   size="sm"
                                   leftIcon={<Trash2 className="w-4 h-4" />}
                                   className="border-red-200 hover:bg-red-50 hover:border-red-300"
-                                  onClick={async () => {
+                                  onClick={() => {
                                     if (confirm(`¿Estás seguro de eliminar el activo "${asset.name}"?`)) {
-                                      try {
-                                        const response = await fetch(`/api/fixed-assets/${asset.id}`, {
-                                          method: 'DELETE'
-                                        });
-                                        
-                                        if (response.ok) {
-                                          console.log('🔄 Actualizando datos tras eliminar activo...');
-                                          
-                                          // Demora para consistencia de BD
-                                          await new Promise(resolve => setTimeout(resolve, 800));
-                                          
-                                          // Double refresh para garantizar actualización
-                                          await fetchData();
-                                          await new Promise(resolve => setTimeout(resolve, 200));
-                                          await fetchData();
-                                          
-                                          console.log('✅ Activo eliminado y datos completamente actualizados');
-                                        } else {
-                                          const errorData = await response.json();
-                                          alert(errorData.error || 'Error al eliminar activo');
+                                      deleteAssetOptimistic(
+                                        asset.id,
+                                        () => {
+                                          console.log('✅ Activo eliminado con optimistic update');
+                                          // Refrescar reporte después de eliminar
+                                          setTimeout(() => fetchData(), 1000);
+                                        },
+                                        (error) => {
+                                          alert(error || 'Error al eliminar activo');
                                         }
-                                      } catch (error) {
-                                        console.error('Error deleting asset:', error);
-                                        alert('Error al eliminar activo');
-                                      }
+                                      );
                                     }
                                   }}
                                 >
@@ -603,7 +700,7 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                           </span>
                         </div>
                         <p className="text-sm font-medium text-gray-700">
-                          Valor libro: {formatCurrency(calculateBookValue(asset))}
+                          Valor libro: {formatCurrency(calculateBookValueSync(asset))}
                         </p>
                       </div>
                     </div>
@@ -642,6 +739,7 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
         isOpen={showAddForm}
         onClose={() => setShowAddForm(false)}
         onSuccess={handleAssetCreated}
+        createAssetOptimistic={createAssetOptimistic}
       />
 
       {/* Modal Editar Activo */}

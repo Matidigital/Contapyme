@@ -4,16 +4,18 @@ import { useState, useEffect } from 'react';
 import { X, Save, Package, Calendar, DollarSign, Settings } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { CreateFixedAssetData, Account } from '@/types';
+import { useChartOfAccountsCache } from '@/hooks/useChartOfAccountsCache';
 
 interface AddFixedAssetFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  createAssetOptimistic?: (data: CreateFixedAssetData, onSuccess?: () => void, onError?: (error: string) => void) => void;
 }
 
-export default function AddFixedAssetForm({ isOpen, onClose, onSuccess }: AddFixedAssetFormProps) {
+export default function AddFixedAssetForm({ isOpen, onClose, onSuccess, createAssetOptimistic }: AddFixedAssetFormProps) {
   const [loading, setLoading] = useState(false);
-  const [accounts, setAccounts] = useState<Account[]>([]);
+  const { accounts, loading: accountsLoading, loadAccounts } = useChartOfAccountsCache();
   
   const [formData, setFormData] = useState<CreateFixedAssetData>({
     name: '',
@@ -36,69 +38,15 @@ export default function AddFixedAssetForm({ isOpen, onClose, onSuccess }: AddFix
 
   const [errors, setErrors] = useState<Partial<CreateFixedAssetData>>({});
 
-  // Cargar cuentas al abrir el modal
+  // Cargar cuentas imputables al abrir el modal
   useEffect(() => {
-    if (isOpen) {
-      loadAccounts();
-    }
-  }, [isOpen]);
-
-
-  const loadAccounts = async () => {
-    try {
-      console.log('Loading accounts from API...');
-      
-      // Cargar cuentas imputables (nivel detalle) para activos fijos
-      const response = await fetch('/api/chart-of-accounts?level=Imputable');
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Accounts loaded:', data);
-        
-        // Convertir formato de respuesta a formato Account
-        const accountsData = data.accounts.map((acc: any) => ({
-          id: acc.code,
-          code: acc.code,
-          name: acc.name,
-          level: acc.level_type === 'Imputable' ? 4 : 3,
-          account_type: acc.account_type.toLowerCase(),
-          is_detail: acc.level_type === 'Imputable',
-          is_active: acc.is_active
-        }));
-        
-        console.log('Accounts loaded and formatted:', accountsData);
-        setAccounts(accountsData);
-      } else {
-        console.error('Failed to load accounts, attempting fallback...');
-        // Intentar cargar plan básico
-        try {
-          const fallbackResponse = await fetch('/api/chart-of-accounts/initialize', {
-            method: 'POST'
-          });
-          
-          if (fallbackResponse.ok) {
-            console.log('✅ Plan básico inicializado, reintentando carga...');
-            setTimeout(() => loadAccounts(), 1000); // Reintentar después de crear
-            return;
-          }
-        } catch (error) {
-          console.error('Error inicializando plan básico:', error);
-        }
-        
-        // Si todo falla, usar fallback mínimo
-        const fallbackAccounts: Account[] = [
-          { id: '1.2.1.001', code: '1.2.1.001', name: 'Equipos de Computación', level: 4, account_type: 'activo', is_detail: true, is_active: true },
-          { id: '1.2.1.002', code: '1.2.1.002', name: 'Muebles y Enseres', level: 4, account_type: 'activo', is_detail: true, is_active: true },
-          { id: '1.2.1.003', code: '1.2.1.003', name: 'Equipos de Oficina', level: 4, account_type: 'activo', is_detail: true, is_active: true }
-        ];
-        setAccounts(fallbackAccounts);
+    if (isOpen && !accountsLoading) {
+      // Si no hay cuentas cargadas, cargar con filtro para activos fijos
+      if (accounts.length === 0) {
+        loadAccounts({ level: 'Imputable' });
       }
-    } catch (error) {
-      console.error('Error loading accounts:', error);
-      // Fallback en caso de error
-      setAccounts([]);
     }
-  };
+  }, [isOpen, accountsLoading, accounts.length]);
 
   // Auto-completar cuentas relacionadas basado en la cuenta de activo seleccionada
   const autoCompleteRelatedAccounts = (assetAccountCode: string) => {
@@ -221,52 +169,76 @@ export default function AddFixedAssetForm({ isOpen, onClose, onSuccess }: AddFix
     }
 
     setLoading(true);
-    try {
-      const response = await fetch('/api/fixed-assets', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log('Activo creado:', result);
-        
-        // Resetear formulario
-        setFormData({
-          name: '',
-          description: '',
-          category: 'Activo Fijo',
-          purchase_value: 0,
-          residual_value: 0,
-          purchase_date: new Date().toISOString().split('T')[0],
-          start_depreciation_date: new Date().toISOString().split('T')[0],
-          useful_life_years: 1,
-          asset_account_code: '',
-          depreciation_account_code: '',
-          expense_account_code: '',
-          serial_number: '',
-          brand: '',
-          model: '',
-          location: '',
-          responsible_person: ''
+    // Usar optimistic updates si está disponible
+    if (createAssetOptimistic) {
+      createAssetOptimistic(
+        formData,
+        () => {
+          // Éxito - resetear formulario
+          resetForm();
+          onSuccess();
+          onClose();
+          setLoading(false);
+        },
+        (error) => {
+          // Error - mostrar mensaje
+          alert(error || 'Error al crear activo fijo');
+          setLoading(false);
+        }
+      );
+    } else {
+      // Fallback a método tradicional
+      try {
+        const response = await fetch('/api/fixed-assets', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData),
         });
-        setErrors({});
-        
-        onSuccess();
-        onClose();
-      } else {
-        const errorData = await response.json();
-        alert(errorData.error || 'Error al crear activo fijo');
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log('Activo creado:', result);
+          
+          resetForm();
+          onSuccess();
+          onClose();
+        } else {
+          const errorData = await response.json();
+          alert(errorData.error || 'Error al crear activo fijo');
+        }
+      } catch (error) {
+        console.error('Error creating fixed asset:', error);
+        alert('Error al crear activo fijo');
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error creating fixed asset:', error);
-      alert('Error al crear activo fijo');
-    } finally {
-      setLoading(false);
     }
+  };
+
+  // Función para resetear formulario
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      description: '',
+      category: 'Activo Fijo',
+      purchase_value: 0,
+      residual_value: 0,
+      purchase_date: new Date().toISOString().split('T')[0],
+      start_depreciation_date: new Date().toISOString().split('T')[0],
+      useful_life_years: 1,
+      asset_account_code: '',
+      depreciation_account_code: '',
+      expense_account_code: '',
+      serial_number: '',
+      brand: '',
+      model: '',
+      location: '',
+      responsible_person: ''
+    });
+    setErrors({});
   };
 
   const formatCurrency = (amount: number) => {
