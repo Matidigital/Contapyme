@@ -6,6 +6,7 @@ import { Header } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { Calculator, Users, FileText, AlertCircle, CheckCircle, Download, Eye } from 'lucide-react';
 import { PayrollCalculator } from '@/lib/payrollCalculator';
+import { LiquidationService } from '@/lib/liquidationService';
 
 interface Employee {
   id: string;
@@ -107,48 +108,41 @@ export default function GenerateLiquidationPage() {
     setLiquidationResult(null);
 
     try {
-      const additional_income = {
-        bonuses: formData.bonuses,
-        commissions: formData.commissions,
-        gratification: formData.gratification,
-        overtime_amount: formData.overtime_amount,
-        food_allowance: formData.food_allowance,
-        transport_allowance: formData.transport_allowance
-      };
-
-      const additional_deductions = {
-        loan_deductions: formData.loan_deductions,
-        advance_payments: formData.advance_payments,
-        apv_amount: formData.apv_amount,
-        other_deductions: formData.other_deductions
-      };
-
-      const requestBody = {
+      // Usar servicio frontend como alternativa a API
+      const liquidationService = new LiquidationService(COMPANY_ID);
+      
+      const requestData = {
         employee_id: selectedEmployee,
         period_year: formData.period_year,
         period_month: formData.period_month,
         days_worked: formData.days_worked,
         worked_hours: formData.worked_hours,
         overtime_hours: formData.overtime_hours,
-        additional_income,
-        additional_deductions,
+        additional_income: {
+          bonuses: formData.bonuses,
+          commissions: formData.commissions,
+          gratification: formData.gratification,
+          overtime_amount: formData.overtime_amount,
+          food_allowance: formData.food_allowance,
+          transport_allowance: formData.transport_allowance
+        },
+        additional_deductions: {
+          loan_deductions: formData.loan_deductions,
+          advance_payments: formData.advance_payments,
+          apv_amount: formData.apv_amount,
+          other_deductions: formData.other_deductions
+        },
         save_liquidation: formData.save_liquidation
       };
 
-      const response = await fetch(`/api/payroll/liquidations/calculate?company_id=${COMPANY_ID}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
+      console.log('🔄 Calculando con servicio frontend...');
+      const result = await liquidationService.calculateLiquidation(requestData);
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        setLiquidationResult(data.data.liquidation);
+      if (result.success && result.data) {
+        console.log('✅ Liquidación calculada exitosamente');
+        setLiquidationResult(result.data.liquidation);
       } else {
-        setError(data.error || 'Error al calcular liquidación');
+        setError(result.error || 'Error al calcular liquidación');
       }
     } catch (err) {
       setError('Error de conexión');
