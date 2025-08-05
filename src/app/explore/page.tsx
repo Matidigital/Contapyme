@@ -18,6 +18,7 @@ export default function ExplorePage() {
         title="Explorar Funcionalidades"
         subtitle="Selecciona el módulo que deseas explorar"
         showBackButton
+        variant="premium"
       />
 
       {/* Main Content */}

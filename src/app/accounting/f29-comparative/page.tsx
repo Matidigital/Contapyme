@@ -2,11 +2,13 @@
 
 // ==========================================
 // PÁGINA DE ANÁLISIS COMPARATIVO F29
-// Upload múltiple + Dashboard temporal
+// Versión Modernizada - Eliminadas redundancias
 // ==========================================
 
 import { useState, useCallback, useRef } from 'react';
-import { FileText, Upload, TrendingUp, AlertCircle, CheckCircle, X, BarChart3 } from 'lucide-react';
+import { Header } from '@/components/layout';
+import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
+import { FileText, Upload, TrendingUp, AlertCircle, CheckCircle, X, BarChart3, Zap, Brain } from 'lucide-react';
 
 interface UploadResult {
   file_name: string;
@@ -50,7 +52,6 @@ interface AnalysisData {
 export default function F29ComparativePage() {
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const [results, setResults] = useState<UploadResult[]>([]);
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -80,7 +81,7 @@ export default function F29ComparativePage() {
     );
     
     if (droppedFiles.length > 0) {
-      setFiles(prev => [...prev, ...droppedFiles]);
+      setFiles(prev => [...prev, ...droppedFiles].slice(0, 24)); // Máximo 24
     }
   }, []);
 
@@ -90,7 +91,7 @@ export default function F29ComparativePage() {
     );
     
     if (selectedFiles.length > 0) {
-      setFiles(prev => [...prev, ...selectedFiles]);
+      setFiles(prev => [...prev, ...selectedFiles].slice(0, 24)); // Máximo 24
     }
   };
 
@@ -111,8 +112,6 @@ export default function F29ComparativePage() {
       formData.append('company_id', demoCompanyId);
       formData.append('user_id', demoUserId);
 
-      console.log('🚀 Iniciando upload de', files.length, 'archivos...');
-
       const response = await fetch('/api/f29/batch-upload', {
         method: 'POST',
         body: formData,
@@ -127,7 +126,6 @@ export default function F29ComparativePage() {
       if (data.success) {
         setResults(data.results || []);
         setAnalysis(data.analysis || null);
-        console.log('✅ Upload completado:', data.summary);
       } else {
         throw new Error(data.error || 'Error desconocido');
       }
@@ -146,8 +144,6 @@ export default function F29ComparativePage() {
     setAnalysis(null);
 
     try {
-      console.log('🎭 Generando datos de demostración...');
-
       const response = await fetch('/api/f29/demo-data', {
         method: 'POST',
       });
@@ -159,9 +155,7 @@ export default function F29ComparativePage() {
       const data = await response.json();
       
       if (data.success) {
-        console.log('✅ Datos demo generados:', data.summary);
-        
-        // Simular resultados de upload para mostrar en la UI
+        // Simular resultados para mostrar en la UI
         const demoResults = Array.from({ length: 12 }, (_, i) => ({
           file_name: `F29_${['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][i]}_2024.pdf`,
           success: true,
@@ -195,8 +189,6 @@ export default function F29ComparativePage() {
         };
 
         setAnalysis(demoAnalysis);
-
-        alert('🎉 ¡Datos de demostración generados! Ahora puedes ver el análisis comparativo completo.');
       } else {
         throw new Error(data.error || 'Error generando datos demo');
       }
@@ -229,357 +221,361 @@ export default function F29ComparativePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-6xl mx-auto px-4">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            📊 Análisis Comparativo F29
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Animated Background Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-400 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-blob" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-400 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-blob animation-delay-2000" />
+        <div className="absolute top-40 left-40 w-80 h-80 bg-cyan-400 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-blob animation-delay-4000" />
+      </div>
+      
+      <Header 
+        title="Análisis Comparativo F29"
+        subtitle="Único sistema en Chile para comparar múltiples períodos F29 automáticamente"
+        showBackButton={true}
+        backHref="/accounting"
+        variant="premium"
+        actions={
+          <div className="flex items-center space-x-3">
+            <div className="hidden md:flex items-center space-x-2 px-3 py-1 bg-gradient-to-r from-purple-100 to-blue-100 rounded-full text-xs font-medium text-purple-800">
+              <Brain className="w-3 h-3" />
+              <span>Único en Chile</span>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => window.open('/accounting/f29-analysis', '_blank')}
+              className="border-blue-200 hover:bg-blue-50 hover:border-blue-300"
+            >
+              <FileText className="w-4 h-4 mr-1" />
+              Análisis Individual
+            </Button>
+          </div>
+        }
+      />
+
+      <div className="relative z-10 max-w-6xl mx-auto py-8 px-4 space-y-8">
+        {/* Hero Section */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-100 to-blue-100 text-purple-800 rounded-full text-sm font-medium mb-6">
+            <span className="mr-2">🏆</span>
+            Funcionalidad Única en Chile • Hasta 24 Períodos • IA Avanzada
+          </div>
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 leading-tight">
+            Ve 2 años de tu negocio
+            <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent"> en un vistazo</span>
           </h1>
-          <p className="text-gray-600">
-            Sube múltiples formularios F29 y obtén insights automáticos de tu evolución temporal
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Sube múltiples formularios F29 y obtén insights estratégicos, tendencias estacionales y proyecciones de crecimiento automáticamente.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Panel de Upload */}
-          <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                <Upload className="mr-2 h-5 w-5" />
-                Upload Múltiple de F29
-              </h2>
-
-              {/* Drag & Drop Zone */}
+        {/* Upload Section */}
+        <Card className="bg-white/90 backdrop-blur-sm border-2 border-purple-100 hover:border-purple-200 transition-colors">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl flex items-center justify-center">
+                <Upload className="w-5 h-5 text-white" />
+              </div>
+              <span>Cargar Múltiples F29</span>
+            </CardTitle>
+            <CardDescription>
+              Arrastra hasta 24 formularios F29 para generar análisis comparativo completo
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {files.length === 0 ? (
               <div
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                  dragActive
-                    ? 'border-blue-400 bg-blue-50'
-                    : 'border-gray-300 hover:border-gray-400'
+                className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-300 ${
+                  dragActive 
+                    ? 'border-purple-400 bg-gradient-to-br from-purple-50 to-blue-50 scale-[1.02]' 
+                    : 'border-gray-300 hover:border-purple-400 hover:bg-gradient-to-br hover:from-purple-50 hover:to-blue-50'
                 }`}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
               >
-                <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <p className="text-lg font-medium text-gray-900 mb-2">
-                  Arrastra tus formularios F29 aquí
+                <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl mx-auto mb-6 flex items-center justify-center transform hover:scale-110 transition-transform duration-300">
+                  <BarChart3 className="w-10 h-10 text-white" />
+                </div>
+                <h4 className="text-xl font-bold text-gray-900 mb-3">
+                  Arrastra múltiples F29 aquí
+                </h4>
+                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                  o selecciona archivos. Primer sistema en Chile para análisis comparativo automático.
                 </p>
-                <p className="text-gray-500 mb-4">
-                  O haz clic para seleccionar archivos PDF
-                </p>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors"
-                  disabled={uploading}
-                >
-                  Seleccionar Archivos
-                </button>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                  <Button 
+                    variant="primary"
+                    size="lg"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 px-8 py-3"
+                  >
+                    <FileText className="w-5 h-5 mr-2" />
+                    Seleccionar Archivos F29
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    size="lg"
+                    onClick={handleGenerateDemoData}
+                    className="border-orange-200 hover:bg-orange-50 hover:border-orange-300 px-8 py-3"
+                  >
+                    <Zap className="w-5 h-5 mr-2" />
+                    Ver Demo con Datos Reales
+                  </Button>
+                </div>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  multiple
                   accept=".pdf"
+                  multiple
                   onChange={handleFileSelect}
                   className="hidden"
                 />
-              </div>
-
-              {/* Lista de archivos */}
-              {files.length > 0 && (
-                <div className="mt-6">
-                  <h3 className="font-medium text-gray-900 mb-3">
-                    Archivos seleccionados ({files.length})
-                  </h3>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {files.map((file, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between bg-gray-50 p-3 rounded-md"
-                      >
-                        <div className="flex items-center">
-                          <FileText className="h-4 w-4 text-red-500 mr-2" />
-                          <span className="text-sm text-gray-900">{file.name}</span>
-                          <span className="text-xs text-gray-500 ml-2">
-                            ({Math.round(file.size / 1024)}KB)
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => removeFile(index)}
-                          className="text-gray-400 hover:text-red-500 transition-colors"
-                          disabled={uploading}
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
+                <div className="mt-6 flex items-center justify-center space-x-6 text-sm text-gray-500">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span>Hasta 24 archivos</span>
                   </div>
-
-                  <button
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span>Solo PDFs</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span>Único en Chile</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-semibold text-gray-900">
+                    {files.length} archivo{files.length !== 1 ? 's' : ''} seleccionado{files.length !== 1 ? 's' : ''}
+                  </h4>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-purple-200 hover:bg-purple-50"
+                  >
+                    <Upload className="w-4 h-4 mr-1" />
+                    Agregar Más
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf"
+                    multiple
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-60 overflow-y-auto">
+                  {files.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-200">
+                      <div className="flex items-center space-x-2 flex-1 min-w-0">
+                        <FileText className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                        <span className="text-sm font-medium text-gray-900 truncate">{file.name}</span>
+                      </div>
+                      <button
+                        onClick={() => removeFile(index)}
+                        className="text-gray-400 hover:text-red-600 flex-shrink-0 ml-2"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                  <Button
+                    variant="primary"
                     onClick={handleUpload}
+                    loading={uploading}
                     disabled={uploading || files.length === 0}
-                    className="w-full mt-4 bg-green-600 text-white py-3 px-6 rounded-md hover:bg-green-700 transition-colors disabled:bg-gray-400 font-medium"
+                    size="lg"
+                    className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
                   >
                     {uploading ? (
-                      <span className="flex items-center justify-center">
-                        <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                        Procesando {files.length} archivos...
-                      </span>
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        Procesando con IA...
+                      </>
                     ) : (
-                      `🚀 Procesar ${files.length} formularios F29`
+                      <>
+                        <BarChart3 className="w-5 h-5 mr-2" />
+                        Generar Análisis Comparativo
+                      </>
                     )}
-                  </button>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleGenerateDemoData}
+                    disabled={uploading}
+                    className="border-orange-200 hover:bg-orange-50 hover:border-orange-300"
+                  >
+                    <Zap className="w-4 h-4 mr-2" />
+                    Demo con Datos Reales
+                  </Button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-            {/* Resultados del Upload */}
-            {results.length > 0 && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  📋 Resultados del Procesamiento
-                </h3>
-                <div className="space-y-3">
-                  {results.map((result, index) => (
-                    <div
-                      key={index}
-                      className={`flex items-center justify-between p-3 rounded-md ${
-                        result.success ? 'bg-green-50 border-l-4 border-green-400' : 'bg-red-50 border-l-4 border-red-400'
-                      }`}
-                    >
-                      <div className="flex items-center">
+        {/* Results Section */}
+        {results.length > 0 && (
+          <Card className="bg-white/90 backdrop-blur-sm border-2 border-green-200">
+            <CardHeader className="bg-gradient-to-r from-green-50 to-blue-50">
+              <CardTitle className="flex items-center space-x-2">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+                <span>Procesamiento Completado</span>
+              </CardTitle>
+              <CardDescription>
+                {results.filter(r => r.success).length} de {results.length} archivos procesados exitosamente
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {results.map((result, index) => (
+                  <div
+                    key={index}
+                    className={`p-3 rounded-lg border-l-4 ${
+                      result.success 
+                        ? 'bg-green-50 border-green-400' 
+                        : 'bg-red-50 border-red-400'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {result.file_name}
+                        </p>
                         {result.success ? (
-                          <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                        ) : (
-                          <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
-                        )}
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">
-                            {result.file_name}
+                          <p className="text-xs text-green-600">
+                            {result.period ? formatPeriod(result.period) : 'Procesado'} 
+                            {result.confidence_score && ` • ${result.confidence_score}%`}
                           </p>
-                          {result.success ? (
-                            <p className="text-xs text-green-600">
-                              {result.period ? formatPeriod(result.period) : 'Procesado'} 
-                              {result.confidence_score && ` • Confianza: ${result.confidence_score}%`}
-                            </p>
-                          ) : (
-                            <p className="text-xs text-red-600">{result.error}</p>
-                          )}
-                        </div>
+                        ) : (
+                          <p className="text-xs text-red-600">{result.error}</p>
+                        )}
                       </div>
+                      {result.success ? (
+                        <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Analysis Results */}
+        {analysis && (
+          <Card className="bg-white/90 backdrop-blur-sm border-2 border-purple-200">
+            <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50">
+              <CardTitle className="flex items-center space-x-2">
+                <BarChart3 className="w-5 h-5 text-purple-600" />
+                <span>Análisis Comparativo Completo</span>
+              </CardTitle>
+              <CardDescription>
+                {analysis.periodos_analizados} períodos analizados • {analysis.rango_temporal.inicio.substring(0,4)} - {analysis.rango_temporal.fin.substring(0,4)}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Métricas Principales */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
+                  <h4 className="text-sm font-medium text-blue-700 mb-2">Ventas Totales</h4>
+                  <p className="text-3xl font-bold text-blue-900">
+                    {formatCurrency(analysis.metricas_clave.total_ventas)}
+                  </p>
+                  <p className="text-sm text-blue-600">Promedio mensual: {formatCurrency(analysis.metricas_clave.promedio_mensual)}</p>
+                </div>
+
+                <div className="bg-green-50 rounded-xl p-6 border border-green-200">
+                  <h4 className="text-sm font-medium text-green-700 mb-2">Crecimiento</h4>
+                  <p className="text-3xl font-bold text-green-900">
+                    +{analysis.metricas_clave.crecimiento_periodo}%
+                  </p>
+                  <p className="text-sm text-green-600">Durante el período analizado</p>
+                </div>
+
+                <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
+                  <h4 className="text-sm font-medium text-purple-700 mb-2">Mejor Mes</h4>
+                  <p className="text-2xl font-bold text-purple-900">
+                    {formatPeriod(analysis.metricas_clave.mejor_mes.period)}
+                  </p>
+                  <p className="text-sm text-purple-600">
+                    {formatCurrency(analysis.metricas_clave.mejor_mes.ventas)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Insights */}
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">💡 Insights Estratégicos</h3>
+                <div className="space-y-3">
+                  {analysis.insights_iniciales.map((insight, index) => (
+                    <div key={index} className="flex items-start space-x-3">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
+                      <p className="text-gray-700">{insight}</p>
                     </div>
                   ))}
                 </div>
               </div>
-            )}
-          </div>
 
-          {/* Panel de Análisis */}
-          <div className="space-y-6">
-            {analysis && !analysis.error ? (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                  <BarChart3 className="mr-2 h-5 w-5" />
-                  Análisis Comparativo
-                </h2>
-
-                {/* Validación Anual */}
-                {analysis.validacion_anual && (
-                  <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <h4 className="font-medium text-blue-900 mb-2">🔍 Validación Anual</h4>
-                    <div className="space-y-1 text-sm">
-                      <p className="text-blue-700">
-                        <span className="font-medium">RUT:</span> {analysis.validacion_anual.rut_validado}
-                      </p>
-                      {analysis.validacion_anual.tiene_año_completo ? (
-                        <p className="text-green-700 font-medium">
-                          ✅ Año {analysis.validacion_anual.año_analizado} completo (12 meses)
-                        </p>
-                      ) : (
-                        <p className="text-orange-700">
-                          ⚠️ No se encontró un año completo con 12 meses
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Métricas Anuales */}
-                {analysis.metricas_anuales && (
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                      <p className="text-sm text-green-600 font-medium">Ventas Netas Totales</p>
-                      <p className="text-xl font-bold text-green-900">
-                        {formatCurrency(analysis.metricas_anuales.total_ventas_anual)}
-                      </p>
-                    </div>
-                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                      <p className="text-sm text-blue-600 font-medium">Compras Netas Totales</p>
-                      <p className="text-xl font-bold text-blue-900">
-                        {formatCurrency(analysis.metricas_anuales.total_compras_netas_anual)}
-                      </p>
-                    </div>
-                    <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                      <p className="text-sm text-purple-600 font-medium">Margen Bruto Anual</p>
-                      <p className="text-xl font-bold text-purple-900">
-                        {analysis.metricas_anuales.margen_bruto_anual_porcentaje.toFixed(1)}%
-                      </p>
-                      <p className="text-sm text-purple-700">
-                        {formatCurrency(analysis.metricas_anuales.margen_bruto_anual_monto)}
-                      </p>
-                    </div>
-                    <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                      <p className="text-sm text-orange-600 font-medium">Períodos Analizados</p>
-                      <p className="text-xl font-bold text-orange-900">{analysis.periodos_analizados}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Métricas Mensuales */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="text-sm text-gray-600 font-medium">Promedio Ventas Mensual</p>
-                    <p className="text-lg font-bold text-gray-900">
-                      {formatCurrency(analysis.metricas_clave.promedio_mensual)}
-                    </p>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="text-sm text-gray-600 font-medium">Promedio Compras Mensual</p>
-                    <p className="text-lg font-bold text-gray-900">
-                      {formatCurrency(analysis.metricas_clave.promedio_compras_mensual || 0)}
-                    </p>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="text-sm text-gray-600 font-medium">Mejor Mes</p>
-                    <p className="text-sm font-bold text-gray-900">
-                      {formatPeriod(analysis.metricas_clave.mejor_mes.period)}
-                    </p>
-                    <p className="text-xs text-gray-700">
-                      {formatCurrency(analysis.metricas_clave.mejor_mes.ventas)}
-                    </p>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="text-sm text-gray-600 font-medium">Crecimiento</p>
-                    <p className="text-lg font-bold text-gray-900">
-                      {analysis.metricas_clave.crecimiento_periodo > 0 ? '+' : ''}
-                      {analysis.metricas_clave.crecimiento_periodo.toFixed(1)}%
-                    </p>
-                  </div>
-                </div>
-
-                {/* Rango Temporal */}
-                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                  <h4 className="font-medium text-gray-900 mb-2">📅 Período Analizado</h4>
-                  <p className="text-sm text-gray-600">
-                    Desde {formatPeriod(analysis.rango_temporal.inicio)} hasta {formatPeriod(analysis.rango_temporal.fin)}
-                  </p>
-                </div>
-
-                {/* Insights Automáticos */}
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-3">🧠 Insights Automáticos</h4>
-                  <div className="space-y-2">
-                    {analysis.insights_iniciales.map((insight, index) => (
-                      <div key={index} className="flex items-start">
-                        <TrendingUp className="h-4 w-4 text-blue-500 mr-2 mt-0.5 flex-shrink-0" />
-                        <p className="text-sm text-gray-700">{insight}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Call to Action */}
-                <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-sm text-blue-800 mb-2">
-                    🎯 <strong>¡Excelente!</strong> Ya tienes datos suficientes para análisis comparativo.
-                  </p>
-                  <p className="text-xs text-blue-600">
-                    Sube más formularios F29 para obtener insights aún más precisos y proyecciones avanzadas.
-                  </p>
-                </div>
-              </div>
-            ) : analysis?.error ? (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                  <AlertCircle className="mr-2 h-5 w-5 text-red-500" />
-                  Error en Análisis
-                </h2>
-                <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-                  <p className="text-red-800 font-medium mb-2">{analysis.error}</p>
-                  {analysis.ruts_encontrados && (
-                    <div className="mt-2">
-                      <p className="text-sm text-red-700">RUTs encontrados:</p>
-                      <ul className="list-disc list-inside text-sm text-red-600 mt-1">
-                        {analysis.ruts_encontrados.map((rut, idx) => (
-                          <li key={idx}>{rut}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-                <p className="text-sm text-gray-600 mt-4">
-                  Asegúrate de subir formularios F29 del mismo contribuyente.
-                </p>
-              </div>
-            ) : (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                  <BarChart3 className="mr-2 h-5 w-5" />
-                  Análisis Comparativo
-                </h2>
-                <div className="text-center py-12">
-                  <TrendingUp className="mx-auto h-16 w-16 text-gray-300 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    Sube múltiples F29 para análisis
-                  </h3>
-                  <p className="text-gray-500 max-w-sm mx-auto">
-                    Necesitas al menos 3 formularios F29 de diferentes períodos para generar un análisis comparativo
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Tips de Uso */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">💡 Tips de Uso</h3>
-              <div className="space-y-3 text-sm text-gray-600 mb-6">
-                <div className="flex items-start">
-                  <span className="text-blue-500 mr-2">•</span>
-                  <span>Sube F29 de al menos 6 meses para análisis de tendencias</span>
-                </div>
-                <div className="flex items-start">
-                  <span className="text-blue-500 mr-2">•</span>
-                  <span>Incluye formularios de diferentes estaciones para detectar patrones</span>
-                </div>
-                <div className="flex items-start">
-                  <span className="text-blue-500 mr-2">•</span>
-                  <span>PDFs de alta calidad dan mejores resultados de análisis</span>
-                </div>
-                <div className="flex items-start">
-                  <span className="text-blue-500 mr-2">•</span>
-                  <span>El sistema detecta automáticamente períodos y valida datos</span>
-                </div>
-              </div>
-
-              {/* Demo Data Button */}
-              <div className="border-t pt-4">
-                <button
-                  onClick={handleGenerateDemoData}
-                  className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 px-6 rounded-lg font-medium hover:from-purple-600 hover:to-pink-600 transition-all duration-200 flex items-center justify-center space-x-2"
-                  disabled={uploading}
+              {/* Action Buttons */}
+              <div className="mt-8 flex flex-col sm:flex-row gap-4">
+                <Button 
+                  variant="primary"
+                  className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                  onClick={() => window.open('/accounting/f29-analysis', '_blank')}
                 >
-                  <span>🎭</span>
-                  <span>Generar Datos de Demostración</span>
-                </button>
-                <p className="text-xs text-gray-500 mt-2 text-center">
-                  Crea 12 meses de datos F29 de ejemplo para probar el análisis
-                </p>
+                  <TrendingUp className="w-4 h-4 mr-2" />
+                  Ver Análisis Individual
+                </Button>
+                <Button 
+                  variant="outline"
+                  className="border-green-200 hover:bg-green-50 hover:border-green-300"
+                  onClick={() => window.location.href = '/accounting'}
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Volver a Contabilidad
+                </Button>
               </div>
-            </div>
-          </div>
-        </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
+
+      {/* Custom animations */}
+      <style jsx>{`
+        @keyframes blob {
+          0% { transform: translate(0px, 0px) scale(1); }
+          33% { transform: translate(30px, -50px) scale(1.1); }
+          66% { transform: translate(-20px, 20px) scale(0.9); }
+          100% { transform: translate(0px, 0px) scale(1); }
+        }
+        
+        .animate-blob {
+          animation: blob 7s infinite;
+        }
+        
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+      `}</style>
     </div>
   );
 }
