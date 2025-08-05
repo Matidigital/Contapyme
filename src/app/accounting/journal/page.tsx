@@ -791,8 +791,8 @@ export default function JournalPage() {
       reference: '',
       entry_type: 'manual' as 'manual' | 'f29' | 'fixed_asset',
       lines: [
-        { account_code: '', account_name: '', debit_amount: 0, credit_amount: 0, description: '' },
-        { account_code: '', account_name: '', debit_amount: 0, credit_amount: 0, description: '' }
+        { account_code: '', account_name: '', debit_amount: 0, credit_amount: 0, line_description: '', line_number: 1 },
+        { account_code: '', account_name: '', debit_amount: 0, credit_amount: 0, line_description: '', line_number: 2 }
       ]
     });
     const [fixedAssets, setFixedAssets] = useState<any[]>([]);
@@ -890,14 +890,16 @@ export default function JournalPage() {
                 account_name: 'Activos Fijos',
                 debit_amount: newAsset.purchase_value,
                 credit_amount: 0,
-                description: `Ingreso ${newAsset.name}`
+                line_description: `Ingreso ${newAsset.name}`,
+                line_number: 1
               },
               {
                 account_code: '11010001',
                 account_name: 'Caja y Bancos',
                 debit_amount: 0,
                 credit_amount: newAsset.purchase_value,
-                description: `Pago ${newAsset.name}`
+                line_description: `Pago ${newAsset.name}`,
+                line_number: 2
               }
             ]
           };
@@ -928,14 +930,16 @@ export default function JournalPage() {
             account_name: 'Gasto por Depreciación',
             debit_amount: monthlyDepreciation,
             credit_amount: 0,
-            description: `Depreciación ${asset.name}`
+            line_description: `Depreciación ${asset.name}`,
+            line_number: 1
           },
           {
             account_code: '13020001',
             account_name: 'Depreciación Acumulada',
             debit_amount: 0,
             credit_amount: monthlyDepreciation,
-            description: `Depreciación acumulada ${asset.name}`
+            line_description: `Depreciación acumulada ${asset.name}`,
+            line_number: 2
           }
         ]
       };
@@ -946,7 +950,14 @@ export default function JournalPage() {
     const addLine = () => {
       setEntryData(prev => ({
         ...prev,
-        lines: [...prev.lines, { account_code: '', account_name: '', debit_amount: 0, credit_amount: 0, description: '' }]
+        lines: [...prev.lines, { 
+          account_code: '', 
+          account_name: '', 
+          debit_amount: 0, 
+          credit_amount: 0, 
+          line_description: '', 
+          line_number: prev.lines.length + 1 
+        }]
       }));
     };
 
@@ -954,7 +965,9 @@ export default function JournalPage() {
       if (entryData.lines.length > 2) {
         setEntryData(prev => ({
           ...prev,
-          lines: prev.lines.filter((_, i) => i !== index)
+          lines: prev.lines
+            .filter((_, i) => i !== index)
+            .map((line, i) => ({ ...line, line_number: i + 1 }))
         }));
       }
     };
@@ -1208,8 +1221,8 @@ export default function JournalPage() {
                       <div className="col-span-2">
                         <input
                           type="text"
-                          value={line.description}
-                          onChange={(e) => updateLine(index, 'description', e.target.value)}
+                          value={line.line_description}
+                          onChange={(e) => updateLine(index, 'line_description', e.target.value)}
                           placeholder="Detalle"
                           className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
                         />
