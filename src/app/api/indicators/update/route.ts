@@ -19,7 +19,7 @@ async function fetchFromMindicador(indicator: string) {
 // Función para obtener datos de criptomonedas
 async function fetchCryptoData() {
   try {
-    const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd&include_24hr_change=true');
+    const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true');
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -47,8 +47,7 @@ export async function POST(request: NextRequest) {
       'ipc': 'ipc',
       'tpm': 'tpm',
       'tasa_desempleo': 'tasa_desempleo',
-      'bitcoin': 'crypto',
-      'ethereum': 'crypto'
+      'bitcoin': 'crypto'
     };
 
     for (const indicatorCode of indicators || Object.keys(indicatorMappings)) {
@@ -61,12 +60,6 @@ export async function POST(request: NextRequest) {
           const cryptoData = await fetchCryptoData();
           if (cryptoData && cryptoData.bitcoin) {
             value = cryptoData.bitcoin.usd;
-          }
-        } else if (indicatorCode === 'ethereum') {
-          // Obtener datos de criptomonedas
-          const cryptoData = await fetchCryptoData();
-          if (cryptoData && cryptoData.ethereum) {
-            value = cryptoData.ethereum.usd;
           }
         } else if (indicatorCode === 'sueldo_minimo') {
           // Sueldo mínimo se actualiza manualmente o desde otra fuente

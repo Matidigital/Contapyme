@@ -113,19 +113,6 @@ export const INDICATORS_CONFIG: Record<string, IndicatorConfig> = {
     sources: ['Coinbase', 'CoinMarketCap', 'CoinGecko'],
     lastVerified: '2025-08-04'
   },
-  ethereum: {
-    code: 'ethereum',
-    name: 'Ethereum',
-    baseValue: 3200, // Valor más actualizado agosto 2025
-    unit: 'USD',
-    category: 'crypto',
-    format_type: 'currency',
-    decimal_places: 2,
-    volatility: 'extreme',
-    updateFrequency: 2,
-    sources: ['Coinbase', 'CoinMarketCap', 'CoinGecko'],
-    lastVerified: '2025-08-04'
-  },
 
 
   // LABORALES

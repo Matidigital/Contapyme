@@ -68,7 +68,6 @@ export async function POST(request: NextRequest) {
       'dolar': 'dolar',
       'euro': 'euro',
       'bitcoin': 'bitcoin',
-      'ethereum': 'ethereum',
       'sueldo_minimo': 'sueldo_minimo'  // NO MINIMUM_WAGE
     };
 
@@ -87,7 +86,6 @@ INSTRUCCIONES CRÍTICAS:
 • Dólar (código: "dolar"): ~$950-$1000 CLP
 • Euro (código: "euro"): ~$1,050-$1,150 CLP
 • Bitcoin (código: "bitcoin"): ~$60,000-$70,000 USD
-• Ethereum (código: "ethereum"): ~$3,000-$3,500 USD
 • Sueldo Mínimo (código: "sueldo_minimo"): $529,000 CLP
 
 ⚠️ IMPORTANTE: NO uses códigos como "MINIMUM_WAGE", usa "sueldo_minimo"
@@ -249,7 +247,6 @@ RESPONDE SOLO JSON (sin explicaciones):
       'USD': 'dolar',
       'EUR': 'euro',
       'BTC': 'bitcoin',
-      'ETH': 'ethereum',
       'SUELDO_MIN': 'sueldo_minimo'
     };
 

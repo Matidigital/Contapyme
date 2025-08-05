@@ -72,8 +72,7 @@ INSERT INTO indicator_config (code, name, description, unit, category, api_endpo
 ('euro', 'Euro', 'Tipo de cambio EUR/CLP', 'CLP', 'currency', 'https://mindicador.cl/api/euro', 8, 2, 'currency'),
 
 -- Criptomonedas
-('bitcoin', 'Bitcoin', 'Valor Bitcoin en USD', 'USD', 'crypto', 'https://mindicador.cl/api/bitcoin', 9, 0, 'currency'),
-('ethereum', 'Ethereum', 'Valor Ethereum en USD', 'USD', 'crypto', '', 10, 2, 'currency')
+('bitcoin', 'Bitcoin', 'Valor Bitcoin en USD', 'USD', 'crypto', 'https://mindicador.cl/api/bitcoin', 9, 0, 'currency')
 
 ON CONFLICT (code) DO UPDATE SET
     name = EXCLUDED.name,

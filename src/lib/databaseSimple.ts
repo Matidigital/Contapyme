@@ -686,7 +686,6 @@ export async function ensureIndicatorConfig(): Promise<{ data: any; error: any }
       { code: 'EUR', name: 'Euro', unit: 'CLP', category: 'currency' },
       { code: 'SUELDO_MIN', name: 'Sueldo Mínimo', unit: 'CLP', category: 'labor' },
       { code: 'BTC', name: 'Bitcoin', unit: 'USD', category: 'crypto' },
-      { code: 'ETH', name: 'Ethereum', unit: 'USD', category: 'crypto' },
     ];
 
     for (const config of indicatorConfigs) {

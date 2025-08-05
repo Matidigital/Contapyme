@@ -178,20 +178,6 @@ async function tryGetRealData(): Promise<IndicatorsDashboard | null> {
         });
       }
 
-      if (data.ethereum) {
-        indicators.push({
-          code: 'ethereum',
-          name: 'Ethereum',
-          value: data.ethereum,
-          date: currentDate,
-          unit: 'USD',
-          category: 'crypto',
-          format_type: 'currency',
-          decimal_places: 2,
-          source: 'real_data',
-          last_updated: currentTime
-        });
-      }
     }
 
     // Procesar datos de web search fallback (valores verificados)
@@ -221,7 +207,6 @@ async function tryGetRealData(): Promise<IndicatorsDashboard | null> {
       addIfMissing('dolar', 'Dólar Observado', data.dolar, 'CLP', 'currency', 'currency', 2);
       addIfMissing('euro', 'Euro', data.euro, 'CLP', 'currency', 'currency', 2);
       addIfMissing('bitcoin', 'Bitcoin', data.bitcoin, 'USD', 'crypto', 'currency', 0);
-      addIfMissing('ethereum', 'Ethereum', data.ethereum, 'USD', 'crypto', 'currency', 2);
       addIfMissing('sueldo_minimo', 'Sueldo Mínimo', data.sueldo_minimo, 'CLP', 'labor', 'currency', 0);
     }
 
@@ -278,7 +263,7 @@ async function fetchCryptoSafe() {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     const response = await fetch(
-      'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd',
+      'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd',
       {
         signal: controller.signal,
         headers: {
@@ -297,8 +282,7 @@ async function fetchCryptoSafe() {
     const data = await response.json();
     
     return {
-      bitcoin: data.bitcoin?.usd || null,
-      ethereum: data.ethereum?.usd || null
+      bitcoin: data.bitcoin?.usd || null
     };
   } catch (error) {
     console.error('Crypto fetch failed:', error);
@@ -318,7 +302,6 @@ async function fetchWebSearchFallback() {
       dolar: 969.41,          // USD/CLP Investing.com ✅
       euro: 1123.11,          // EUR/CLP Investing.com actualizado ✅
       bitcoin: 113625,        // Bitcoin USD Coinbase ✅
-      ethereum: 3492.54,      // Ethereum USD (pendiente verificar)
       sueldo_minimo: 529000   // Sueldo mínimo oficial vigente Ley N°21.751 ✅
     };
 
@@ -334,7 +317,6 @@ async function fetchWebSearchFallback() {
       dolar: addDailyVariation(webSearchValues.dolar, 0.03),    // USD/CLP mercado actual
       euro: addDailyVariation(webSearchValues.euro, 0.03),      // EUR volátil
       bitcoin: Math.round(addDailyVariation(webSearchValues.bitcoin, 0.05)), // BTC alta volatilidad
-      ethereum: addDailyVariation(webSearchValues.ethereum, 0.06), // ETH alta volatilidad
       sueldo_minimo: webSearchValues.sueldo_minimo, // No varía diariamente
       date: currentDate,
       source: 'web_search_verified' // Identificar fuente
@@ -437,18 +419,6 @@ function getSmartSimulatedData(): IndicatorsDashboard {
       category: 'crypto',
       format_type: 'currency',
       decimal_places: 0,
-      source: 'smart_simulation',
-      last_updated: currentTime
-    },
-    {
-      code: 'ethereum',
-      name: 'Ethereum',
-      value: currentValues.ethereum,
-      date: currentDate,
-      unit: 'USD',
-      category: 'crypto',
-      format_type: 'currency',
-      decimal_places: 2,
       source: 'smart_simulation',
       last_updated: currentTime
     },
