@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import mockEmployeeStore from '@/lib/mockEmployeeStore';
+import fileEmployeeStore from '@/lib/fileEmployeeStore';
 
 // Inicializar cliente de Supabase
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     console.log('🔍 API empleados llamada para company_id:', companyId);
 
     // Usar el store en memoria para obtener empleados
-    const employees = mockEmployeeStore.getEmployeesByCompany(companyId);
+    const employees = fileEmployeeStore.getEmployeesByCompany(companyId);
     
     console.log('✅ Retornando empleados desde store:', employees.length);
 
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: employees,
       count: employees.length,
-      mode: 'mock_memory_store'
+      mode: 'file_persistent_store'
     });
   } catch (error) {
     console.error('Error en GET /api/payroll/employees:', error);
@@ -109,15 +109,15 @@ export async function POST(request: NextRequest) {
     };
     
     // Agregar al store
-    const savedEmployee = mockEmployeeStore.addEmployee(newEmployee);
+    const savedEmployee = fileEmployeeStore.addEmployee(newEmployee);
     
     console.log('✅ Empleado guardado en store:', savedEmployee.id);
     
     return NextResponse.json({
       success: true,
       data: savedEmployee,
-      message: 'Empleado creado exitosamente y guardado en memoria',
-      mode: 'mock_memory_store'
+      message: 'Empleado creado exitosamente y guardado permanentemente',
+      mode: 'file_persistent_store'
     }, { status: 201 });
     
     /* CÓDIGO ORIGINAL COMENTADO TEMPORALMENTE
@@ -329,7 +329,7 @@ export async function PATCH(request: NextRequest) {
     console.log('🔍 Actualizando empleado:', id, 'con datos:', updateData);
 
     // Actualizar en el store
-    const updatedEmployee = mockEmployeeStore.updateEmployee(company_id, id, updateData);
+    const updatedEmployee = fileEmployeeStore.updateEmployee(company_id, id, updateData);
 
     if (!updatedEmployee) {
       return NextResponse.json(
@@ -344,7 +344,7 @@ export async function PATCH(request: NextRequest) {
       success: true,
       data: updatedEmployee,
       message: 'Empleado actualizado exitosamente',
-      mode: 'mock_memory_store'
+      mode: 'file_persistent_store'
     });
   } catch (error) {
     console.error('Error en PATCH /api/payroll/employees:', error);
@@ -372,7 +372,7 @@ export async function DELETE(request: NextRequest) {
     console.log('🔍 Desactivando empleado:', id, 'de empresa:', companyId);
 
     // Desactivar en el store (soft delete)
-    const success = mockEmployeeStore.deleteEmployee(companyId, id);
+    const success = fileEmployeeStore.deleteEmployee(companyId, id);
 
     if (!success) {
       return NextResponse.json(
@@ -382,7 +382,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Obtener el empleado actualizado
-    const updatedEmployee = mockEmployeeStore.getEmployeeById(companyId, id);
+    const updatedEmployee = fileEmployeeStore.getEmployeeById(companyId, id);
 
     console.log('✅ Empleado desactivado en store:', id);
 
@@ -390,7 +390,7 @@ export async function DELETE(request: NextRequest) {
       success: true,
       data: updatedEmployee,
       message: 'Empleado desactivado exitosamente',
-      mode: 'mock_memory_store'
+      mode: 'file_persistent_store'
     });
   } catch (error) {
     console.error('Error en DELETE /api/payroll/employees:', error);

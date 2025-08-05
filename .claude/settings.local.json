@@ -37,7 +37,8 @@
       "WebFetch(domain:www.previred.com)",
       "Bash(start http://localhost:3000/payroll/liquidations/generate)",
       "Bash(del test-employees-api.js)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(docker:*)"
     ],
     "deny": []
   }
