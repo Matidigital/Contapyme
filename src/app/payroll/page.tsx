@@ -1,13 +1,74 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Header } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { Users, FileText, Clock, Calendar, BarChart3, Plus, ChevronRight } from 'lucide-react';
 
+interface PayrollStats {
+  totalEmployees: number;
+  activeContracts: number;
+  monthlyPayroll: number;
+  upcomingEvents: number;
+}
+
 export default function PayrollPage() {
   const [activeTab, setActiveTab] = useState('overview');
+  const [stats, setStats] = useState<PayrollStats>({
+    totalEmployees: 0,
+    activeContracts: 0,
+    monthlyPayroll: 0,
+    upcomingEvents: 0
+  });
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  const COMPANY_ID = '8033ee69-b420-4d91-ba0e-482f46cd6fce';
+
+  useEffect(() => {
+    if (activeTab === 'overview') {
+      fetchStats();
+    }
+  }, [activeTab]);
+
+  const fetchStats = async () => {
+    try {
+      setLoadingStats(true);
+      const response = await fetch(`/api/payroll/employees?company_id=${COMPANY_ID}`);
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        const employees = data.data || [];
+        const activeContracts = employees.reduce((count: number, emp: any) => {
+          return count + (emp.employment_contracts?.filter((contract: any) => contract.status === 'active').length || 0);
+        }, 0);
+        
+        const monthlyPayroll = employees.reduce((total: number, emp: any) => {
+          const activeContract = emp.employment_contracts?.find((contract: any) => contract.status === 'active');
+          return total + (activeContract?.base_salary || 0);
+        }, 0);
+
+        setStats({
+          totalEmployees: employees.length,
+          activeContracts: activeContracts,
+          monthlyPayroll: monthlyPayroll,
+          upcomingEvents: 0 // Por ahora 0, futuro desarrollo
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching payroll stats:', error);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('es-CL', {
+      style: 'currency',
+      currency: 'CLP',
+      minimumFractionDigits: 0
+    }).format(amount);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -73,7 +134,16 @@ export default function PayrollPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">Total Empleados</p>
-                        <p className="text-2xl font-bold text-gray-900">0</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {loadingStats ? (
+                            <span className="animate-pulse bg-gray-200 rounded w-8 h-8 inline-block"></span>
+                          ) : (
+                            stats.totalEmployees
+                          )}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {!loadingStats && stats.totalEmployees > 0 && 'Activos en el sistema'}
+                        </p>
                       </div>
                       <div className="p-3 bg-blue-100 rounded-lg">
                         <Users className="w-6 h-6 text-blue-600" />
@@ -87,7 +157,16 @@ export default function PayrollPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">Contratos Activos</p>
-                        <p className="text-2xl font-bold text-gray-900">0</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {loadingStats ? (
+                            <span className="animate-pulse bg-gray-200 rounded w-8 h-8 inline-block"></span>
+                          ) : (
+                            stats.activeContracts
+                          )}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {!loadingStats && stats.activeContracts > 0 && 'Contratos vigentes'}
+                        </p>
                       </div>
                       <div className="p-3 bg-green-100 rounded-lg">
                         <FileText className="w-6 h-6 text-green-600" />
@@ -101,7 +180,16 @@ export default function PayrollPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">Nómina Mensual</p>
-                        <p className="text-2xl font-bold text-gray-900">$0</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {loadingStats ? (
+                            <span className="animate-pulse bg-gray-200 rounded w-20 h-8 inline-block"></span>
+                          ) : (
+                            formatCurrency(stats.monthlyPayroll)
+                          )}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {!loadingStats && stats.monthlyPayroll > 0 && 'Sueldos base totales'}
+                        </p>
                       </div>
                       <div className="p-3 bg-purple-100 rounded-lg">
                         <BarChart3 className="w-6 h-6 text-purple-600" />
@@ -115,7 +203,14 @@ export default function PayrollPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-600">Próximos Vencimientos</p>
-                        <p className="text-2xl font-bold text-gray-900">0</p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {loadingStats ? (
+                            <span className="animate-pulse bg-gray-200 rounded w-8 h-8 inline-block"></span>
+                          ) : (
+                            stats.upcomingEvents
+                          )}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">Próximamente</p>
                       </div>
                       <div className="p-3 bg-yellow-100 rounded-lg">
                         <Calendar className="w-6 h-6 text-yellow-600" />
@@ -160,28 +255,47 @@ export default function PayrollPage() {
               {/* Header Actions */}
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold text-gray-900">Gestión de Empleados</h2>
-                <Link href="/payroll/employees/new">
-                  <Button variant="primary">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Nuevo Empleado
-                  </Button>
-                </Link>
-              </div>
-
-              {/* Empty State */}
-              <Card>
-                <CardContent className="p-12 text-center">
-                  <div className="w-20 h-20 bg-gray-100 rounded-full mx-auto mb-6 flex items-center justify-center">
-                    <Users className="w-10 h-10 text-gray-400" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No hay empleados registrados</h3>
-                  <p className="text-gray-600 mb-6">Comienza agregando el primer empleado de tu empresa</p>
+                <div className="flex space-x-3">
+                  <Link href="/payroll/employees">
+                    <Button variant="outline">
+                      <Users className="w-4 h-4 mr-2" />
+                      Ver Todos los Empleados
+                    </Button>
+                  </Link>
                   <Link href="/payroll/employees/new">
                     <Button variant="primary">
                       <Plus className="w-4 h-4 mr-2" />
-                      Agregar Primer Empleado
+                      Nuevo Empleado
                     </Button>
                   </Link>
+                </div>
+              </div>
+
+              {/* Redirect Card */}
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <div className="w-16 h-16 bg-blue-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+                    <Users className="w-8 h-8 text-blue-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Lista Completa de Empleados</h3>
+                  <p className="text-gray-600 mb-6">
+                    Ve la lista completa de empleados con detalles, búsquedas y filtros avanzados
+                  </p>
+                  <div className="flex justify-center space-x-4">
+                    <Link href="/payroll/employees">
+                      <Button variant="primary" size="lg">
+                        <Users className="w-5 h-5 mr-2" />
+                        Ir a Lista de Empleados
+                        <ChevronRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    </Link>
+                    <Link href="/payroll/employees/new">
+                      <Button variant="outline" size="lg">
+                        <Plus className="w-5 h-5 mr-2" />
+                        Crear Nuevo Empleado
+                      </Button>
+                    </Link>
+                  </div>
                 </CardContent>
               </Card>
             </div>
