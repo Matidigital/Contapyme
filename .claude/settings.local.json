@@ -34,7 +34,8 @@
       "WebFetch(domain:api.coingecko.com)",
       "Bash(cp:*)",
       "Bash(npx next build:*)",
-      "WebFetch(domain:www.previred.com)"
+      "WebFetch(domain:www.previred.com)",
+      "Bash(start http://localhost:3000/payroll/liquidations/generate)"
     ],
     "deny": []
   }
