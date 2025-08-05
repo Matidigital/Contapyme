@@ -545,6 +545,9 @@ COMMENT ON COLUMN journal_entries.entry_type IS 'Tipo: manual, f29, rcv, fixed_a
 COMMENT ON COLUMN journal_entries.source_type IS 'Origen específico: f29_analysis, rcv_analysis, asset_depreciation';
 COMMENT ON COLUMN journal_entries.status IS 'Estado: draft, approved, posted, cancelled';
 
+-- Temporalmente deshabilitar constraint para insertar datos demo
+ALTER TABLE journal_entries DROP CONSTRAINT IF EXISTS valid_totals;
+
 -- Insertar datos demo para pruebas
 INSERT INTO journal_entries (
   entry_date, description, reference, entry_type, source_type, status
@@ -601,10 +604,13 @@ BEGIN
       journal_entry_id, account_code, account_name, line_number,
       debit_amount, credit_amount, line_description
     ) VALUES 
-    (v_entry2_id, '11070001', 'IVA Débito Fiscal', 1, 3410651, 0, 'IVA débito período 202408'),
+    (v_entry2_id, '11070001', 'IVA Débito Fiscal', 1, 4188643, 0, 'IVA débito período 202408'),
     (v_entry2_id, '21050001', 'IVA Crédito Fiscal', 2, 0, 4188643, 'IVA crédito período 202408');
   END IF;
 END $$;
+
+-- Rehabilitar constraint después de insertar datos balanceados
+ALTER TABLE journal_entries ADD CONSTRAINT valid_totals CHECK (total_debit = total_credit);
 
 -- Final del script
 SELECT 'Migración libro diario completada exitosamente' as status;
