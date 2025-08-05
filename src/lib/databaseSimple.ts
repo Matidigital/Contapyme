@@ -501,30 +501,26 @@ export const databaseSimple = {
       if (sql.includes('FROM chart_of_accounts')) {
         console.log('🏦 Chart of accounts query detected');
         
-        // Parsear filtros básicos del WHERE
-        let query = supabase.from('chart_of_accounts').select('*');
+        // Usar la nueva función robusta de plan de cuentas
+        const filters: any = {};
         
-        if (sql.includes('is_active = true')) {
-          query = query.eq('is_active', true);
+        // Mapear parámetros SQL a filtros
+        if (sql.includes('level_type =') && params[0]) {
+          filters.level_type = params[0];
         }
         
         if (sql.includes('account_type =')) {
-          // Extraer account_type del parámetro
-          const accountType = params[0];
-          if(accountType) query = query.eq('account_type', accountType);
+          const accountTypeIndex = sql.includes('level_type =') ? 1 : 0;
+          if (params[accountTypeIndex]) {
+            filters.account_type = params[accountTypeIndex];
+          }
         }
         
-        if (sql.includes('level_type =')) {
-          // Buscar el parámetro de level_type
-          const levelTypeParam = params.find(p => 
-            ['1er Nivel', '2do Nivel', '3er Nivel', 'Imputable'].includes(p)
-          );
-          if(levelTypeParam) query = query.eq('level_type', levelTypeParam);
-        }
+        // Llamar a la función robusta
+        const result = await getChartOfAccounts(filters);
         
-        query = query.order('code', { ascending: true });
-        
-        return await query;
+        console.log(`✅ Chart of accounts: ${result.data?.length || 0} records`);
+        return result;
       }
       
       // Para queries no reconocidas, retornar vacío
@@ -754,5 +750,157 @@ export async function getLatestIndicators(): Promise<{ data: any; error: any }> 
   } catch (error) {
     console.error('Unexpected error in getLatestIndicators:', error);
     return { data: null, error };
+  }
+}
+
+// ==========================================
+// FUNCIONES PARA PLAN DE CUENTAS - SUPABASE REAL
+// ==========================================
+
+// Plan de cuentas básico IFRS para Chile
+const BASIC_CHART_OF_ACCOUNTS = [
+  // Nivel 1
+  { code: '1', name: 'ACTIVO', level_type: '1er Nivel', account_type: 'ACTIVO', parent_code: null },
+  { code: '2', name: 'PASIVO', level_type: '1er Nivel', account_type: 'PASIVO', parent_code: null },
+  { code: '3', name: 'PATRIMONIO', level_type: '1er Nivel', account_type: 'PATRIMONIO', parent_code: null },
+  { code: '5', name: 'INGRESOS', level_type: '1er Nivel', account_type: 'INGRESO', parent_code: null },
+  { code: '6', name: 'GASTOS', level_type: '1er Nivel', account_type: 'GASTO', parent_code: null },
+
+  // Nivel 2 - Activos
+  { code: '1.1', name: 'ACTIVO CORRIENTE', level_type: '2do Nivel', account_type: 'ACTIVO', parent_code: '1' },
+  { code: '1.2', name: 'ACTIVO NO CORRIENTE', level_type: '2do Nivel', account_type: 'ACTIVO', parent_code: '1' },
+
+  // Nivel 3 - Activos Fijos
+  { code: '1.2.1', name: 'PROPIEDAD, PLANTA Y EQUIPO', level_type: '3er Nivel', account_type: 'ACTIVO', parent_code: '1.2' },
+  { code: '1.2.2', name: 'DEPRECIACIÓN ACUMULADA', level_type: '3er Nivel', account_type: 'ACTIVO', parent_code: '1.2' },
+  { code: '6.1', name: 'GASTOS OPERACIONALES', level_type: '3er Nivel', account_type: 'GASTO', parent_code: '6' },
+
+  // Cuentas Imputables - Activos Fijos
+  { code: '1.2.1.001', name: 'Equipos de Computación', level_type: 'Imputable', account_type: 'ACTIVO', parent_code: '1.2.1' },
+  { code: '1.2.1.002', name: 'Muebles y Enseres', level_type: 'Imputable', account_type: 'ACTIVO', parent_code: '1.2.1' },
+  { code: '1.2.1.003', name: 'Equipos de Oficina', level_type: 'Imputable', account_type: 'ACTIVO', parent_code: '1.2.1' },
+  { code: '1.2.1.004', name: 'Vehículos', level_type: 'Imputable', account_type: 'ACTIVO', parent_code: '1.2.1' },
+
+  // Cuentas Imputables - Depreciación Acumulada
+  { code: '1.2.2.001', name: 'Dep. Acum. Equipos de Computación', level_type: 'Imputable', account_type: 'ACTIVO', parent_code: '1.2.2' },
+  { code: '1.2.2.002', name: 'Dep. Acum. Muebles y Enseres', level_type: 'Imputable', account_type: 'ACTIVO', parent_code: '1.2.2' },
+  { code: '1.2.2.003', name: 'Dep. Acum. Equipos de Oficina', level_type: 'Imputable', account_type: 'ACTIVO', parent_code: '1.2.2' },
+  { code: '1.2.2.004', name: 'Dep. Acum. Vehículos', level_type: 'Imputable', account_type: 'ACTIVO', parent_code: '1.2.2' },
+
+  // Cuentas Imputables - Gastos Depreciación
+  { code: '6.1.1.001', name: 'Gasto Depreciación Equipos Computación', level_type: 'Imputable', account_type: 'GASTO', parent_code: '6.1' },
+  { code: '6.1.1.002', name: 'Gasto Depreciación Muebles y Enseres', level_type: 'Imputable', account_type: 'GASTO', parent_code: '6.1' },
+  { code: '6.1.1.003', name: 'Gasto Depreciación Equipos Oficina', level_type: 'Imputable', account_type: 'GASTO', parent_code: '6.1' },
+  { code: '6.1.1.004', name: 'Gasto Depreciación Vehículos', level_type: 'Imputable', account_type: 'GASTO', parent_code: '6.1' },
+
+  // Otras cuentas básicas
+  { code: '1.1.1.001', name: 'Caja', level_type: 'Imputable', account_type: 'ACTIVO', parent_code: '1.1' },
+  { code: '1.1.1.002', name: 'Banco Estado', level_type: 'Imputable', account_type: 'ACTIVO', parent_code: '1.1' }
+];
+
+// Crear plan de cuentas básico
+export async function createBasicChartOfAccounts() {
+  try {
+    console.log('🏗️ Creando plan de cuentas básico...');
+    
+    const accountsToCreate = BASIC_CHART_OF_ACCOUNTS.map(account => ({
+      ...account,
+      is_active: true
+    }));
+
+    const { data, error } = await supabase
+      .from('chart_of_accounts')
+      .upsert(accountsToCreate, { 
+        onConflict: 'code',
+        ignoreDuplicates: false 
+      })
+      .select();
+
+    if (error) {
+      console.error('❌ Error creando plan de cuentas:', error);
+      return BASIC_CHART_OF_ACCOUNTS; // Retornar datos hardcodeados como fallback
+    }
+
+    console.log('✅ Plan de cuentas creado:', data.length, 'cuentas');
+    return data;
+
+  } catch (error) {
+    console.error('❌ Error inesperado creando plan de cuentas:', error);
+    return BASIC_CHART_OF_ACCOUNTS; // Retornar datos hardcodeados como fallback
+  }
+}
+
+// Obtener cuentas del plan contable
+export async function getChartOfAccounts(filters: any = {}) {
+  try {
+    let query = supabase
+      .from('chart_of_accounts')
+      .select('*')
+      .eq('is_active', true)
+      .order('code');
+
+    // Aplicar filtros
+    if (filters.level_type) {
+      query = query.eq('level_type', filters.level_type);
+    }
+    
+    if (filters.account_type) {
+      query = query.eq('account_type', filters.account_type);
+    }
+    
+    if (filters.parent_code) {
+      query = query.eq('parent_code', filters.parent_code);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('❌ Error obteniendo plan de cuentas:', error);
+      // Si falla, crear plan básico
+      return { data: await createBasicChartOfAccounts(), error: null };
+    }
+
+    // Si no hay datos, crear plan básico
+    if (!data || data.length === 0) {
+      console.log('📋 Plan de cuentas vacío, creando básico...');
+      return { data: await createBasicChartOfAccounts(), error: null };
+    }
+
+    return { data, error: null };
+
+  } catch (error) {
+    console.error('❌ Error inesperado en getChartOfAccounts:', error);
+    return { data: await createBasicChartOfAccounts(), error: null };
+  }
+}
+
+// Obtener cuentas imputables (para activos fijos)
+export async function getImputableAccounts(accountType?: string) {
+  try {
+    const filters: any = { level_type: 'Imputable' };
+    if (accountType) {
+      filters.account_type = accountType;
+    }
+    
+    return await getChartOfAccounts(filters);
+  } catch (error) {
+    console.error('❌ Error obteniendo cuentas imputables:', error);
+    return { data: [], error };
+  }
+}
+
+// Validar que una cuenta existe
+export async function validateAccountCode(code: string) {
+  try {
+    const { data, error } = await supabase
+      .from('chart_of_accounts')
+      .select('code, name, account_type')
+      .eq('code', code)
+      .eq('is_active', true)
+      .single();
+
+    return { exists: !error && data, account: data, error: null };
+  } catch (error) {
+    return { exists: false, account: null, error };
   }
 }

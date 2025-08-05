@@ -69,14 +69,29 @@ export default function AddFixedAssetForm({ isOpen, onClose, onSuccess }: AddFix
         console.log('Accounts loaded and formatted:', accountsData);
         setAccounts(accountsData);
       } else {
-        console.error('Failed to load accounts');
-        // Fallback: usar cuentas básicas demo
-        const basicAccounts: Account[] = [
+        console.error('Failed to load accounts, attempting fallback...');
+        // Intentar cargar plan básico
+        try {
+          const fallbackResponse = await fetch('/api/chart-of-accounts/initialize', {
+            method: 'POST'
+          });
+          
+          if (fallbackResponse.ok) {
+            console.log('✅ Plan básico inicializado, reintentando carga...');
+            setTimeout(() => loadAccounts(), 1000); // Reintentar después de crear
+            return;
+          }
+        } catch (error) {
+          console.error('Error inicializando plan básico:', error);
+        }
+        
+        // Si todo falla, usar fallback mínimo
+        const fallbackAccounts: Account[] = [
           { id: '1.2.1.001', code: '1.2.1.001', name: 'Equipos de Computación', level: 4, account_type: 'activo', is_detail: true, is_active: true },
           { id: '1.2.1.002', code: '1.2.1.002', name: 'Muebles y Enseres', level: 4, account_type: 'activo', is_detail: true, is_active: true },
           { id: '1.2.1.003', code: '1.2.1.003', name: 'Equipos de Oficina', level: 4, account_type: 'activo', is_detail: true, is_active: true }
         ];
-        setAccounts(basicAccounts);
+        setAccounts(fallbackAccounts);
       }
     } catch (error) {
       console.error('Error loading accounts:', error);
@@ -171,6 +186,27 @@ export default function AddFixedAssetForm({ isOpen, onClose, onSuccess }: AddFix
 
     if (!formData.asset_account_code) {
       newErrors.asset_account_code = 'La cuenta de activo es requerida';
+    } else {
+      // Validar que la cuenta de activo existe en la lista cargada
+      const assetAccountExists = accounts.find(acc => acc.code === formData.asset_account_code);
+      if (!assetAccountExists) {
+        newErrors.asset_account_code = 'La cuenta de activo seleccionada no es válida';
+      }
+    }
+
+    // Validar cuentas opcionales si se especifican
+    if (formData.depreciation_account_code) {
+      const depAccountExists = accounts.find(acc => acc.code === formData.depreciation_account_code);
+      if (!depAccountExists) {
+        newErrors.depreciation_account_code = 'La cuenta de depreciación seleccionada no es válida';
+      }
+    }
+
+    if (formData.expense_account_code) {
+      const expAccountExists = accounts.find(acc => acc.code === formData.expense_account_code);
+      if (!expAccountExists) {
+        newErrors.expense_account_code = 'La cuenta de gasto seleccionada no es válida';
+      }
     }
 
     setErrors(newErrors);
