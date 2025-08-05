@@ -114,6 +114,7 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
         marginBottom: '20px',
         border: '1px solid #000'
       }}>
+        <tbody>
         <tr>
           <td style={{ 
             padding: '8px', 
@@ -243,6 +244,7 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
         marginBottom: '20px',
         border: '1px solid #000'
       }}>
+        <tbody>
         <tr>
           <td style={{ 
             padding: '8px', 
@@ -306,6 +308,7 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
         marginBottom: '20px',
         border: '2px solid #000'
       }}>
+        <tbody>
         {/* Headers */}
         <tr>
           <td style={{ 
@@ -617,6 +620,7 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
         borderCollapse: 'collapse',
         border: '1px solid #000'
       }}>
+        <tbody>
         <tr>
           <td style={{ 
             textAlign: 'center', 
@@ -650,6 +654,7 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
             </div>
           </td>
         </tr>
+        </tbody>
       </table>
     </div>
   );

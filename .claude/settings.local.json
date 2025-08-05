@@ -35,7 +35,8 @@
       "Bash(cp:*)",
       "Bash(npx next build:*)",
       "WebFetch(domain:www.previred.com)",
-      "Bash(start http://localhost:3000/payroll/liquidations/generate)"
+      "Bash(start http://localhost:3000/payroll/liquidations/generate)",
+      "Bash(del test-employees-api.js)"
     ],
     "deny": []
   }
