@@ -94,15 +94,13 @@ const Header: React.FC<HeaderProps> = ({
               </Link>
             )}
 
-            {/* Brand */}
-            <Link href="/" className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">C</span>
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">ContaPyme</h1>
-                <p className="text-xs text-gray-500">Sistema Integral</p>
-              </div>
+            {/* Brand - Solo Logo */}
+            <Link href="/" className="flex items-center">
+              <img 
+                src="/images/logo-contapymepuq.svg" 
+                alt="ContaPymePuq" 
+                className="h-10 w-auto" 
+              />
             </Link>
 
             {/* Title and subtitle */}

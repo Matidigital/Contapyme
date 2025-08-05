@@ -1,0 +1,45 @@
+<svg width="120" height="140" viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg">
+  <!-- Símbolo centrado -->
+  <g transform="translate(36, 10)">
+    <!-- Fondo del símbolo -->
+    <rect x="0" y="0" width="48" height="48" rx="8" fill="#3B82F6" opacity="0.1"/>
+    
+    <!-- Documento F29 estilizado -->
+    <rect x="8" y="8" width="32" height="24" rx="3" fill="#3B82F6" opacity="0.2"/>
+    
+    <!-- Líneas de datos -->
+    <line x1="12" y1="14" x2="36" y2="14" stroke="#3B82F6" stroke-width="2" opacity="0.4"/>
+    <line x1="12" y1="18" x2="32" y2="18" stroke="#3B82F6" stroke-width="2" opacity="0.4"/>
+    <line x1="12" y1="22" x2="34" y2="22" stroke="#3B82F6" stroke-width="2" opacity="0.4"/>
+    
+    <!-- Gráfico ascendente -->
+    <polyline points="10,28 16,24 22,20 28,14 34,10 38,6" 
+              fill="none" 
+              stroke="#10B981" 
+              stroke-width="3" 
+              stroke-linecap="round"
+              stroke-linejoin="round"/>
+    
+    <!-- Puntos de datos -->
+    <circle cx="10" cy="28" r="2" fill="#10B981"/>
+    <circle cx="16" cy="24" r="2" fill="#10B981"/>
+    <circle cx="22" cy="20" r="2" fill="#10B981"/>
+    <circle cx="28" cy="14" r="2" fill="#8B5CF6"/>
+    <circle cx="34" cy="10" r="2" fill="#8B5CF6"/>
+    <circle cx="38" cy="6" r="2" fill="#8B5CF6"/>
+  </g>
+  
+  <!-- Texto centrado -->
+  <text x="60" y="85" text-anchor="middle" 
+        font-family="system-ui, -apple-system, sans-serif" 
+        font-size="18" font-weight="700" fill="#374151">
+    Conta<tspan fill="#3B82F6">Pyme</tspan><tspan fill="#10B981">Puq</tspan>
+  </text>
+  
+  <!-- Subtítulo centrado -->
+  <text x="60" y="105" text-anchor="middle"
+        font-family="system-ui, -apple-system, sans-serif" 
+        font-size="10" font-weight="500" fill="#6B7280">
+    Sistema Contable Integral
+  </text>
+</svg>
