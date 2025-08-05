@@ -92,14 +92,15 @@ export default function Preloader({ onComplete }: PreloaderProps) {
           }`} />
           
           {/* Logo */}
-          <div className={`relative w-32 h-32 mx-auto bg-white rounded-2xl p-6 shadow-2xl transition-all duration-1000 ${
+          <div className={`relative w-40 h-40 mx-auto bg-white rounded-2xl p-6 shadow-2xl transition-all duration-1000 ${
             stage === 'brandReveal' ? 'shadow-blue-500/50 shadow-2xl' : ''
           }`}>
             <Image
               src="/images/logo.webp"
               alt="ContaPymePuq Logo"
               fill
-              className="object-contain p-2"
+              className="object-contain p-2 mix-blend-multiply"
+              style={{ filter: 'brightness(1.1) contrast(1.1)' }}
               priority
             />
           </div>

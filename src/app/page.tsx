@@ -37,7 +37,8 @@ export default function Home() {
               <img 
                 src="/images/logo.webp" 
                 alt="ContaPymePuq" 
-                className="h-20 w-auto drop-shadow-lg" 
+                className="h-24 w-auto drop-shadow-lg mix-blend-multiply" 
+                style={{ filter: 'brightness(1.1) contrast(1.1)' }}
               />
             </div>
             <div className="flex items-center space-x-4">

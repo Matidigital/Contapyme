@@ -99,7 +99,8 @@ const Header: React.FC<HeaderProps> = ({
               <img 
                 src="/images/logo.webp" 
                 alt="ContaPymePuq" 
-                className="h-14 w-auto drop-shadow-md" 
+                className="h-16 w-auto drop-shadow-md mix-blend-multiply" 
+                style={{ filter: 'brightness(1.1) contrast(1.1)' }}
               />
             </Link>
 
