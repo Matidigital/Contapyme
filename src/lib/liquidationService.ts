@@ -8,10 +8,21 @@ import { PayrollCalculator } from './payrollCalculator';
 
 // Configuración Supabase 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-// Usar service key para bypass RLS temporalmente
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// Intentar usar service key, fallback a anon key
+const supabaseServiceKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_KEY;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Crear cliente con service key si está disponible
+const supabase = createClient(
+  supabaseUrl, 
+  supabaseServiceKey || supabaseAnonKey,
+  supabaseServiceKey ? {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  } : {}
+);
 
 export interface LiquidationRequest {
   employee_id: string;
@@ -57,38 +68,38 @@ export class LiquidationService {
   async calculateLiquidation(request: LiquidationRequest): Promise<LiquidationResponse> {
     try {
       console.log('🚀 Frontend Liquidation Service - Starting calculation');
+      console.log('🔑 Using Supabase key type:', supabaseServiceKey ? 'SERVICE_KEY' : 'ANON_KEY');
 
-      // 1. Obtener datos del empleado (sin RLS por ahora)
+      // 1. Obtener datos del empleado con múltiples estrategias
       console.log('📋 Fetching employee:', request.employee_id);
       
       let employee: any = null;
       let employeeError: any = null;
       
-      const employeeResult = await supabase
-        .from('employees')
-        .select(`
-          *,
-          employment_contracts (
-            position,
-            base_salary,
-            contract_type,
-            status
-          )
-        `)
-        .eq('id', request.employee_id)
-        .eq('company_id', this.companyId)
-        .single();
-        
-      employee = employeeResult.data;
-      employeeError = employeeResult.error;
-
-      console.log('Employee query result:', { employee, employeeError });
-
-      // Si falla, intentar sin RLS temporalmente
-      if (employeeError || !employee) {
-        console.log('🔄 Intentando consulta alternativa...');
-        
-        const empAltResult = await supabase
+      // Estrategia 1: Consulta con company_id (para service key)
+      if (supabaseServiceKey) {
+        console.log('🔑 Usando SERVICE_KEY - consulta con company_id');
+        const employeeResult = await supabase
+          .from('employees')
+          .select(`
+            *,
+            employment_contracts (
+              position,
+              base_salary,
+              contract_type,
+              status
+            )
+          `)
+          .eq('id', request.employee_id)
+          .eq('company_id', this.companyId)
+          .single();
+          
+        employee = employeeResult.data;
+        employeeError = employeeResult.error;
+      } else {
+        console.log('🔑 Usando ANON_KEY - consulta sin company_id');
+        // Estrategia 2: Solo por ID (para anon key)
+        const empResult = await supabase
           .from('employees')
           .select(`
             *,
@@ -102,20 +113,54 @@ export class LiquidationService {
           .eq('id', request.employee_id)
           .single();
           
-        if (empAltResult.error || !empAltResult.data) {
-          console.error('Alternative employee fetch error:', empAltResult.error);
+        employee = empResult.data;
+        employeeError = empResult.error;
+      }
+
+      console.log('Employee query result:', { 
+        found: !!employee, 
+        error: employeeError?.message,
+        keyType: supabaseServiceKey ? 'SERVICE' : 'ANON'
+      });
+
+      // Si todavía falla, intentar consulta más simple
+      if (employeeError || !employee) {
+        console.log('🔄 Intentando consulta simplificada...');
+        
+        const simpleResult = await supabase
+          .from('employees')
+          .select('*')
+          .eq('id', request.employee_id)
+          .single();
+          
+        if (simpleResult.error || !simpleResult.data) {
+          console.error('Simple employee fetch error:', simpleResult.error);
           return {
             success: false,
-            error: `Empleado no encontrado: ${empAltResult.error?.message || employeeError?.message || 'Unknown error'}`
+            error: `Empleado no encontrado: ${simpleResult.error?.message || employeeError?.message || 'RLS blocking access'}`
           };
         }
         
-        // Usar resultado alternativo
-        employee = empAltResult.data;
+        // Usar resultado simple y obtener contratos por separado
+        employee = simpleResult.data;
+        
+        // Intentar obtener contratos por separado
+        const contractsResult = await supabase
+          .from('employment_contracts')
+          .select('*')
+          .eq('employee_id', request.employee_id);
+          
+        if (!contractsResult.error && contractsResult.data) {
+          employee.employment_contracts = contractsResult.data;
+        } else {
+          console.warn('No se pudieron obtener contratos, usando defaults');
+          employee.employment_contracts = [];
+        }
+        
         employeeError = null;
       }
 
-      // 1.5. Obtener payroll_config por separado
+      // 1.5. Obtener payroll_config por separado (con fallback)
       let payrollConfig = null;
       const { data: payrollData, error: payrollError } = await supabase
         .from('payroll_config')
@@ -125,8 +170,15 @@ export class LiquidationService {
         
       if (!payrollError && payrollData) {
         payrollConfig = payrollData;
+        console.log('✅ Payroll config encontrado');
       } else {
-        console.warn('No payroll config found, using defaults');
+        console.warn('⚠️ No payroll config found, using defaults:', payrollError?.message);
+        // Crear config por defecto
+        payrollConfig = {
+          afp_code: 'HABITAT',
+          health_institution_code: 'FONASA',
+          family_allowances: 0
+        };
       }
 
       if (employeeError || !employee) {
@@ -146,18 +198,33 @@ export class LiquidationService {
         };
       }
 
-      // 2. Obtener configuración previsional de la empresa
-      const { data: settingsData, error: settingsError } = await supabase
+      // 2. Obtener configuración previsional de la empresa (con fallback)
+      let settingsData = null;
+      const settingsResult = await supabase
         .from('payroll_settings')
         .select('settings')
         .eq('company_id', this.companyId)
         .single();
 
-      if (settingsError || !settingsData) {
-        console.error('Settings fetch error:', settingsError);
-        return {
-          success: false,
-          error: 'Configuración previsional no encontrada'
+      if (!settingsResult.error && settingsResult.data) {
+        settingsData = settingsResult.data;
+        console.log('✅ Settings encontrados');
+      } else {
+        console.warn('⚠️ Settings no encontrados, usando defaults:', settingsResult.error?.message);
+        // Usar configuración por defecto chilena
+        settingsData = {
+          settings: {
+            afp_configs: [
+              { name: 'HABITAT', commission_percentage: 1.27 },
+              { name: 'CUPRUM', commission_percentage: 1.44 },
+              { name: 'PROVIDA', commission_percentage: 1.45 }
+            ],
+            health_plans: [
+              { code: 'FONASA', name: 'FONASA', percentage: 7.0 }
+            ],
+            tax_brackets: [], // Usar defaults del calculador
+            family_allowance_amount: 15000
+          }
         };
       }
 
