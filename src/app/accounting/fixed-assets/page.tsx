@@ -71,20 +71,34 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
 
   // Manejar éxito en creación de activo
   const handleAssetCreated = async () => {
-    // Pequeña demora para asegurar que la DB se actualizó
-    await new Promise(resolve => setTimeout(resolve, 500));
-    await fetchData(); // Recargar datos
-    console.log('✅ Nuevo activo creado, datos actualizados');
+    console.log('🔄 Actualizando datos tras crear activo...');
+    
+    // Demora más larga para consistencia de base de datos
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    
+    // Force refresh - recargar datos dos veces para garantizar actualización
+    await fetchData();
+    await new Promise(resolve => setTimeout(resolve, 300));
+    await fetchData();
+    
+    console.log('✅ Activo creado y datos completamente actualizados');
   };
 
   // Manejar éxito en edición de activo
   const handleAssetUpdated = async () => {
-    // Pequeña demora para asegurar que la DB se actualizó
-    await new Promise(resolve => setTimeout(resolve, 500));
-    await fetchData(); // Recargar datos
+    console.log('🔄 Actualizando datos tras editar activo...');
+    
+    // Demora para consistencia de base de datos
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Force refresh con doble carga
+    await fetchData();
+    await new Promise(resolve => setTimeout(resolve, 200));
+    await fetchData();
+    
     setSelectedAsset(null);
     setShowEditForm(false);
-    console.log('✅ Activo actualizado, datos refrescados');
+    console.log('✅ Activo editado y datos completamente actualizados');
   };
 
   // Abrir modal de edición
@@ -516,9 +530,17 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                                         });
                                         
                                         if (response.ok) {
-                                          // Forzar recarga completa de datos
+                                          console.log('🔄 Actualizando datos tras eliminar activo...');
+                                          
+                                          // Demora para consistencia de BD
+                                          await new Promise(resolve => setTimeout(resolve, 800));
+                                          
+                                          // Double refresh para garantizar actualización
                                           await fetchData();
-                                          console.log('✅ Activo eliminado, datos actualizados');
+                                          await new Promise(resolve => setTimeout(resolve, 200));
+                                          await fetchData();
+                                          
+                                          console.log('✅ Activo eliminado y datos completamente actualizados');
                                         } else {
                                           const errorData = await response.json();
                                           alert(errorData.error || 'Error al eliminar activo');
