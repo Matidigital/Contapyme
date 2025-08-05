@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Payroll API - ContaPyme</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .test-section h3 { margin-top: 0; color: #333; }
+        button { background: #007cba; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #005a87; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .result { margin-top: 10px; padding: 10px; border-radius: 4px; font-family: monospace; white-space: pre-wrap; max-height: 400px; overflow-y: auto; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        .loading { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+        input, select { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; }
+        .form-group { margin: 10px 0; }
+        label { display: inline-block; width: 150px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Payroll API - ContaPyme</h1>
+        <p>Herramienta para probar las APIs del módulo de nóminas</p>
+
+        <!-- Test 1: Verificar conexión con la base de datos -->
+        <div class="test-section">
+            <h3>📊 Test 1: Verificar Estado de Base de Datos</h3>
+            <p>Verifica si las tablas de empleados están correctamente creadas</p>
+            <button onclick="testDatabaseConnection()">Verificar Base de Datos</button>
+            <div id="db-result" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- Test 2: Crear empleado de prueba -->
+        <div class="test-section">
+            <h3>👤 Test 2: Crear Empleado de Prueba</h3>
+            <p>Intenta crear un empleado con datos de ejemplo</p>
+            
+            <div class="form-group">
+                <label>RUT:</label>
+                <input type="text" id="test-rut" value="12345678-9" placeholder="12345678-9">
+            </div>
+            <div class="form-group">
+                <label>Nombre:</label>
+                <input type="text" id="test-firstName" value="Juan Carlos" placeholder="Juan Carlos">
+            </div>
+            <div class="form-group">
+                <label>Apellido:</label>
+                <input type="text" id="test-lastName" value="Pérez González" placeholder="Pérez González">
+            </div>
+            <div class="form-group">
+                <label>Email:</label>
+                <input type="email" id="test-email" value="juan.perez@ejemplo.cl" placeholder="juan.perez@ejemplo.cl">
+            </div>
+            <div class="form-group">
+                <label>Cargo:</label>
+                <input type="text" id="test-position" value="Vendedor" placeholder="Vendedor">
+            </div>
+            <div class="form-group">
+                <label>Salario Base:</label>
+                <input type="number" id="test-salary" value="800000" placeholder="800000">
+            </div>
+            
+            <button onclick="testCreateEmployee()">Crear Empleado de Prueba</button>
+            <div id="create-result" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- Test 3: Listar empleados -->
+        <div class="test-section">
+            <h3>📋 Test 3: Listar Empleados</h3>
+            <p>Obtiene la lista de empleados existentes</p>
+            <button onclick="testListEmployees()">Listar Empleados</button>
+            <div id="list-result" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- Test 4: Verificar RUT Input Component -->
+        <div class="test-section">
+            <h3>🔍 Test 4: Verificar Página de Empleados</h3>
+            <p>Verifica si la página de nuevo empleado carga correctamente</p>
+            <button onclick="testEmployeePage()">Verificar Página</button>
+            <div id="page-result" class="result" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://funny-elf-4be477.netlify.app/api';
+        const DEMO_COMPANY_ID = 'demo-company-12345678-9';
+        const DEMO_USER_ID = '550e8400-e29b-41d4-a716-446655440000';
+
+        function showResult(elementId, content, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `result ${type}`;
+            element.textContent = content;
+            element.style.display = 'block';
+        }
+
+        function showLoading(elementId) {
+            showResult(elementId, 'Cargando...', 'loading');
+        }
+
+        async function testDatabaseConnection() {
+            showLoading('db-result');
+            
+            try {
+                // Intentar hacer una consulta simple a la API de empleados
+                const response = await fetch(`${API_BASE}/payroll/employees?company_id=${DEMO_COMPANY_ID}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('db-result', 
+                        `✅ Base de datos conectada correctamente\n` +
+                        `📊 Empleados encontrados: ${data.count || 0}\n` +
+                        `📋 Respuesta: ${JSON.stringify(data, null, 2)}`, 
+                        'success'
+                    );
+                } else {
+                    showResult('db-result', 
+                        `❌ Error en la base de datos\n` +
+                        `📋 Respuesta: ${JSON.stringify(data, null, 2)}`, 
+                        'error'
+                    );
+                }
+            } catch (error) {
+                showResult('db-result', 
+                    `❌ Error de conexión: ${error.message}\n` +
+                    `🔍 Verificar configuración de Supabase`, 
+                    'error'
+                );
+            }
+        }
+
+        async function testCreateEmployee() {
+            showLoading('create-result');
+            
+            const employeeData = {
+                company_id: DEMO_COMPANY_ID,
+                created_by: DEMO_USER_ID,
+                rut: document.getElementById('test-rut').value,
+                first_name: document.getElementById('test-firstName').value,
+                last_name: document.getElementById('test-lastName').value,
+                birth_date: '1990-05-15',
+                email: document.getElementById('test-email').value,
+                position: document.getElementById('test-position').value,
+                start_date: new Date().toISOString().split('T')[0],
+                base_salary: parseFloat(document.getElementById('test-salary').value),
+                salary_type: 'monthly',
+                contract_type: 'indefinido',
+                weekly_hours: 45,
+                health_insurance: 'FONASA',
+                pension_fund: 'Habitat'
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/payroll/employees`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(employeeData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult('create-result', 
+                        `✅ Empleado creado exitosamente\n` +
+                        `👤 ID: ${data.data.id}\n` +
+                        `📋 Datos: ${JSON.stringify(data, null, 2)}`, 
+                        'success'
+                    );
+                } else {
+                    showResult('create-result', 
+                        `❌ Error al crear empleado\n` +
+                        `📋 Respuesta: ${JSON.stringify(data, null, 2)}`, 
+                        'error'
+                    );
+                }
+            } catch (error) {
+                showResult('create-result', 
+                    `❌ Error de conexión: ${error.message}`, 
+                    'error'
+                );
+            }
+        }
+
+        async function testListEmployees() {
+            showLoading('list-result');
+            
+            try {
+                const response = await fetch(`${API_BASE}/payroll/employees?company_id=${DEMO_COMPANY_ID}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('list-result', 
+                        `✅ Empleados obtenidos correctamente\n` +
+                        `📊 Total: ${data.count}\n` +
+                        `📋 Empleados:\n${JSON.stringify(data.data, null, 2)}`, 
+                        'success'
+                    );
+                } else {
+                    showResult('list-result', 
+                        `❌ Error al obtener empleados\n` +
+                        `📋 Respuesta: ${JSON.stringify(data, null, 2)}`, 
+                        'error'
+                    );
+                }
+            } catch (error) {
+                showResult('list-result', 
+                    `❌ Error de conexión: ${error.message}`, 
+                    'error'
+                );
+            }
+        }
+
+        async function testEmployeePage() {
+            showLoading('page-result');
+            
+            try {
+                const response = await fetch('https://funny-elf-4be477.netlify.app/payroll/employees/new');
+                
+                if (response.ok) {
+                    const html = await response.text();
+                    const hasForm = html.includes('Nuevo Empleado');
+                    const hasRutInput = html.includes('RutInput') || html.includes('rut');
+                    const hasSubmitButton = html.includes('Guardar Empleado');
+                    
+                    showResult('page-result', 
+                        `✅ Página carga correctamente\n` +
+                        `📝 Formulario encontrado: ${hasForm ? 'Sí' : 'No'}\n` +
+                        `🆔 RUT Input presente: ${hasRutInput ? 'Sí' : 'No'}\n` +
+                        `💾 Botón guardar presente: ${hasSubmitButton ? 'Sí' : 'No'}\n` +
+                        `📏 Tamaño HTML: ${html.length} caracteres`, 
+                        hasForm && hasSubmitButton ? 'success' : 'error'
+                    );
+                } else {
+                    showResult('page-result', 
+                        `❌ Error al cargar página: ${response.status} ${response.statusText}`, 
+                        'error'
+                    );
+                }
+            } catch (error) {
+                showResult('page-result', 
+                    `❌ Error de conexión: ${error.message}`, 
+                    'error'
+                );
+            }
+        }
+
+        // Ejecutar prueba inicial al cargar la página
+        window.onload = function() {
+            console.log('🧪 Test Payroll API - ContaPyme iniciado');
+            console.log('🔗 API Base:', API_BASE);
+            console.log('🏢 Demo Company ID:', DEMO_COMPANY_ID);
+        };
+    </script>
+</body>
+</html>
