@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { FixedAsset, CreateFixedAssetData } from '@/types';
 
 interface OptimisticAsset extends FixedAsset {
@@ -8,9 +8,38 @@ interface OptimisticAsset extends FixedAsset {
   isReverting?: boolean;
 }
 
+// Función de debounce
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => Promise<void> {
+  let timeout: NodeJS.Timeout | null = null;
+  let resolvePromise: ((value: void) => void) | null = null;
+  
+  return (...args: Parameters<T>) => {
+    return new Promise<void>((resolve) => {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+      
+      resolvePromise = resolve;
+      
+      timeout = setTimeout(async () => {
+        await func(...args);
+        if (resolvePromise) {
+          resolvePromise();
+        }
+      }, wait);
+    });
+  };
+}
+
 export function useOptimisticAssets() {
   const [assets, setAssets] = useState<OptimisticAsset[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  // Referencias para debouncing
+  const updateQueueRef = useRef<Map<string, Partial<CreateFixedAssetData>>>(new Map());
 
   // Generar ID temporal para optimistic updates
   const generateTempId = () => `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -96,7 +125,52 @@ export function useOptimisticAssets() {
     }
   }, []);
 
-  // Actualizar activo con optimistic update
+  // Función interna para procesar update con debounce
+  const processUpdateQueue = useCallback(async () => {
+    const updates = Array.from(updateQueueRef.current.entries());
+    updateQueueRef.current.clear();
+    
+    console.log(`⚡ Procesando ${updates.length} actualizaciones en batch`);
+    
+    // Procesar todas las actualizaciones pendientes
+    await Promise.all(
+      updates.map(async ([id, updateData]) => {
+        try {
+          const response = await fetch(`/api/fixed-assets/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updateData),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Error al actualizar activo');
+          }
+
+          const updatedAsset = await response.json();
+          
+          // Confirmar con datos reales
+          setAssets(prev => prev.map(asset => 
+            asset.id === id ? { ...updatedAsset.asset, isOptimistic: false } : asset
+          ));
+          
+        } catch (error: any) {
+          console.error(`❌ Error actualizando activo ${id}:`, error);
+          // En caso de error, revertir el estado optimista
+          setAssets(prev => prev.map(asset => 
+            asset.id === id ? { ...asset, isOptimistic: false, isReverting: true } : asset
+          ));
+        }
+      })
+    );
+  }, []);
+
+  // Debounced update processor
+  const debouncedUpdate = useRef(
+    debounce(processUpdateQueue, 500) // 500ms de debounce
+  ).current;
+
+  // Actualizar activo con optimistic update y debouncing
   const updateAssetOptimistic = useCallback(async (
     id: string,
     updateData: Partial<CreateFixedAssetData>,
@@ -123,40 +197,21 @@ export function useOptimisticAssets() {
       asset.id === id ? optimisticUpdate : asset
     ));
 
+    // 3. Agregar a la cola de actualizaciones
+    updateQueueRef.current.set(id, updateData);
+    
+    // 4. Procesar con debounce
     try {
-      // 3. Guardar en base de datos
-      const response = await fetch(`/api/fixed-assets/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updateData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al actualizar activo');
-      }
-
-      const updatedAsset = await response.json();
-      
-      // 4. Confirmar con datos reales
-      console.log('✅ Activo actualizado, confirmando cambios');
-      setAssets(prev => prev.map(asset => 
-        asset.id === id ? { ...updatedAsset.asset, isOptimistic: false } : asset
-      ));
-
+      await debouncedUpdate();
       onSuccess?.();
-
     } catch (error: any) {
-      console.error('❌ Error actualizando activo, revirtiendo:', error);
-      
-      // 5. Revertir al estado original
+      // 5. En caso de error, revertir al estado original
       setAssets(prev => prev.map(asset => 
         asset.id === id ? originalAsset : asset
       ));
-
       onError?.(error.message || 'Error al actualizar activo');
     }
-  }, [assets]);
+  }, [assets, debouncedUpdate]);
 
   // Eliminar activo con optimistic update
   const deleteAssetOptimistic = useCallback(async (

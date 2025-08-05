@@ -45,54 +45,36 @@ export function useRealtimeAssets(
       try {
         console.log('🔄 Configurando subscripción real-time para activos fijos...');
 
-        // Crear canal específico para el usuario
+        // Crear un solo canal con todos los eventos
         channel = supabase
-          .channel(`fixed_assets_user_${userId}`)
+          .channel(`fixed_assets_all_${userId}`)
           .on(
             'postgres_changes',
             {
-              event: 'INSERT',
+              event: '*', // Todos los eventos en una sola subscripción
               schema: 'public',
               table: 'fixed_assets',
               filter: `user_id=eq.${userId}`
             },
             (payload) => {
               if (!isUnmounted) {
-                console.log('🆕 Nuevo activo detectado (real-time):', payload.new);
+                const event = payload.eventType;
                 setLastUpdate(new Date().toISOString());
-                onAssetInsertedRef.current?.(payload.new as FixedAsset);
-              }
-            }
-          )
-          .on(
-            'postgres_changes',
-            {
-              event: 'UPDATE',
-              schema: 'public',
-              table: 'fixed_assets',
-              filter: `user_id=eq.${userId}`
-            },
-            (payload) => {
-              if (!isUnmounted) {
-                console.log('✏️ Activo actualizado (real-time):', payload.new);
-                setLastUpdate(new Date().toISOString());
-                onAssetUpdatedRef.current?.(payload.new as FixedAsset);
-              }
-            }
-          )
-          .on(
-            'postgres_changes',
-            {
-              event: 'DELETE',
-              schema: 'public',
-              table: 'fixed_assets',
-              filter: `user_id=eq.${userId}`
-            },
-            (payload) => {
-              if (!isUnmounted) {
-                console.log('🗑️ Activo eliminado (real-time):', payload.old);
-                setLastUpdate(new Date().toISOString());
-                onAssetDeletedRef.current?.(payload.old.id);
+                
+                switch (event) {
+                  case 'INSERT':
+                    console.log('🆕 Nuevo activo detectado (real-time):', payload.new);
+                    onAssetInsertedRef.current?.(payload.new as FixedAsset);
+                    break;
+                  case 'UPDATE':
+                    console.log('✏️ Activo actualizado (real-time):', payload.new);
+                    onAssetUpdatedRef.current?.(payload.new as FixedAsset);
+                    break;
+                  case 'DELETE':
+                    console.log('🗑️ Activo eliminado (real-time):', payload.old);
+                    onAssetDeletedRef.current?.(payload.old.id);
+                    break;
+                }
               }
             }
           )

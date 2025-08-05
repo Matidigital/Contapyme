@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { 
   Package, 
@@ -14,7 +14,9 @@ import {
   Calendar,
   DollarSign,
   FileText,
-  AlertTriangle
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { Header } from '@/components/layout';
@@ -26,6 +28,9 @@ import { useRealtimeAssets } from '@/hooks/useRealtimeAssets';
 import { useDepreciationWorker } from '@/hooks/useDepreciationWorker';
 
 interface FixedAssetsPageProps {}
+
+// Constantes de paginación
+const ITEMS_PER_PAGE = 20;
 
 export default function FixedAssetsPage({}: FixedAssetsPageProps) {
   const { 
@@ -78,6 +83,10 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<FixedAsset | null>(null);
+  
+  // Estados de paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showReportDetails, setShowReportDetails] = useState(false);
 
   // Cargar datos iniciales con Web Worker
   const fetchData = useCallback(async () => {
@@ -161,21 +170,34 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
   }, [assets, selectedStatus]);
 
   // Filtrar activos por búsqueda y estado
-  const filteredAssets = assets.filter(asset => {
-    // Filtro por texto de búsqueda
-    const matchesSearch = !searchTerm || (
-      asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (asset.serial_number && asset.serial_number.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (asset.brand && asset.brand.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (asset.model && asset.model.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (asset.category && asset.category.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+  const filteredAssets = useMemo(() => {
+    return assets.filter(asset => {
+      // Filtro por texto de búsqueda
+      const matchesSearch = !searchTerm || (
+        asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (asset.serial_number && asset.serial_number.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (asset.brand && asset.brand.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (asset.model && asset.model.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (asset.category && asset.category.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
 
-    // Filtro por estado
-    const matchesStatus = selectedStatus === 'all' || asset.status === selectedStatus;
+      // Filtro por estado
+      const matchesStatus = selectedStatus === 'all' || asset.status === selectedStatus;
 
-    return matchesSearch && matchesStatus;
-  });
+      return matchesSearch && matchesStatus;
+    });
+  }, [assets, searchTerm, selectedStatus]);
+
+  // Calcular paginación
+  const totalPages = Math.ceil(filteredAssets.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedAssets = filteredAssets.slice(startIndex, endIndex);
+  
+  // Reset página cuando cambian los filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedStatus]);
 
   // Formatear moneda
   const formatCurrency = (amount: number) => {
@@ -191,14 +213,12 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
     return new Date(dateString).toLocaleDateString('es-CL');
   };
 
-  // Calcular valor libro usando Web Worker (o fallback local)
-  const calculateBookValue = async (asset: FixedAsset): Promise<number> => {
-    try {
-      if (isWorkerReady) {
-        const calc = await calculateSingleDepreciation(asset);
-        return calc.bookValue;
-      } else {
-        // Fallback local
+  // Memoizar cálculos de valor libro para todos los activos paginados
+  const bookValues = useMemo(() => {
+    const values = new Map<string, number>();
+    
+    paginatedAssets.forEach(asset => {
+      try {
         const monthsSinceDepreciation = Math.max(0, Math.floor(
           (new Date().getTime() - new Date(asset.start_depreciation_date).getTime()) / (1000 * 60 * 60 * 24 * 30)
         ));
@@ -217,40 +237,19 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
           asset.residual_value || 0
         );
         
-        return bookValue;
+        values.set(asset.id, bookValue);
+      } catch (error) {
+        console.error('Error calculating book value for asset:', asset.name, error);
+        values.set(asset.id, asset.purchase_value);
       }
-    } catch (error) {
-      console.error('Error calculating book value for asset:', asset.name, error);
-      return asset.purchase_value;
-    }
-  };
+    });
+    
+    return values;
+  }, [paginatedAssets]);
 
-  // Calcular valor libro síncrono (para compatibilidad inmediata)
-  const calculateBookValueSync = (asset: FixedAsset) => {
-    try {
-      const monthsSinceDepreciation = Math.max(0, Math.floor(
-        (new Date().getTime() - new Date(asset.start_depreciation_date).getTime()) / (1000 * 60 * 60 * 24 * 30)
-      ));
-      
-      const depreciableValue = asset.purchase_value - (asset.residual_value || 0);
-      const totalMonths = asset.useful_life_years * 12;
-      const monthlyDepreciation = depreciableValue / totalMonths;
-      
-      const accumulatedDepreciation = Math.min(
-        monthsSinceDepreciation * monthlyDepreciation,
-        depreciableValue
-      );
-      
-      const bookValue = Math.max(
-        asset.purchase_value - accumulatedDepreciation, 
-        asset.residual_value || 0
-      );
-      
-      return bookValue;
-    } catch (error) {
-      console.error('Error calculating book value for asset:', asset.name, error);
-      return asset.purchase_value;
-    }
+  // Obtener valor libro memoizado
+  const getBookValue = (assetId: string): number => {
+    return bookValues.get(assetId) || 0;
   };
 
   if (loading) {
@@ -364,7 +363,7 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           
-          {/* Tarjetas de Resumen Modernizadas */}
+          {/* Tarjetas de Resumen Modernizadas con Lazy Loading */}
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               {[1, 2, 3, 4].map(i => (
@@ -379,7 +378,7 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                 </Card>
               ))}
             </div>
-          ) : report ? (
+          ) : report && showReportDetails ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               <Card className="bg-white/90 backdrop-blur-sm border-2 border-blue-100 hover:border-blue-200 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] p-6">
                 <div className="flex items-center">
@@ -436,20 +435,33 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
               </Card>
             </div>
           ) : (
-            <Card className="bg-white/90 backdrop-blur-sm border-2 border-yellow-200 mb-8">
+            <Card className="bg-white/90 backdrop-blur-sm border-2 border-blue-100 mb-8">
               <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-yellow-100 rounded-lg">
-                    <AlertTriangle className="h-6 w-6 text-yellow-600" />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <TrendingUp className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div className="ml-4">
+                      <h3 className="text-lg font-semibold text-blue-800">
+                        Resumen de Activos Fijos
+                      </h3>
+                      <p className="text-blue-600">
+                        {filteredAssets.length} activos encontrados
+                      </p>
+                    </div>
                   </div>
-                  <div className="ml-4">
-                    <h3 className="text-lg font-semibold text-yellow-800 mb-2">
-                      No se pudieron cargar las estadísticas
-                    </h3>
-                    <p className="text-yellow-700">
-                      Las métricas de activos fijos no están disponibles en este momento.
-                    </p>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setShowReportDetails(true);
+                      if (!report) fetchData();
+                    }}
+                    className="border-blue-200 hover:bg-blue-50"
+                  >
+                    Ver estadísticas detalladas
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -502,9 +514,18 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
           {/* Lista de Activos Fijos */}
           <Card>
             <CardContent className="p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Activos Fijos ({filteredAssets.length})
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Activos Fijos ({filteredAssets.length})
+                </h2>
+                {totalPages > 1 && (
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-600">
+                      Página {currentPage} de {totalPages}
+                    </span>
+                  </div>
+                )}
+              </div>
               
               {filteredAssets.length === 0 ? (
                 <div className="text-center py-12">
@@ -554,8 +575,8 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-100">
-                      {filteredAssets.map((asset) => {
-                        const bookValue = calculateBookValueSync(asset);
+                      {paginatedAssets.map((asset) => {
+                        const bookValue = getBookValue(asset.id);
                         
                         return (
                           <tr key={asset.id} className={`hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 transition-all duration-300 ${
@@ -660,6 +681,72 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                   </table>
                 </div>
               )}
+              
+              {/* Controles de Paginación */}
+              {totalPages > 1 && (
+                <div className="mt-6 flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="border-gray-300"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      Anterior
+                    </Button>
+                    
+                    {/* Números de página */}
+                    <div className="flex items-center space-x-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+                        
+                        if (pageNum < 1 || pageNum > totalPages) return null;
+                        
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={currentPage === pageNum ? "primary" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={currentPage === pageNum 
+                              ? "bg-orange-600 hover:bg-orange-700" 
+                              : "border-gray-300"
+                            }
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                      className="border-gray-300"
+                    >
+                      Siguiente
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  
+                  <div className="text-sm text-gray-600">
+                    Mostrando {startIndex + 1} - {Math.min(endIndex, filteredAssets.length)} de {filteredAssets.length} activos
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -700,7 +787,7 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                           </span>
                         </div>
                         <p className="text-sm font-medium text-gray-700">
-                          Valor libro: {formatCurrency(calculateBookValueSync(asset))}
+                          Valor libro: {formatCurrency(getBookValue(asset.id))}
                         </p>
                       </div>
                     </div>
