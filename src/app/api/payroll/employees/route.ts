@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import mockEmployeeStore from '@/lib/mockEmployeeStore';
 
 // Inicializar cliente de Supabase
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -22,81 +23,16 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 API empleados llamada para company_id:', companyId);
 
-    // TEMPORAL: Retornar datos mock para que las liquidaciones funcionen
-    const mockEmployees = [
-      {
-        id: 'mock-employee-1',
-        company_id: companyId,
-        rut: '12.345.678-9',
-        first_name: 'Juan',
-        last_name: 'Pérez',
-        middle_name: 'Carlos',
-        email: 'juan.perez@empresa.cl',
-        phone: '+56912345678',
-        status: 'active',
-        employment_contracts: [
-          {
-            id: 'mock-contract-1',
-            position: 'Desarrollador Senior',
-            department: 'Tecnología',
-            contract_type: 'indefinido',
-            start_date: '2024-01-01',
-            base_salary: 1500000,
-            salary_type: 'monthly',
-            status: 'active'
-          }
-        ],
-        payroll_config: [
-          {
-            afp_code: 'HABITAT',
-            health_institution_code: 'FONASA',
-            family_allowances: 2,
-            legal_gratification_type: 'code_47',
-            has_unemployment_insurance: true
-          }
-        ]
-      },
-      {
-        id: 'mock-employee-2',
-        company_id: companyId,
-        rut: '98.765.432-1',
-        first_name: 'María',
-        last_name: 'González',
-        middle_name: 'Isabel',
-        email: 'maria.gonzalez@empresa.cl',
-        phone: '+56987654321',
-        status: 'active',
-        employment_contracts: [
-          {
-            id: 'mock-contract-2',
-            position: 'Contadora',
-            department: 'Finanzas',
-            contract_type: 'indefinido',
-            start_date: '2023-06-15',
-            base_salary: 1200000,
-            salary_type: 'monthly',
-            status: 'active'
-          }
-        ],
-        payroll_config: [
-          {
-            afp_code: 'PROVIDA',
-            health_institution_code: 'ISAPRE_CONSALUD',
-            family_allowances: 1,
-            legal_gratification_type: 'code_50',
-            has_unemployment_insurance: true
-          }
-        ]
-      }
-    ];
-
-    console.log('✅ Retornando empleados mock:', mockEmployees.length);
+    // Usar el store en memoria para obtener empleados
+    const employees = mockEmployeeStore.getEmployeesByCompany(companyId);
+    
+    console.log('✅ Retornando empleados desde store:', employees.length);
 
     return NextResponse.json({
       success: true,
-      data: mockEmployees,
-      count: mockEmployees.length,
-      mode: 'mock_data'
+      data: employees,
+      count: employees.length,
+      mode: 'mock_memory_store'
     });
   } catch (error) {
     console.error('Error en GET /api/payroll/employees:', error);
@@ -112,11 +48,19 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
-    console.log('🔍 API POST empleados - datos recibidos:', body);
+    console.log('🔍 API POST empleados - datos recibidos:', JSON.stringify(body, null, 2));
     
-    // TEMPORAL: Simular creación exitosa sin tocar la base de datos
-    const mockNewEmployee = {
-      id: `mock-employee-${Date.now()}`,
+    // Validaciones básicas
+    if (!body.company_id || !body.rut || !body.first_name || !body.last_name || !body.email) {
+      return NextResponse.json(
+        { error: 'Faltan campos requeridos: company_id, rut, first_name, last_name, email' },
+        { status: 400 }
+      );
+    }
+    
+    // Crear empleado con estructura completa
+    const newEmployee = {
+      id: '', // Se generará en el store
       company_id: body.company_id,
       rut: body.rut,
       first_name: body.first_name,
@@ -139,22 +83,20 @@ export async function POST(request: NextRequest) {
       status: 'active',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      employment_contracts: [
+      employment_contracts: body.position ? [
         {
-          id: `mock-contract-${Date.now()}`,
-          employee_id: `mock-employee-${Date.now()}`,
-          company_id: body.company_id,
+          id: `contract-${Date.now()}`,
           position: body.position,
           department: body.department,
           contract_type: body.contract_type || 'indefinido',
           start_date: body.start_date,
           end_date: body.contract_type === 'indefinido' ? null : body.end_date,
-          base_salary: body.base_salary,
+          base_salary: parseFloat(body.base_salary) || 0,
           salary_type: body.salary_type || 'monthly',
           weekly_hours: body.weekly_hours || 45,
           status: 'active'
         }
-      ],
+      ] : [],
       payroll_config: [
         {
           afp_code: body.payroll_config?.afp_code || 'HABITAT',
@@ -166,13 +108,16 @@ export async function POST(request: NextRequest) {
       ]
     };
     
-    console.log('✅ Empleado mock creado exitosamente:', mockNewEmployee.id);
+    // Agregar al store
+    const savedEmployee = mockEmployeeStore.addEmployee(newEmployee);
+    
+    console.log('✅ Empleado guardado en store:', savedEmployee.id);
     
     return NextResponse.json({
       success: true,
-      data: mockNewEmployee,
-      message: 'Empleado creado exitosamente (modo mock)',
-      mode: 'mock_data'
+      data: savedEmployee,
+      message: 'Empleado creado exitosamente y guardado en memoria',
+      mode: 'mock_memory_store'
     }, { status: 201 });
     
     /* CÓDIGO ORIGINAL COMENTADO TEMPORALMENTE
@@ -372,42 +317,34 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, ...updateData } = body;
+    const { id, company_id, ...updateData } = body;
 
-    if (!id) {
+    if (!id || !company_id) {
       return NextResponse.json(
-        { error: 'ID del empleado es requerido' },
+        { error: 'ID del empleado y company_id son requeridos' },
         { status: 400 }
       );
     }
 
-    // Remover campos que no deben actualizarse
-    delete updateData.id;
-    delete updateData.created_at;
-    delete updateData.company_id; // No permitir cambiar de empresa
+    console.log('🔍 Actualizando empleado:', id, 'con datos:', updateData);
 
-    const { data: employee, error } = await supabase
-      .from('employees')
-      .update({
-        ...updateData,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select()
-      .single();
+    // Actualizar en el store
+    const updatedEmployee = mockEmployeeStore.updateEmployee(company_id, id, updateData);
 
-    if (error) {
-      console.error('Error al actualizar empleado:', error);
+    if (!updatedEmployee) {
       return NextResponse.json(
-        { error: 'Error al actualizar empleado' },
-        { status: 500 }
+        { error: 'Empleado no encontrado' },
+        { status: 404 }
       );
     }
 
+    console.log('✅ Empleado actualizado en store:', updatedEmployee.id);
+
     return NextResponse.json({
       success: true,
-      data: employee,
-      message: 'Empleado actualizado exitosamente'
+      data: updatedEmployee,
+      message: 'Empleado actualizado exitosamente',
+      mode: 'mock_memory_store'
     });
   } catch (error) {
     console.error('Error en PATCH /api/payroll/employees:', error);
@@ -423,48 +360,37 @@ export async function DELETE(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const id = searchParams.get('id');
+    const companyId = searchParams.get('company_id');
 
-    if (!id) {
+    if (!id || !companyId) {
       return NextResponse.json(
-        { error: 'ID del empleado es requerido' },
+        { error: 'ID del empleado y company_id son requeridos' },
         { status: 400 }
       );
     }
 
-    // Soft delete - cambiar estado a 'terminated'
-    const { data: employee, error } = await supabase
-      .from('employees')
-      .update({
-        status: 'terminated',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select()
-      .single();
+    console.log('🔍 Desactivando empleado:', id, 'de empresa:', companyId);
 
-    if (error) {
-      console.error('Error al desactivar empleado:', error);
+    // Desactivar en el store (soft delete)
+    const success = mockEmployeeStore.deleteEmployee(companyId, id);
+
+    if (!success) {
       return NextResponse.json(
-        { error: 'Error al desactivar empleado' },
-        { status: 500 }
+        { error: 'Empleado no encontrado' },
+        { status: 404 }
       );
     }
 
-    // También terminar contratos activos
-    await supabase
-      .from('employment_contracts')
-      .update({
-        status: 'terminated',
-        termination_date: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq('employee_id', id)
-      .eq('status', 'active');
+    // Obtener el empleado actualizado
+    const updatedEmployee = mockEmployeeStore.getEmployeeById(companyId, id);
+
+    console.log('✅ Empleado desactivado en store:', id);
 
     return NextResponse.json({
       success: true,
-      data: employee,
-      message: 'Empleado desactivado exitosamente'
+      data: updatedEmployee,
+      message: 'Empleado desactivado exitosamente',
+      mode: 'mock_memory_store'
     });
   } catch (error) {
     console.error('Error en DELETE /api/payroll/employees:', error);
