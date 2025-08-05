@@ -20,31 +20,82 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { data: employees, error } = await supabase
-      .from('employees')
-      .select(`
-        *,
-        employment_contracts (
-          id,
-          position,
-          department,
-          contract_type,
-          start_date,
-          end_date,
-          base_salary,
-          salary_type,
-          status
-        ),
-        payroll_config (
-          afp_code,
-          health_institution_code,
-          family_allowances,
-          legal_gratification_type,
-          has_unemployment_insurance
-        )
-      `)
-      .eq('company_id', companyId)
-      .order('first_name', { ascending: true });
+    // Consulta con fallback para campos que pueden no existir
+    let employees, error;
+    
+    try {
+      // Intentar consulta completa con nuevos campos
+      const result = await supabase
+        .from('employees')
+        .select(`
+          *,
+          employment_contracts (
+            id,
+            position,
+            department,
+            contract_type,
+            start_date,
+            end_date,
+            base_salary,
+            salary_type,
+            status
+          ),
+          payroll_config (
+            afp_code,
+            health_institution_code,
+            family_allowances,
+            legal_gratification_type,
+            has_unemployment_insurance
+          )
+        `)
+        .eq('company_id', companyId)
+        .order('first_name', { ascending: true });
+        
+      employees = result.data;
+      error = result.error;
+    } catch (fullQueryError) {
+      console.log('Consulta completa falló, intentando consulta básica:', fullQueryError);
+      
+      // Fallback: consulta solo campos básicos
+      const basicResult = await supabase
+        .from('employees')
+        .select(`
+          *,
+          employment_contracts (
+            id,
+            position,
+            department,
+            contract_type,
+            start_date,
+            end_date,
+            base_salary,
+            salary_type,
+            status
+          ),
+          payroll_config (
+            afp_code,
+            health_institution_code,
+            family_allowances
+          )
+        `)
+        .eq('company_id', companyId)
+        .order('first_name', { ascending: true });
+        
+      employees = basicResult.data;
+      error = basicResult.error;
+      
+      // Agregar campos faltantes con defaults
+      if (employees) {
+        employees = employees.map(emp => ({
+          ...emp,
+          payroll_config: emp.payroll_config ? emp.payroll_config.map(config => ({
+            ...config,
+            legal_gratification_type: 'none',
+            has_unemployment_insurance: true
+          })) : []
+        }));
+      }
+    }
 
     if (error) {
       console.error('Error al obtener empleados:', error);
