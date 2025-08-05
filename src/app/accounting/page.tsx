@@ -92,7 +92,7 @@ export default function AccountingPage() {
           <div className="mb-8">
             <h3 className="text-xl font-semibold text-gray-900 mb-6">Herramientas de Análisis</h3>
             
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
               {/* F29 Analysis */}
               <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl shadow-lg overflow-hidden">
                 <div className="px-6 py-6 text-white">
@@ -175,6 +175,39 @@ export default function AccountingPage() {
                     </Link>
                     <div className="w-full bg-white bg-opacity-10 text-white px-4 py-2 rounded-lg text-sm text-center opacity-60">
                       Dashboard ejecutivo
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Libro Diario - NUEVO */}
+              <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl shadow-lg overflow-hidden border-2 border-emerald-300">
+                <div className="px-6 py-6 text-white">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="w-10 h-10 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold">Libro Diario</h3>
+                      <p className="text-emerald-100 text-sm">Asientos integrados</p>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <Link href="/accounting/journal" className="w-full bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg font-medium inline-flex items-center justify-center space-x-2 transition-all text-sm">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      <span>Ver Libro Diario</span>
+                    </Link>
+                    <div className="w-full bg-white bg-opacity-10 text-white px-4 py-2 rounded-lg text-sm text-center">
+                      <div className="flex items-center justify-center space-x-1">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-200 text-emerald-800">
+                          Nuevo
+                        </span>
+                        <span className="text-xs opacity-80">F29 + RCV + Activos</span>
+                      </div>
                     </div>
                   </div>
                 </div>
