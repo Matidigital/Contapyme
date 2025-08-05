@@ -55,6 +55,10 @@ const CHILE_STANDARD_CONFIG = {
   health_plans: [
     { code: 'FONASA', name: 'FONASA', percentage: 7.0 }
   ],
+  income_limits: {
+    uf_limit: 84.6, // Tope imponible AFP/Salud 2025 (84.6 UF)
+    tax_exempt_utms: 13.5 // Exento impuesto hasta 13.5 UTM
+  },
   family_allowance_amount: 15000,
   tax_brackets: [] // Usar defaults del PayrollCalculator
 };
