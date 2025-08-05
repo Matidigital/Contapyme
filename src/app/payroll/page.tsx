@@ -339,7 +339,7 @@ export default function PayrollPage() {
           <div className="mt-12">
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Próximas Funcionalidades</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Nóminas */}
+              {/* Liquidaciones */}
               <Card variant="bordered">
                 <CardContent className="p-6">
                   <div className="flex items-start">
@@ -347,10 +347,14 @@ export default function PayrollPage() {
                       <BarChart3 className="w-6 h-6 text-green-600" />
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900 mb-1">Cálculo de Nóminas</h4>
-                      <p className="text-sm text-gray-600">Liquidaciones automáticas con cálculo de impuestos y cotizaciones</p>
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 mt-2">
-                        Próximamente
+                      <Link href="/payroll/liquidations">
+                        <h4 className="font-semibold text-gray-900 mb-1 hover:text-green-600 cursor-pointer">
+                          Liquidaciones de Sueldo
+                        </h4>
+                      </Link>
+                      <p className="text-sm text-gray-600">Cálculo automático con configuración previsional chilena</p>
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-600 mt-2">
+                        ✅ Disponible
                       </span>
                     </div>
                   </div>
