@@ -161,7 +161,7 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
       return bookValue;
     } catch (error) {
       console.error('Error calculating book value for asset:', asset.name, error);
-      return asset.purchase_value; // Fallback al valor de compra
+      return asset.purchase_value;
     }
   };
 

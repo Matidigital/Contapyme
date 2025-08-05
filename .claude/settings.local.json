@@ -32,7 +32,8 @@
       "WebFetch(domain:contapymepuq.netlify.app)",
       "WebFetch(domain:mindicador.cl)",
       "WebFetch(domain:api.coingecko.com)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(npx next build:*)"
     ],
     "deny": []
   }
