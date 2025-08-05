@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { AlertCircle, Check } from 'lucide-react';
 
 interface RutInputProps {
@@ -24,7 +24,6 @@ export default function RutInput({
   disabled = false,
   autoFocus = false
 }: RutInputProps) {
-  const [displayValue, setDisplayValue] = useState('');
   const [isValid, setIsValid] = useState<boolean | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -92,6 +91,11 @@ export default function RutInput({
     return dv === calculatedDv;
   };
 
+  // Obtener valor formateado para mostrar
+  const getDisplayValue = () => {
+    return formatRut(value);
+  };
+
   // Manejar cambios en el input
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
@@ -103,10 +107,6 @@ export default function RutInput({
     // Actualizar valor sin formato para el formulario
     onChange(clean);
     
-    // Actualizar valor formateado para mostrar
-    const formatted = formatRut(clean);
-    setDisplayValue(formatted);
-    
     // Validar si tiene el largo correcto
     if (clean.length >= 8) {
       const valid = validateRut(clean);
@@ -117,30 +117,6 @@ export default function RutInput({
       onValidChange?.(false);
     }
   };
-
-  // Sincronizar valor inicial
-  useEffect(() => {
-    if (value) {
-      const formatted = formatRut(value);
-      setDisplayValue(formatted);
-      
-      if (cleanRut(value).length >= 8) {
-        const valid = validateRut(value);
-        setIsValid(valid);
-        onValidChange?.(valid);
-      }
-    } else {
-      setDisplayValue('');
-      setIsValid(null);
-    }
-  }, [value]);
-
-  // Auto focus
-  useEffect(() => {
-    if (autoFocus && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [autoFocus]);
 
   // Determinar clases del input
   const inputClasses = `
@@ -158,17 +134,18 @@ export default function RutInput({
       <input
         ref={inputRef}
         type="text"
-        value={displayValue}
+        value={getDisplayValue()}
         onChange={handleChange}
         placeholder={placeholder}
         className={inputClasses}
         required={required}
         disabled={disabled}
         maxLength={12} // 11.111.111-1
+        autoFocus={autoFocus}
       />
       
       {/* Indicador de validación */}
-      {!disabled && displayValue && (
+      {!disabled && value && (
         <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
           {isValid === true && (
             <Check className="h-5 w-5 text-green-500" />
