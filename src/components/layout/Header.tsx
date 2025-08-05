@@ -68,7 +68,7 @@ const Header: React.FC<HeaderProps> = ({
   return (
     <header className={cn("bg-white border-b border-gray-200", className)}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between py-3">
+        <div className="flex items-center justify-between py-2">
           {/* Left section */}
           <div className="flex items-center space-x-4">
             {/* Back button */}
@@ -99,7 +99,7 @@ const Header: React.FC<HeaderProps> = ({
               <img 
                 src="/images/logo.png" 
                 alt="ContaPymePuq" 
-                className="h-20 w-auto drop-shadow-lg hover:scale-105 transition-transform duration-200" 
+                className="h-24 w-auto drop-shadow-xl hover:scale-105 transition-transform duration-200" 
               />
             </Link>
 
