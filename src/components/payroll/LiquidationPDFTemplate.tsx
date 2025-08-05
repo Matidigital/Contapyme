@@ -223,6 +223,7 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
             borderTop: '1px solid #000'
           }}>0</td>
         </tr>
+        </tbody>
       </table>
 
       {/* Título */}
@@ -299,6 +300,7 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
             borderTop: '1px solid #000'
           }}>{employeePosition.toUpperCase()}</td>
         </tr>
+        </tbody>
       </table>
 
       {/* Tabla Principal - Haberes y Descuentos */}
@@ -583,6 +585,7 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
             fontSize: '11px'
           }}></td>
         </tr>
+        </tbody>
       </table>
 
       {/* Resumen Final */}
