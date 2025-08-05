@@ -61,7 +61,10 @@ export class LiquidationService {
       // 1. Obtener datos del empleado (sin RLS por ahora)
       console.log('📋 Fetching employee:', request.employee_id);
       
-      const { data: employee, error: employeeError } = await supabase
+      let employee: any = null;
+      let employeeError: any = null;
+      
+      const employeeResult = await supabase
         .from('employees')
         .select(`
           *,
@@ -75,6 +78,9 @@ export class LiquidationService {
         .eq('id', request.employee_id)
         .eq('company_id', this.companyId)
         .single();
+        
+      employee = employeeResult.data;
+      employeeError = employeeResult.error;
 
       console.log('Employee query result:', { employee, employeeError });
 
@@ -82,7 +88,7 @@ export class LiquidationService {
       if (employeeError || !employee) {
         console.log('🔄 Intentando consulta alternativa...');
         
-        const { data: empAlt, error: empAltError } = await supabase
+        const empAltResult = await supabase
           .from('employees')
           .select(`
             *,
@@ -96,16 +102,17 @@ export class LiquidationService {
           .eq('id', request.employee_id)
           .single();
           
-        if (empAltError || !empAlt) {
-          console.error('Alternative employee fetch error:', empAltError);
+        if (empAltResult.error || !empAltResult.data) {
+          console.error('Alternative employee fetch error:', empAltResult.error);
           return {
             success: false,
-            error: `Empleado no encontrado: ${empAltError?.message || employeeError?.message || 'Unknown error'}`
+            error: `Empleado no encontrado: ${empAltResult.error?.message || employeeError?.message || 'Unknown error'}`
           };
         }
         
         // Usar resultado alternativo
-        employee = empAlt;
+        employee = empAltResult.data;
+        employeeError = null;
       }
 
       // 1.5. Obtener payroll_config por separado
