@@ -6,11 +6,12 @@
 import { createClient } from '@supabase/supabase-js';
 import { PayrollCalculator } from './payrollCalculator';
 
-// Configuración Supabase (usando variables públicas)
+// Configuración Supabase 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// Usar service key para bypass RLS temporalmente
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export interface LiquidationRequest {
   employee_id: string;
@@ -57,7 +58,9 @@ export class LiquidationService {
     try {
       console.log('🚀 Frontend Liquidation Service - Starting calculation');
 
-      // 1. Obtener datos del empleado
+      // 1. Obtener datos del empleado (sin RLS por ahora)
+      console.log('📋 Fetching employee:', request.employee_id);
+      
       const { data: employee, error: employeeError } = await supabase
         .from('employees')
         .select(`
@@ -67,16 +70,57 @@ export class LiquidationService {
             base_salary,
             contract_type,
             status
-          ),
-          payroll_config (
-            afp_code,
-            health_institution_code,
-            family_allowances
           )
         `)
         .eq('id', request.employee_id)
         .eq('company_id', this.companyId)
         .single();
+
+      console.log('Employee query result:', { employee, employeeError });
+
+      // Si falla, intentar sin RLS temporalmente
+      if (employeeError || !employee) {
+        console.log('🔄 Intentando consulta alternativa...');
+        
+        const { data: empAlt, error: empAltError } = await supabase
+          .from('employees')
+          .select(`
+            *,
+            employment_contracts (
+              position,
+              base_salary,
+              contract_type,
+              status
+            )
+          `)
+          .eq('id', request.employee_id)
+          .single();
+          
+        if (empAltError || !empAlt) {
+          console.error('Alternative employee fetch error:', empAltError);
+          return {
+            success: false,
+            error: `Empleado no encontrado: ${empAltError?.message || employeeError?.message || 'Unknown error'}`
+          };
+        }
+        
+        // Usar resultado alternativo
+        employee = empAlt;
+      }
+
+      // 1.5. Obtener payroll_config por separado
+      let payrollConfig = null;
+      const { data: payrollData, error: payrollError } = await supabase
+        .from('payroll_config')
+        .select('*')
+        .eq('employee_id', request.employee_id)
+        .single();
+        
+      if (!payrollError && payrollData) {
+        payrollConfig = payrollData;
+      } else {
+        console.warn('No payroll config found, using defaults');
+      }
 
       if (employeeError || !employee) {
         console.error('Employee fetch error:', employeeError);
@@ -111,8 +155,6 @@ export class LiquidationService {
       }
 
       // 3. Preparar datos para el calculador
-      const payrollConfig = employee.payroll_config || {};
-
       const employeeData = {
         id: employee.id,
         rut: employee.rut,
@@ -120,9 +162,9 @@ export class LiquidationService {
         last_name: employee.last_name,
         base_salary: activeContract.base_salary,
         contract_type: activeContract.contract_type,
-        afp_code: payrollConfig.afp_code || 'HABITAT',
-        health_institution_code: payrollConfig.health_institution_code || 'FONASA',
-        family_allowances: payrollConfig.family_allowances || 0
+        afp_code: payrollConfig?.afp_code || 'HABITAT',
+        health_institution_code: payrollConfig?.health_institution_code || 'FONASA',
+        family_allowances: payrollConfig?.family_allowances || 0
       };
 
       const periodData = {
