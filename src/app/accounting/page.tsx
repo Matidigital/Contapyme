@@ -92,7 +92,7 @@ export default function AccountingPage() {
           <div className="mb-8">
             <h3 className="text-xl font-semibold text-gray-900 mb-6">Herramientas de Análisis</h3>
             
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
               {/* F29 Analysis */}
               <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl shadow-lg overflow-hidden">
                 <div className="px-6 py-6 text-white">
@@ -175,6 +175,39 @@ export default function AccountingPage() {
                     </Link>
                     <div className="w-full bg-white bg-opacity-10 text-white px-4 py-2 rounded-lg text-sm text-center opacity-60">
                       Dashboard ejecutivo
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Executive Dashboard */}
+              <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl shadow-lg overflow-hidden border-2 border-purple-300">
+                <div className="px-6 py-6 text-white">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="w-10 h-10 bg-white bg-opacity-20 rounded-xl flex items-center justify-center">
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold">Dashboard Ejecutivo</h3>
+                      <p className="text-purple-100 text-sm">Análisis integral IA</p>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <Link href="/accounting/executive-dashboard" className="w-full bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg font-medium inline-flex items-center justify-center space-x-2 transition-all text-sm">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      <span>Insights Ejecutivos</span>
+                    </Link>
+                    <div className="w-full bg-white bg-opacity-10 text-white px-4 py-2 rounded-lg text-sm text-center">
+                      <div className="flex items-center justify-center space-x-1">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-200 text-purple-800">
+                          Premium
+                        </span>
+                        <span className="text-xs opacity-80">ROI + Correlaciones</span>
+                      </div>
                     </div>
                   </div>
                 </div>
