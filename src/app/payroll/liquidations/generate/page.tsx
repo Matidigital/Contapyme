@@ -129,7 +129,13 @@ export default function GenerateLiquidationPage() {
           first_name: selectedEmployeeData.first_name,
           last_name: selectedEmployeeData.last_name,
           base_salary: contract.base_salary,
-          contract_type: contract.contract_type
+          contract_type: contract.contract_type,
+          // Configuración previsional (usar defaults si no existe)
+          afp_code: 'HABITAT',
+          health_institution_code: 'FONASA',
+          family_allowances: 0,
+          legal_gratification_type: 'none',
+          has_unemployment_insurance: true
         },
         period: {
           year: formData.period_year,

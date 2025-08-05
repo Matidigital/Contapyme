@@ -13,6 +13,12 @@ export interface SimpleLiquidationRequest {
     last_name: string;
     base_salary: number;
     contract_type?: string;
+    // Configuración previsional
+    afp_code?: string;
+    health_institution_code?: string;
+    family_allowances?: number;
+    legal_gratification_type?: string;
+    has_unemployment_insurance?: boolean;
   };
   period: {
     year: number;
@@ -87,7 +93,7 @@ export class SimpleLiquidationService {
         };
       }
 
-      // Preparar datos del empleado con configuración estándar
+      // Preparar datos del empleado con su configuración específica
       const employeeData = {
         id: request.employee.id,
         rut: request.employee.rut,
@@ -95,10 +101,12 @@ export class SimpleLiquidationService {
         last_name: request.employee.last_name,
         base_salary: request.employee.base_salary,
         contract_type: request.employee.contract_type || 'indefinido',
-        // Configuración estándar (más común en Chile)
-        afp_code: 'HABITAT',
-        health_institution_code: 'FONASA',
-        family_allowances: 0
+        // Configuración previsional del empleado
+        afp_code: request.employee.afp_code || 'HABITAT',
+        health_institution_code: request.employee.health_institution_code || 'FONASA',
+        family_allowances: request.employee.family_allowances || 0,
+        legal_gratification_type: request.employee.legal_gratification_type || 'none',
+        has_unemployment_insurance: request.employee.has_unemployment_insurance !== false
       };
 
       const periodData = {

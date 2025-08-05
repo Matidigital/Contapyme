@@ -33,14 +33,18 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
     }).format(amount);
   };
 
-  // Calcular gratificación legal (25% del sueldo base si corresponde)
+  // Calcular gratificación legal según configuración del empleado
   const calculateLegalGratification = () => {
     const baseSalary = liquidationData.base_salary || 0;
-    // Solo si el sueldo base es mayor a 2 sueldos mínimos (aprox)
-    if (baseSalary > 1000000) {
-      return Math.round(baseSalary * 0.25 / 12); // 25% anual dividido en 12 meses
-    }
-    return 0;
+    const gratificationType = liquidationData.legal_gratification_type || 'none';
+    
+    if (gratificationType === 'none') return 0;
+    
+    const annualPercentage = gratificationType === 'code_47' ? 0.25 : // 25% código 47
+                            gratificationType === 'code_50' ? 0.30 : // 30% código 50
+                            0;
+    
+    return Math.round(baseSalary * annualPercentage / 12); // Anual dividido en 12 meses
   };
 
   const legalGratification = calculateLegalGratification();
@@ -105,8 +109,7 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
         width: '100%', 
         borderCollapse: 'collapse', 
         marginBottom: '20px',
-        border: '1px solid #000',
-        backgroundColor: '#f8f9fa'
+        border: '1px solid #000'
       }}>
         <tr>
           <td style={{ 
@@ -225,8 +228,7 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
         fontSize: '16px', 
         fontWeight: 'bold',
         border: '2px solid #000',
-        padding: '10px',
-        backgroundColor: '#e9ecef'
+        padding: '10px'
       }}>
         LIQUIDACIÓN DE SUELDO
       </div>
@@ -310,7 +312,6 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
             textAlign: 'center',
             borderRight: '2px solid #000',
             borderBottom: '2px solid #000',
-            backgroundColor: '#d1ecf1',
             width: '50%'
           }}>HABERES</td>
           <td style={{ 
@@ -319,7 +320,6 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
             fontWeight: 'bold', 
             textAlign: 'center',
             borderBottom: '2px solid #000',
-            backgroundColor: '#f8d7da',
             width: '50%'
           }}>DESCUENTOS</td>
         </tr>
@@ -407,8 +407,29 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
               fontSize: '11px',
               borderBottom: '1px solid #ccc'
             }}>
-              FONASA (7%): <span style={{ float: 'right', fontWeight: 'bold' }}>
+              {liquidationData.health_institution_code || 'FONASA'} (7%): <span style={{ float: 'right', fontWeight: 'bold' }}>
                 ${(liquidationData.health_amount || 0).toLocaleString('es-CL')}
+              </span>
+            </td>
+          </tr>
+        )}
+
+        {/* Seguro Cesantía si aplica */}
+        {liquidationData.has_unemployment_insurance && (liquidationData.sis_amount || 0) > 0 && (
+          <tr>
+            <td style={{ 
+              padding: '8px', 
+              fontSize: '11px',
+              borderRight: '2px solid #000',
+              borderBottom: '1px solid #ccc'
+            }}></td>
+            <td style={{ 
+              padding: '8px', 
+              fontSize: '11px',
+              borderBottom: '1px solid #ccc'
+            }}>
+              SEGURO CESANTÍA: <span style={{ float: 'right', fontWeight: 'bold' }}>
+                ${(liquidationData.sis_amount || 0).toLocaleString('es-CL')}
               </span>
             </td>
           </tr>
@@ -423,7 +444,6 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
             borderRight: '2px solid #000',
             borderTop: '2px solid #000',
             borderBottom: '2px solid #000',
-            backgroundColor: '#d1ecf1',
             textAlign: 'center'
           }}>
             TOTAL IMPONIBLE: ${totalImponible.toLocaleString('es-CL')}
@@ -434,7 +454,6 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
             fontWeight: 'bold',
             borderTop: '2px solid #000',
             borderBottom: '2px solid #000',
-            backgroundColor: '#f8d7da',
             textAlign: 'center'
           }}>
             TOTAL DESCUENTOS: ${totalDescuentos.toLocaleString('es-CL')}
@@ -508,7 +527,6 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
         border: '3px solid #000', 
         padding: '20px', 
         textAlign: 'center',
-        backgroundColor: '#fff3cd',
         marginBottom: '20px'
       }}>
         <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '10px' }}>
@@ -523,10 +541,8 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
         <div style={{ 
           fontSize: '18px', 
           fontWeight: 'bold', 
-          color: '#155724',
-          border: '2px solid #155724',
-          padding: '10px',
-          backgroundColor: '#d4edda'
+          border: '2px solid #000',
+          padding: '10px'
         }}>
           SUELDO LÍQUIDO: ${liquidoAPagar.toLocaleString('es-CL')}
         </div>

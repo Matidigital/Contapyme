@@ -33,6 +33,8 @@ interface Employee {
     afp_code: string;
     health_institution_code: string;
     family_allowances: number;
+    legal_gratification_type: string;
+    has_unemployment_insurance: boolean;
   };
 }
 
@@ -67,7 +69,9 @@ export default function EditEmployeePage() {
     payroll_config: {
       afp_code: 'HABITAT',
       health_institution_code: 'FONASA',
-      family_allowances: 0
+      family_allowances: 0,
+      legal_gratification_type: 'none',
+      has_unemployment_insurance: true
     }
   });
 
@@ -109,7 +113,9 @@ export default function EditEmployeePage() {
           payroll_config: {
             afp_code: emp.payroll_config?.afp_code || 'HABITAT',
             health_institution_code: emp.payroll_config?.health_institution_code || 'FONASA',
-            family_allowances: emp.payroll_config?.family_allowances || 0
+            family_allowances: emp.payroll_config?.family_allowances || 0,
+            legal_gratification_type: emp.payroll_config?.legal_gratification_type || 'none',
+            has_unemployment_insurance: emp.payroll_config?.has_unemployment_insurance || true
           }
         });
       } else {
@@ -141,7 +147,8 @@ export default function EditEmployeePage() {
         ...prev,
         payroll_config: {
           ...prev.payroll_config,
-          [payrollField]: payrollField === 'family_allowances' ? parseInt(value) || 0 : value
+          [payrollField]: payrollField === 'family_allowances' ? parseInt(value) || 0 : 
+                         payrollField === 'has_unemployment_insurance' ? value === 'true' : value
         }
       }));
     } else {
@@ -606,6 +613,45 @@ export default function EditEmployeePage() {
                       max="10"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Gratificación Legal
+                    </label>
+                    <select
+                      name="payroll_config.legal_gratification_type"
+                      value={formData.payroll_config.legal_gratification_type}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="none">No tiene gratificación</option>
+                      <option value="code_47">Código 47 (25% anual)</option>
+                      <option value="code_50">Código 50 (30% anual)</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Seleccione el tipo de gratificación legal según normativa
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Seguro de Cesantía
+                    </label>
+                    <select
+                      name="payroll_config.has_unemployment_insurance"
+                      value={formData.payroll_config.has_unemployment_insurance.toString()}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="true">Sí tiene seguro cesantía</option>
+                      <option value="false">No tiene seguro cesantía</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Trabajadores indefinidos suelen tener seguro cesantía
+                    </p>
                   </div>
                 </div>
               </CardContent>
