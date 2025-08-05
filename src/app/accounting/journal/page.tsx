@@ -1316,5 +1316,4 @@ function CreateJournalEntryModal({
         </div>
       </div>
     );
-  }
 }
