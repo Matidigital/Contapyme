@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       .from('employees')
       .select(`
         *,
-        employment_contracts!inner (
+        employment_contracts (
           position,
           base_salary,
           contract_type,
@@ -59,13 +59,22 @@ export async function POST(request: NextRequest) {
       `)
       .eq('id', employee_id)
       .eq('company_id', companyId)
-      .eq('employment_contracts.status', 'active')
       .single();
 
     if (employeeError || !employee) {
+      console.error('Employee fetch error:', employeeError);
       return NextResponse.json(
-        { success: false, error: 'Empleado no encontrado o sin contrato activo' },
+        { success: false, error: `Empleado no encontrado: ${employeeError?.message || 'Unknown error'}` },
         { status: 404 }
+      );
+    }
+
+    // Verificar que tenga contrato activo
+    const activeContract = employee.employment_contracts?.find((contract: any) => contract.status === 'active');
+    if (!activeContract) {
+      return NextResponse.json(
+        { success: false, error: 'Empleado no tiene contrato activo' },
+        { status: 400 }
       );
     }
 
@@ -84,7 +93,6 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Preparar datos para el calculador
-    const activeContract = employee.employment_contracts[0];
     const payrollConfig = employee.payroll_config || {};
 
     const employeeData = {
