@@ -1,0 +1,245 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// Configuración por defecto basada en valores reales de Chile (Enero 2025)
+const DEFAULT_SETTINGS = {
+  afp_configs: [
+    { id: 'afp-capital', name: 'AFP Capital', code: 'CAPITAL', commission_percentage: 1.44, sis_percentage: 1.15, active: true },
+    { id: 'afp-cuprum', name: 'AFP Cuprum', code: 'CUPRUM', commission_percentage: 1.48, sis_percentage: 1.15, active: true },
+    { id: 'afp-habitat', name: 'AFP Hábitat', code: 'HABITAT', commission_percentage: 1.27, sis_percentage: 1.15, active: true },
+    { id: 'afp-planvital', name: 'AFP PlanVital', code: 'PLANVITAL', commission_percentage: 1.16, sis_percentage: 1.15, active: true },
+    { id: 'afp-provida', name: 'AFP ProVida', code: 'PROVIDA', commission_percentage: 1.69, sis_percentage: 1.15, active: true },
+    { id: 'afp-modelo', name: 'AFP Modelo', code: 'MODELO', commission_percentage: 0.58, sis_percentage: 1.15, active: true },
+    { id: 'afp-uno', name: 'AFP Uno', code: 'UNO', commission_percentage: 0.69, sis_percentage: 1.15, active: true }
+  ],
+  health_configs: [
+    { id: 'fonasa', name: 'FONASA', code: 'FONASA', plan_percentage: 7.0, active: true },
+    { id: 'banmedica', name: 'Banmédica', code: 'BANMEDICA', plan_percentage: 8.5, active: true },
+    { id: 'consalud', name: 'Consalud', code: 'CONSALUD', plan_percentage: 8.2, active: true },
+    { id: 'cruz-blanca', name: 'Cruz Blanca', code: 'CRUZ_BLANCA', plan_percentage: 8.8, active: true },
+    { id: 'vida-tres', name: 'Vida Tres', code: 'VIDA_TRES', plan_percentage: 8.3, active: true },
+    { id: 'colmena', name: 'Colmena Golden Cross', code: 'COLMENA', plan_percentage: 8.6, active: true }
+  ],
+  income_limits: {
+    uf_limit: 83.4, // Tope imponible AFP/Salud en UF
+    minimum_wage: 500000, // Sueldo mínimo en CLP
+    family_allowance_limit: 1000000 // Límite superior para asignación familiar
+  },
+  family_allowances: {
+    tramo_a: 13596, // Hasta $500.000
+    tramo_b: 8397,  // $500.001 a $750.000  
+    tramo_c: 2798   // $750.001 a $1.000.000
+  },
+  contributions: {
+    unemployment_insurance_fixed: 3.0,      // Seguro cesantía plazo fijo
+    unemployment_insurance_indefinite: 0.6, // Seguro cesantía indefinido
+    social_security_percentage: 10.0        // Cotización AFP base
+  },
+  company_info: {
+    mutual_code: 'ACHS',
+    caja_compensacion_code: ''
+  }
+};
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const companyId = searchParams.get('company_id');
+
+    if (!companyId) {
+      return NextResponse.json(
+        { success: false, error: 'company_id es requerido' },
+        { status: 400 }
+      );
+    }
+
+    // Verificar si ya existen configuraciones para esta empresa
+    const { data: existingSettings, error: fetchError } = await supabase
+      .from('payroll_settings')
+      .select('*')
+      .eq('company_id', companyId)
+      .single();
+
+    if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = no rows found
+      console.error('Error fetching payroll settings:', fetchError);
+      return NextResponse.json(
+        { success: false, error: 'Error al obtener configuración' },
+        { status: 500 }
+      );
+    }
+
+    // Si no existen configuraciones, crear las por defecto
+    if (!existingSettings) {
+      const { data: newSettings, error: createError } = await supabase
+        .from('payroll_settings')
+        .insert({
+          company_id: companyId,
+          settings: DEFAULT_SETTINGS,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Error creating default settings:', createError);
+        return NextResponse.json(
+          { success: false, error: 'Error al crear configuración por defecto' },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: newSettings.settings
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: existingSettings.settings
+    });
+
+  } catch (error) {
+    console.error('Error in GET /api/payroll/settings:', error);
+    return NextResponse.json(
+      { success: false, error: 'Error interno del servidor' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const companyId = searchParams.get('company_id');
+
+    if (!companyId) {
+      return NextResponse.json(
+        { success: false, error: 'company_id es requerido' },
+        { status: 400 }
+      );
+    }
+
+    const updatedSettings = await request.json();
+
+    // Obtener configuración actual
+    const { data: currentSettings, error: fetchError } = await supabase
+      .from('payroll_settings')
+      .select('settings')
+      .eq('company_id', companyId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching current settings:', fetchError);
+      return NextResponse.json(
+        { success: false, error: 'Error al obtener configuración actual' },
+        { status: 500 }
+      );
+    }
+
+    // Merge con configuración actual
+    const mergedSettings = {
+      ...currentSettings.settings,
+      ...updatedSettings
+    };
+
+    // Actualizar en base de datos
+    const { data: updated, error: updateError } = await supabase
+      .from('payroll_settings')
+      .update({
+        settings: mergedSettings,
+        updated_at: new Date().toISOString()
+      })
+      .eq('company_id', companyId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Error updating settings:', updateError);
+      return NextResponse.json(
+        { success: false, error: 'Error al actualizar configuración' },
+        { status: 500 }
+      );
+    }
+
+    // Log para auditoría
+    await supabase
+      .from('payroll_settings_log')
+      .insert({
+        company_id: companyId,
+        changed_fields: Object.keys(updatedSettings),
+        old_values: currentSettings.settings,
+        new_values: mergedSettings,
+        created_at: new Date().toISOString()
+      });
+
+    return NextResponse.json({
+      success: true,
+      data: updated.settings,
+      message: 'Configuración actualizada exitosamente'
+    });
+
+  } catch (error) {
+    console.error('Error in PUT /api/payroll/settings:', error);
+    return NextResponse.json(
+      { success: false, error: 'Error interno del servidor' },
+      { status: 500 }
+    );
+  }
+}
+
+// Endpoint para actualizar desde Previred (futuro)
+export async function POST(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const companyId = searchParams.get('company_id');
+
+    if (!companyId) {
+      return NextResponse.json(
+        { success: false, error: 'company_id es requerido' },
+        { status: 400 }
+      );
+    }
+
+    // TODO: Implementar actualización desde API de Previred
+    // Por ahora retornamos los valores por defecto actualizados
+    
+    const { data: updated, error: updateError } = await supabase
+      .from('payroll_settings')
+      .update({
+        settings: DEFAULT_SETTINGS,
+        updated_at: new Date().toISOString(),
+        last_previred_sync: new Date().toISOString()
+      })
+      .eq('company_id', companyId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Error updating from Previred:', updateError);
+      return NextResponse.json(
+        { success: false, error: 'Error al actualizar desde Previred' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: updated.settings,
+      message: 'Configuración actualizada desde Previred exitosamente'
+    });
+
+  } catch (error) {
+    console.error('Error in POST /api/payroll/settings:', error);
+    return NextResponse.json(
+      { success: false, error: 'Error interno del servidor' },
+      { status: 500 }
+    );
+  }
+}

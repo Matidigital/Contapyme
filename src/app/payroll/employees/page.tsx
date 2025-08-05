@@ -189,12 +189,16 @@ export default function EmployeesPage() {
                         </span>
                         
                         <div className="flex space-x-2">
-                          <Button variant="outline" size="sm">
-                            Ver
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            Editar
-                          </Button>
+                          <Link href={`/payroll/employees/${employee.id}`}>
+                            <Button variant="outline" size="sm">
+                              Ver
+                            </Button>
+                          </Link>
+                          <Link href={`/payroll/employees/${employee.id}/edit`}>
+                            <Button variant="outline" size="sm">
+                              Editar
+                            </Button>
+                          </Link>
                         </div>
                       </div>
                     </div>

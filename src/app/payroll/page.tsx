@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Header } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
-import { Users, FileText, Clock, Calendar, BarChart3, Plus, ChevronRight } from 'lucide-react';
+import { Users, FileText, Clock, Calendar, BarChart3, Plus, ChevronRight, Settings } from 'lucide-react';
 
 interface PayrollStats {
   totalEmployees: number;
@@ -240,10 +240,12 @@ export default function PayrollPage() {
                         Nuevo Contrato
                       </Button>
                     </Link>
-                    <Button variant="outline" className="w-full justify-start" disabled>
-                      <Clock className="w-4 h-4 mr-2" />
-                      Registrar Asistencia
-                    </Button>
+                    <Link href="/payroll/settings">
+                      <Button variant="outline" className="w-full justify-start">
+                        <Settings className="w-4 h-4 mr-2" />
+                        Configuración Previsional
+                      </Button>
+                    </Link>
                   </div>
                 </CardContent>
               </Card>
