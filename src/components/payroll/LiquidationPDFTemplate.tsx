@@ -5,13 +5,25 @@ interface LiquidationPDFTemplateProps {
   employeeName: string;
   period: string;
   companyName?: string;
+  companyRut?: string;
+  companyAddress?: string;
+  companyPhone?: string;
+  employeeRut?: string;
+  employeePosition?: string;
+  employeeStartDate?: string;
 }
 
 export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
   liquidationData,
   employeeName,
   period,
-  companyName = "ContaPyme"
+  companyName = "CONTAPYME SPA",
+  companyRut = "12.345.678-9",
+  companyAddress = "Dirección no especificada",
+  companyPhone = "No especificado",
+  employeeRut = liquidationData.employee?.rut || "No especificado",
+  employeePosition = "Empleado",
+  employeeStartDate = "01-01-2024"
 }) => {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-CL', {
@@ -21,284 +33,316 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
     }).format(amount);
   };
 
+  // Calcular gratificación legal (25% del sueldo base si corresponde)
+  const calculateLegalGratification = () => {
+    const baseSalary = liquidationData.base_salary || 0;
+    // Solo si el sueldo base es mayor a 2 sueldos mínimos (aprox)
+    if (baseSalary > 1000000) {
+      return Math.round(baseSalary * 0.25 / 12); // 25% anual dividido en 12 meses
+    }
+    return 0;
+  };
+
+  const legalGratification = calculateLegalGratification();
+  
+  // Convertir número a palabras (simplificado)
+  const numberToWords = (num: number): string => {
+    if (num === 0) return 'cero pesos';
+    // Implementación simplificada - en producción usar librería completa
+    const units = ['', 'mil', 'millón', 'mil millones'];
+    let result = '';
+    
+    if (num >= 1000000) {
+      const millions = Math.floor(num / 1000000);
+      result += `${millions} ${millions === 1 ? 'millón' : 'millones'} `;
+      num %= 1000000;
+    }
+    
+    if (num >= 1000) {
+      const thousands = Math.floor(num / 1000);
+      result += `${thousands} mil `;
+      num %= 1000;
+    }
+    
+    if (num > 0) {
+      result += `${num}`;
+    }
+    
+    return result.trim() + ' pesos';
+  };
+
+  const totalImponible = (liquidationData.base_salary || 0) + 
+                      legalGratification + 
+                      (liquidationData.bonuses || 0) + 
+                      (liquidationData.overtime_amount || 0) + 
+                      (liquidationData.commissions || 0);
+
+  const totalDescuentos = (liquidationData.afp_amount || 0) + 
+                         (liquidationData.health_amount || 0) + 
+                         (liquidationData.sis_amount || 0) + 
+                         (liquidationData.income_tax_amount || 0);
+
+  const liquidoAPagar = totalImponible - totalDescuentos;
+
   return (
     <div 
       id="liquidation-pdf-content"
       style={{
-        fontFamily: 'Arial, sans-serif',
-        width: '794px', // A4 width in pixels at 96 DPI
+        fontFamily: 'Courier New, monospace',
+        width: '794px',
         margin: '0 auto',
-        padding: '40px',
+        padding: '20px',
         backgroundColor: 'white',
         color: '#000',
-        fontSize: '12px',
-        lineHeight: '1.4'
+        fontSize: '11px',
+        lineHeight: '1.3'
       }}
     >
-      {/* Header */}
-      <div style={{ textAlign: 'center', marginBottom: '30px', borderBottom: '2px solid #333', paddingBottom: '20px' }}>
-        <h1 style={{ margin: '0', fontSize: '20px', fontWeight: 'bold', color: '#2563eb' }}>
-          {companyName}
-        </h1>
-        <h2 style={{ margin: '10px 0 0 0', fontSize: '16px', fontWeight: 'bold' }}>
-          LIQUIDACIÓN DE SUELDO
-        </h2>
-        <p style={{ margin: '5px 0 0 0', fontSize: '14px', color: '#666' }}>
-          Período: {period}
-        </p>
+      {/* Company Header */}
+      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '10px' }}>
+        <tr>
+          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>EMPRESA</td>
+          <td style={{ padding: '2px 0', fontSize: '11px' }}>{companyName}</td>
+          <td style={{ padding: '2px 0', fontSize: '11px' }}></td>
+          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>Nro. Interno</td>
+          <td style={{ padding: '2px 0', fontSize: '11px' }}>001</td>
+        </tr>
+        <tr>
+          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>R.U.T.</td>
+          <td style={{ padding: '2px 0', fontSize: '11px' }}>{companyRut}</td>
+          <td style={{ padding: '2px 0', fontSize: '11px' }}></td>
+          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>Fecha Ingreso</td>
+          <td style={{ padding: '2px 0', fontSize: '11px' }}>{employeeStartDate}</td>
+        </tr>
+        <tr>
+          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>DIRECCION</td>
+          <td style={{ padding: '2px 0', fontSize: '11px' }}>{companyAddress}</td>
+          <td style={{ padding: '2px 0', fontSize: '11px' }}></td>
+          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>Dias Trab.</td>
+          <td style={{ padding: '2px 0', fontSize: '11px' }}>30</td>
+        </tr>
+        <tr>
+          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>FONO</td>
+          <td style={{ padding: '2px 0', fontSize: '11px' }}>{companyPhone}</td>
+          <td style={{ padding: '2px 0', fontSize: '11px' }}></td>
+          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>Dias Licencia</td>
+          <td style={{ padding: '2px 0', fontSize: '11px' }}>0</td>
+        </tr>
+      </table>
+
+      {/* Title */}
+      <div style={{ textAlign: 'center', margin: '20px 0', fontSize: '14px', fontWeight: 'bold' }}>
+        LIQUIDACION DE SUELDO
       </div>
 
       {/* Employee Info */}
-      <div style={{ marginBottom: '25px', backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '5px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <strong style={{ fontSize: '14px' }}>EMPLEADO: </strong>
-            <span style={{ fontSize: '14px' }}>{employeeName}</span>
-          </div>
-          <div>
-            <strong>RUT: </strong>
-            <span>{liquidationData.employee?.rut || 'N/A'}</span>
-          </div>
-        </div>
-        {liquidationData.employee?.contract_type && (
-          <div style={{ marginTop: '8px' }}>
-            <strong>TIPO CONTRATO: </strong>
-            <span style={{ textTransform: 'capitalize' }}>
-              {liquidationData.employee.contract_type.replace('_', ' ')}
-            </span>
-          </div>
-        )}
-      </div>
+      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '15px' }}>
+        <tr>
+          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>TRABAJADOR</td>
+          <td style={{ padding: '2px 0', fontSize: '11px' }}>{employeeName.toUpperCase()}</td>
+        </tr>
+        <tr>
+          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>RUT</td>
+          <td style={{ padding: '2px 0', fontSize: '11px' }}>{employeeRut}</td>
+        </tr>
+        <tr>
+          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>MES</td>
+          <td style={{ padding: '2px 0', fontSize: '11px' }}>{period.toUpperCase()}</td>
+        </tr>
+        <tr>
+          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>CARGO</td>
+          <td style={{ padding: '2px 0', fontSize: '11px' }}>{employeePosition.toUpperCase()}</td>
+        </tr>
+      </table>
 
-      {/* Main Content */}
-      <div style={{ display: 'flex', gap: '30px' }}>
+      {/* Main Table - Haberes y Descuentos */}
+      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
+        <tr>
+          <td style={{ padding: '5px 0', fontSize: '12px', fontWeight: 'bold', textAlign: 'center' }}>HABERES</td>
+          <td style={{ padding: '5px 0', fontSize: '12px', fontWeight: 'bold', textAlign: 'center' }}>DESCUENTOS</td>
+        </tr>
         
-        {/* Left Column - Haberes */}
-        <div style={{ flex: '1' }}>
-          <div style={{ backgroundColor: '#e8f5e8', padding: '15px', borderRadius: '5px', marginBottom: '20px' }}>
-            <h3 style={{ margin: '0 0 15px 0', fontSize: '14px', fontWeight: 'bold', color: '#16a34a' }}>
-              HABERES
-            </h3>
-            
-            {/* Haberes Imponibles */}
-            <div style={{ marginBottom: '15px' }}>
-              <strong style={{ fontSize: '12px', color: '#059669' }}>IMPONIBLES:</strong>
-              <div style={{ marginLeft: '10px', marginTop: '5px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', margin: '3px 0' }}>
-                  <span>• Sueldo Base</span>
-                  <span>{formatCurrency(liquidationData.base_salary || 0)}</span>
-                </div>
-                {liquidationData.overtime_amount > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', margin: '3px 0' }}>
-                    <span>• Horas Extra</span>
-                    <span>{formatCurrency(liquidationData.overtime_amount)}</span>
-                  </div>
-                )}
-                {liquidationData.bonuses > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', margin: '3px 0' }}>
-                    <span>• Bonos</span>
-                    <span>{formatCurrency(liquidationData.bonuses)}</span>
-                  </div>
-                )}
-                {liquidationData.commissions > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', margin: '3px 0' }}>
-                    <span>• Comisiones</span>
-                    <span>{formatCurrency(liquidationData.commissions)}</span>
-                  </div>
-                )}
-                {liquidationData.gratification > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', margin: '3px 0' }}>
-                    <span>• Gratificación</span>
-                    <span>{formatCurrency(liquidationData.gratification)}</span>
-                  </div>
-                )}
-              </div>
-              <div style={{ 
-                borderTop: '1px solid #16a34a', 
-                paddingTop: '8px', 
-                marginTop: '8px',
-                display: 'flex', 
-                justifyContent: 'space-between',
-                fontWeight: 'bold'
-              }}>
-                <span>TOTAL IMPONIBLE</span>
-                <span>{formatCurrency(liquidationData.total_taxable_income || 0)}</span>
-              </div>
-            </div>
+        <tr style={{ height: '10px' }}><td colSpan={2}></td></tr>
 
-            {/* Haberes No Imponibles */}
-            <div>
-              <strong style={{ fontSize: '12px', color: '#059669' }}>NO IMPONIBLES:</strong>
-              <div style={{ marginLeft: '10px', marginTop: '5px' }}>
-                {liquidationData.food_allowance > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', margin: '3px 0' }}>
-                    <span>• Colación</span>
-                    <span>{formatCurrency(liquidationData.food_allowance)}</span>
-                  </div>
-                )}
-                {liquidationData.transport_allowance > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', margin: '3px 0' }}>
-                    <span>• Movilización</span>
-                    <span>{formatCurrency(liquidationData.transport_allowance)}</span>
-                  </div>
-                )}
-                {liquidationData.family_allowance > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', margin: '3px 0' }}>
-                    <span>• Asignación Familiar</span>
-                    <span>{formatCurrency(liquidationData.family_allowance)}</span>
-                  </div>
-                )}
-              </div>
-              <div style={{ 
-                borderTop: '1px solid #16a34a', 
-                paddingTop: '8px', 
-                marginTop: '8px',
-                display: 'flex', 
-                justifyContent: 'space-between',
-                fontWeight: 'bold'
-              }}>
-                <span>TOTAL NO IMPONIBLE</span>
-                <span>{formatCurrency(liquidationData.total_non_taxable_income || 0)}</span>
-              </div>
-            </div>
+        {/* Sueldo Base */}
+        <tr>
+          <td style={{ padding: '2px 0', fontSize: '11px' }}>
+            SUELDO BASE &nbsp;&nbsp;&nbsp; $ {(liquidationData.base_salary || 0).toLocaleString('es-CL')}
+          </td>
+          <td style={{ padding: '2px 0', fontSize: '11px' }}>
+            AFP &nbsp; HABITAT &nbsp; 10,00% &nbsp; {(liquidationData.afp_amount || 0).toLocaleString('es-CL')}
+          </td>
+        </tr>
 
-            {/* Total Haberes */}
-            <div style={{ 
-              backgroundColor: '#16a34a', 
-              color: 'white', 
-              padding: '10px', 
-              marginTop: '15px',
-              borderRadius: '3px',
-              display: 'flex', 
-              justifyContent: 'space-between',
-              fontWeight: 'bold',
-              fontSize: '14px'
-            }}>
-              <span>TOTAL HABERES</span>
-              <span>{formatCurrency(liquidationData.total_gross_income || 0)}</span>
-            </div>
-          </div>
-        </div>
+        {/* Gratificación Legal */}
+        {legalGratification > 0 && (
+          <tr>
+            <td style={{ padding: '2px 0', fontSize: '11px' }}>
+              GRATIFICACION LEGAL &nbsp;&nbsp;&nbsp; $ {legalGratification.toLocaleString('es-CL')}
+            </td>
+            <td></td>
+          </tr>
+        )}
 
-        {/* Right Column - Descuentos */}
-        <div style={{ flex: '1' }}>
-          <div style={{ backgroundColor: '#fee8e8', padding: '15px', borderRadius: '5px', marginBottom: '20px' }}>
-            <h3 style={{ margin: '0 0 15px 0', fontSize: '14px', fontWeight: 'bold', color: '#dc2626' }}>
-              DESCUENTOS
-            </h3>
-            
-            {/* Descuentos Previsionales */}
-            <div style={{ marginBottom: '15px' }}>
-              <strong style={{ fontSize: '12px', color: '#b91c1c' }}>PREVISIONALES:</strong>
-              <div style={{ marginLeft: '10px', marginTop: '5px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', margin: '3px 0' }}>
-                  <span>• AFP (10%)</span>
-                  <span>{formatCurrency(liquidationData.afp_amount || 0)}</span>
-                </div>
-                {liquidationData.afp_commission_amount > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', margin: '3px 0' }}>
-                    <span>• Comisión AFP</span>
-                    <span>{formatCurrency(liquidationData.afp_commission_amount)}</span>
-                  </div>
-                )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', margin: '3px 0' }}>
-                  <span>• Salud (7%)</span>
-                  <span>{formatCurrency(liquidationData.health_amount || 0)}</span>
-                </div>
-                {liquidationData.sis_amount > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', margin: '3px 0' }}>
-                    <span>• Seguro Cesantía</span>
-                    <span>{formatCurrency(liquidationData.sis_amount)}</span>
-                  </div>
-                )}
-                {liquidationData.income_tax_amount > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', margin: '3px 0' }}>
-                    <span>• Impuesto Renta</span>
-                    <span>{formatCurrency(liquidationData.income_tax_amount)}</span>
-                  </div>
-                )}
-              </div>
-            </div>
+        {/* Otros haberes */}
+        {(liquidationData.bonuses || 0) > 0 && (
+          <tr>
+            <td style={{ padding: '2px 0', fontSize: '11px' }}>
+              BONO &nbsp;&nbsp;&nbsp; $ {(liquidationData.bonuses || 0).toLocaleString('es-CL')}
+            </td>
+            <td></td>
+          </tr>
+        )}
 
-            {/* Otros Descuentos */}
-            {(liquidationData.total_other_deductions > 0) && (
-              <div>
-                <strong style={{ fontSize: '12px', color: '#b91c1c' }}>OTROS:</strong>
-                <div style={{ marginLeft: '10px', marginTop: '5px' }}>
-                  {liquidationData.loan_deductions > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', margin: '3px 0' }}>
-                      <span>• Préstamos</span>
-                      <span>{formatCurrency(liquidationData.loan_deductions)}</span>
-                    </div>
-                  )}
-                  {liquidationData.advance_payments > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', margin: '3px 0' }}>
-                      <span>• Anticipos</span>
-                      <span>{formatCurrency(liquidationData.advance_payments)}</span>
-                    </div>
-                  )}
-                  {liquidationData.apv_amount > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', margin: '3px 0' }}>
-                      <span>• APV</span>
-                      <span>{formatCurrency(liquidationData.apv_amount)}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+        {(liquidationData.overtime_amount || 0) > 0 && (
+          <tr>
+            <td style={{ padding: '2px 0', fontSize: '11px' }}>
+              HORAS EXTRAS &nbsp;&nbsp;&nbsp; $ {(liquidationData.overtime_amount || 0).toLocaleString('es-CL')}
+            </td>
+            <td></td>
+          </tr>
+        )}
 
-            {/* Total Descuentos */}
-            <div style={{ 
-              backgroundColor: '#dc2626', 
-              color: 'white', 
-              padding: '10px', 
-              marginTop: '15px',
-              borderRadius: '3px',
-              display: 'flex', 
-              justifyContent: 'space-between',
-              fontWeight: 'bold',
-              fontSize: '14px'
-            }}>
-              <span>TOTAL DESCUENTOS</span>
-              <span>{formatCurrency(liquidationData.total_deductions || 0)}</span>
-            </div>
-          </div>
-        </div>
-      </div>
+        {/* Salud */}
+        <tr>
+          <td></td>
+          <td style={{ padding: '2px 0', fontSize: '11px' }}>
+            FONASA O ISAPRE &nbsp;&nbsp; 7,00% &nbsp; {(liquidationData.health_amount || 0).toLocaleString('es-CL')}
+          </td>
+        </tr>
 
-      {/* Final Result */}
-      <div style={{ 
-        backgroundColor: '#1e40af', 
-        color: 'white', 
-        padding: '20px', 
-        borderRadius: '8px',
-        textAlign: 'center',
-        marginTop: '20px'
-      }}>
-        <h2 style={{ margin: '0', fontSize: '18px', fontWeight: 'bold' }}>
-          SUELDO LÍQUIDO A PAGAR
-        </h2>
-        <div style={{ fontSize: '24px', fontWeight: 'bold', marginTop: '10px' }}>
-          {formatCurrency(liquidationData.net_salary || 0)}
-        </div>
-      </div>
+        <tr style={{ height: '10px' }}><td colSpan={2}></td></tr>
 
-      {/* Footer */}
-      <div style={{ 
-        marginTop: '30px', 
-        borderTop: '1px solid #ccc', 
-        paddingTop: '15px',
-        fontSize: '10px',
-        color: '#666',
-        textAlign: 'center'
-      }}>
-        <p style={{ margin: '0' }}>
-          Liquidación generada automáticamente por {companyName}
-        </p>
-        <p style={{ margin: '5px 0 0 0' }}>
-          Fecha de generación: {new Date().toLocaleDateString('es-CL')}
-        </p>
-      </div>
+        {/* Totales Imponibles */}
+        <tr>
+          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>
+            TOTAL IMPONIBLE &nbsp;&nbsp;&nbsp; {totalImponible.toLocaleString('es-CL')}
+          </td>
+          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>
+            DESCTOS. LEGALES &nbsp;&nbsp;&nbsp; {totalDescuentos.toLocaleString('es-CL')}
+          </td>
+        </tr>
+
+        <tr style={{ height: '15px' }}><td colSpan={2}></td></tr>
+
+        {/* No imponibles */}
+        <tr>
+          <td style={{ padding: '2px 0', fontSize: '11px' }}>
+            ASIG. DE CAJA &nbsp;&nbsp;&nbsp; $ {(liquidationData.family_allowance || 0).toLocaleString('es-CL')}
+          </td>
+          <td style={{ padding: '2px 0', fontSize: '11px' }}>
+            IMPUESTO UNICO &nbsp;&nbsp; $ {(liquidationData.income_tax_amount || 0).toLocaleString('es-CL')}
+          </td>
+        </tr>
+
+        <tr>
+          <td style={{ padding: '2px 0', fontSize: '11px' }}>
+            MOVILIZACION &nbsp;&nbsp;&nbsp; $ {(liquidationData.transport_allowance || 0).toLocaleString('es-CL')}
+          </td>
+          <td style={{ padding: '2px 0', fontSize: '11px' }}>
+            ADICIONAL SALUD &nbsp;&nbsp; $ 0
+          </td>
+        </tr>
+
+        <tr>
+          <td style={{ padding: '2px 0', fontSize: '11px' }}>
+            COLACION &nbsp;&nbsp;&nbsp; $ {(liquidationData.food_allowance || 0).toLocaleString('es-CL')}
+          </td>
+          <td style={{ padding: '2px 0', fontSize: '11px' }}>
+            OTROS DESCUENTOS &nbsp;&nbsp; $ {(liquidationData.total_other_deductions || 0).toLocaleString('es-CL')}
+          </td>
+        </tr>
+
+        <tr style={{ height: '10px' }}><td colSpan={2}></td></tr>
+
+        {/* Totales finales */}
+        <tr>
+          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>
+            TOTAL HABER &nbsp;&nbsp; $ {totalImponible.toLocaleString('es-CL')}
+          </td>
+          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>
+            TOTAL DESCUENTOS &nbsp;&nbsp; $ {totalDescuentos.toLocaleString('es-CL')}
+          </td>
+        </tr>
+      </table>
+
+      {/* Resumen Final */}
+      <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '20px' }}>
+        <tr>
+          <td style={{ padding: '5px 0', fontSize: '11px', fontWeight: 'bold' }}>
+            RENTA IMPONIBLE &nbsp;&nbsp; $ {totalImponible.toLocaleString('es-CL')}
+          </td>
+        </tr>
+        <tr>
+          <td style={{ padding: '5px 0', fontSize: '11px', fontWeight: 'bold' }}>
+            DESCTOS &nbsp;&nbsp; $ {totalDescuentos.toLocaleString('es-CL')}
+          </td>
+        </tr>
+        <tr>
+          <td style={{ padding: '5px 0', fontSize: '14px', fontWeight: 'bold' }}>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {liquidoAPagar.toLocaleString('es-CL')}
+          </td>
+        </tr>
+      </table>
+
+      <div style={{ margin: '30px 0' }}></div>
+
+      {/* Sueldo Líquido */}
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <tr>
+          <td style={{ padding: '5px 0', fontSize: '11px' }}>son:</td>
+          <td style={{ padding: '5px 0', fontSize: '12px', fontWeight: 'bold' }}>
+            SUELDO LIQUIDO &nbsp;&nbsp; $ {liquidoAPagar.toLocaleString('es-CL')}
+          </td>
+        </tr>
+        <tr>
+          <td style={{ padding: '5px 0', fontSize: '10px' }}>
+            {numberToWords(liquidoAPagar)}
+          </td>
+          <td style={{ padding: '5px 0', fontSize: '12px', fontWeight: 'bold' }}>
+            ANTICIPOS &nbsp;&nbsp; $ 0
+          </td>
+        </tr>
+        <tr>
+          <td></td>
+          <td style={{ padding: '5px 0', fontSize: '12px', fontWeight: 'bold' }}>
+            LIQUIDO A PAGAR &nbsp;&nbsp; $ {liquidoAPagar.toLocaleString('es-CL')}
+          </td>
+        </tr>
+      </table>
+
+      <div style={{ margin: '40px 0' }}></div>
+
+      {/* Firmas */}
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <tr>
+          <td style={{ textAlign: 'center', padding: '20px 0', borderTop: '1px solid #000', width: '40%' }}>
+            FIRMA REPRESENTANTE LEGAL
+          </td>
+          <td style={{ width: '20%' }}></td>
+          <td style={{ textAlign: 'center', padding: '20px 0', borderTop: '1px solid #000', width: '40%' }}>
+            RECIBO Y FIRMO CONFORME
+          </td>
+        </tr>
+        <tr>
+          <td style={{ textAlign: 'center', fontSize: '10px', padding: '5px 0' }}>
+            {companyName}
+          </td>
+          <td></td>
+          <td style={{ textAlign: 'center', fontSize: '10px', padding: '5px 0' }}>
+            {employeeName.toUpperCase()}
+          </td>
+        </tr>
+        <tr>
+          <td style={{ textAlign: 'center', fontSize: '10px', padding: '5px 0' }}>
+            {companyRut}
+          </td>
+          <td></td>
+          <td style={{ textAlign: 'center', fontSize: '10px', padding: '5px 0' }}>
+            {employeeRut}
+          </td>
+        </tr>
+      </table>
     </div>
   );
 };

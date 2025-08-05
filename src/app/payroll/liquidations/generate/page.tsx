@@ -666,7 +666,13 @@ export default function GenerateLiquidationPage() {
               'Empleado'
             }
             period={formatPeriod(formData.period_year, formData.period_month)}
-            companyName="ContaPyme"
+            companyName="CONTAPYME SPA"
+            companyRut="76.123.456-7"
+            companyAddress="Avenida Principal 123, Santiago"
+            companyPhone="+56 2 2345 6789"
+            employeeRut={selectedEmployeeData?.rut || 'N/A'}
+            employeePosition={selectedEmployeeData?.employment_contracts?.[0]?.position || 'Empleado'}
+            employeeStartDate="01-01-2024"
           />
         </div>
       )}
