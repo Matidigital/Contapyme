@@ -382,7 +382,7 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
 
           {/* Lista de Activos Fijos */}
           <Card>
-            <div className="p-6">
+            <CardContent className="p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 Activos Fijos ({filteredAssets.length})
               </h2>
