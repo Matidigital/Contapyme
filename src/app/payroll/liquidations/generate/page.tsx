@@ -6,7 +6,7 @@ import { Header } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { Calculator, Users, FileText, AlertCircle, CheckCircle, Download, Eye } from 'lucide-react';
 import { PayrollCalculator } from '@/lib/payrollCalculator';
-import { LiquidationService } from '@/lib/liquidationService';
+import { SimpleLiquidationService } from '@/lib/simpleLiquidationService';
 
 interface Employee {
   id: string;
@@ -108,16 +108,31 @@ export default function GenerateLiquidationPage() {
     setLiquidationResult(null);
 
     try {
-      // Usar servicio frontend como alternativa a API
-      const liquidationService = new LiquidationService(COMPANY_ID);
+      // Obtener datos del empleado seleccionado
+      const selectedEmployeeData = employees.find(emp => emp.id === selectedEmployee);
       
+      if (!selectedEmployeeData || !selectedEmployeeData.employment_contracts?.[0]) {
+        setError('Empleado no encontrado o sin contrato');
+        return;
+      }
+
+      const contract = selectedEmployeeData.employment_contracts[0];
+
+      // Usar servicio SIMPLE - solo cálculos locales
       const requestData = {
-        employee_id: selectedEmployee,
-        period_year: formData.period_year,
-        period_month: formData.period_month,
-        days_worked: formData.days_worked,
-        worked_hours: formData.worked_hours,
-        overtime_hours: formData.overtime_hours,
+        employee: {
+          id: selectedEmployeeData.id,
+          rut: selectedEmployeeData.rut,
+          first_name: selectedEmployeeData.first_name,
+          last_name: selectedEmployeeData.last_name,
+          base_salary: contract.base_salary,
+          contract_type: contract.contract_type
+        },
+        period: {
+          year: formData.period_year,
+          month: formData.period_month,
+          days_worked: formData.days_worked
+        },
         additional_income: {
           bonuses: formData.bonuses,
           commissions: formData.commissions,
@@ -131,21 +146,20 @@ export default function GenerateLiquidationPage() {
           advance_payments: formData.advance_payments,
           apv_amount: formData.apv_amount,
           other_deductions: formData.other_deductions
-        },
-        save_liquidation: formData.save_liquidation
+        }
       };
 
-      console.log('🔄 Calculando con servicio frontend...');
-      const result = await liquidationService.calculateLiquidation(requestData);
+      console.log('🔄 Calculando con servicio SIMPLE (solo local)...');
+      const result = SimpleLiquidationService.calculateLiquidation(requestData);
 
       if (result.success && result.data) {
-        console.log('✅ Liquidación calculada exitosamente');
+        console.log('✅ Liquidación calculada exitosamente (modo simple)');
         setLiquidationResult(result.data.liquidation);
       } else {
         setError(result.error || 'Error al calcular liquidación');
       }
     } catch (err) {
-      setError('Error de conexión');
+      setError('Error de cálculo');
       console.error('Error calculating liquidation:', err);
     } finally {
       setCalculating(false);
