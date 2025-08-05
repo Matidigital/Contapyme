@@ -84,6 +84,7 @@ export default function JournalPage() {
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [showGenerators, setShowGenerators] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   // Cargar asientos del libro diario
   const loadEntries = useCallback(async (page = 1, append = false) => {
@@ -305,6 +306,15 @@ export default function JournalPage() {
               <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
               <span>Integración Automática • F29 • RCV • Activos</span>
             </div>
+            <Button 
+              variant="secondary" 
+              size="sm"
+              onClick={() => setShowCreateModal(true)}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Crear Asiento
+            </Button>
             <Button 
               variant="primary" 
               size="sm"
@@ -766,7 +776,509 @@ export default function JournalPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Modal de Creación de Asientos */}
+        {showCreateModal && <CreateJournalEntryModal />}
       </div>
     </div>
   );
+
+  // Componente Modal de Creación de Asientos
+  function CreateJournalEntryModal() {
+    const [entryData, setEntryData] = useState({
+      entry_date: new Date().toISOString().split('T')[0],
+      description: '',
+      reference: '',
+      entry_type: 'manual' as 'manual' | 'f29' | 'fixed_asset',
+      lines: [
+        { account_code: '', account_name: '', debit_amount: 0, credit_amount: 0, description: '' },
+        { account_code: '', account_name: '', debit_amount: 0, credit_amount: 0, description: '' }
+      ]
+    });
+    const [fixedAssets, setFixedAssets] = useState<any[]>([]);
+    const [showAssetForm, setShowAssetForm] = useState(false);
+    const [newAsset, setNewAsset] = useState({
+      name: '',
+      brand: '',
+      model: '',
+      serial_number: '',
+      purchase_date: new Date().toISOString().split('T')[0],
+      purchase_value: 0,
+      residual_value: 0,
+      useful_life_years: 5,
+      account_code: '13010001'
+    });
+
+    // Cargar activos fijos disponibles
+    useEffect(() => {
+      if (showCreateModal) {
+        loadFixedAssets();
+      }
+    }, [showCreateModal]);
+
+    const loadFixedAssets = async () => {
+      try {
+        const response = await fetch('/api/fixed-assets');
+        const result = await response.json();
+        if (result.success) {
+          setFixedAssets(result.data || []);
+        }
+      } catch (error) {
+        console.error('Error cargando activos fijos:', error);
+      }
+    };
+
+    const handleCreateEntry = async () => {
+      try {
+        // Validar que debe = haber
+        const totalDebit = entryData.lines.reduce((sum, line) => sum + Number(line.debit_amount || 0), 0);
+        const totalCredit = entryData.lines.reduce((sum, line) => sum + Number(line.credit_amount || 0), 0);
+        
+        if (Math.abs(totalDebit - totalCredit) > 0.01) {
+          alert(`❌ El asiento debe estar balanceado. Debe: $${totalDebit.toLocaleString()} ≠ Haber: $${totalCredit.toLocaleString()}`);
+          return;
+        }
+
+        if (!entryData.description.trim()) {
+          alert('❌ La descripción es obligatoria');
+          return;
+        }
+
+        const response = await fetch('/api/accounting/journal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(entryData)
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          alert('✅ Asiento creado exitosamente');
+          setShowCreateModal(false);
+          loadEntries(); // Recargar lista
+        } else {
+          alert(`❌ Error: ${result.error}`);
+        }
+      } catch (error) {
+        console.error('Error creando asiento:', error);
+        alert('❌ Error creando asiento');
+      }
+    };
+
+    const handleCreateAsset = async () => {
+      try {
+        const response = await fetch('/api/fixed-assets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newAsset)
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          alert('✅ Activo fijo creado exitosamente');
+          
+          // Crear asiento de ingreso del activo
+          const assetEntry = {
+            ...entryData,
+            description: `Ingreso de activo fijo: ${newAsset.name}`,
+            reference: `AF-${Date.now()}`,
+            entry_type: 'fixed_asset' as const,
+            lines: [
+              {
+                account_code: newAsset.account_code,
+                account_name: 'Activos Fijos',
+                debit_amount: newAsset.purchase_value,
+                credit_amount: 0,
+                description: `Ingreso ${newAsset.name}`
+              },
+              {
+                account_code: '11010001',
+                account_name: 'Caja y Bancos',
+                debit_amount: 0,
+                credit_amount: newAsset.purchase_value,
+                description: `Pago ${newAsset.name}`
+              }
+            ]
+          };
+          
+          setEntryData(assetEntry);
+          setShowAssetForm(false);
+          loadFixedAssets(); // Recargar activos
+        } else {
+          alert(`❌ Error: ${result.error}`);
+        }
+      } catch (error) {
+        console.error('Error creando activo:', error);
+        alert('❌ Error creando activo fijo');
+      }
+    };
+
+    const generateDepreciationEntry = (asset: any) => {
+      const monthlyDepreciation = (asset.purchase_value - asset.residual_value) / (asset.useful_life_years * 12);
+      
+      const depreciationEntry = {
+        ...entryData,
+        description: `Depreciación mensual: ${asset.name}`,
+        reference: `DEP-${asset.id.slice(0, 8)}`,
+        entry_type: 'fixed_asset' as const,
+        lines: [
+          {
+            account_code: '61010001',
+            account_name: 'Gasto por Depreciación',
+            debit_amount: monthlyDepreciation,
+            credit_amount: 0,
+            description: `Depreciación ${asset.name}`
+          },
+          {
+            account_code: '13020001',
+            account_name: 'Depreciación Acumulada',
+            debit_amount: 0,
+            credit_amount: monthlyDepreciation,
+            description: `Depreciación acumulada ${asset.name}`
+          }
+        ]
+      };
+      
+      setEntryData(depreciationEntry);
+    };
+
+    const addLine = () => {
+      setEntryData(prev => ({
+        ...prev,
+        lines: [...prev.lines, { account_code: '', account_name: '', debit_amount: 0, credit_amount: 0, description: '' }]
+      }));
+    };
+
+    const removeLine = (index: number) => {
+      if (entryData.lines.length > 2) {
+        setEntryData(prev => ({
+          ...prev,
+          lines: prev.lines.filter((_, i) => i !== index)
+        }));
+      }
+    };
+
+    const updateLine = (index: number, field: string, value: any) => {
+      setEntryData(prev => ({
+        ...prev,
+        lines: prev.lines.map((line, i) => 
+          i === index ? { ...line, [field]: value } : line
+        )
+      }));
+    };
+
+    const totalDebit = entryData.lines.reduce((sum, line) => sum + Number(line.debit_amount || 0), 0);
+    const totalCredit = entryData.lines.reduce((sum, line) => sum + Number(line.credit_amount || 0), 0);
+    const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
+
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-2xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold">Crear Asiento Contable</h2>
+                <p className="text-blue-100 mt-1">Integración con activos fijos y módulos del sistema</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowCreateModal(false)}
+                className="text-white hover:bg-white/20"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </Button>
+            </div>
+          </div>
+
+          <div className="p-6 space-y-6">
+            {/* Información básica */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Fecha</label>
+                <input
+                  type="date"
+                  value={entryData.entry_date}
+                  onChange={(e) => setEntryData(prev => ({ ...prev, entry_date: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
+                <select
+                  value={entryData.entry_type}
+                  onChange={(e) => setEntryData(prev => ({ ...prev, entry_type: e.target.value as any }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="manual">Manual</option>
+                  <option value="fixed_asset">Activo Fijo</option>
+                  <option value="f29">F29</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Referencia</label>
+                <input
+                  type="text"
+                  value={entryData.reference}
+                  onChange={(e) => setEntryData(prev => ({ ...prev, reference: e.target.value }))}
+                  placeholder="Ej: FAC-001, REC-123"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Descripción</label>
+              <input
+                type="text"
+                value={entryData.description}
+                onChange={(e) => setEntryData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Descripción del asiento contable"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Integración con Activos Fijos */}
+            {entryData.entry_type === 'fixed_asset' && (
+              <Card className="bg-purple-50 border-purple-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2 text-purple-700">
+                    <Settings className="w-5 h-5" />
+                    <span>Integración con Activos Fijos</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Button
+                        variant="outline"
+                        fullWidth
+                        onClick={() => setShowAssetForm(true)}
+                        className="border-green-300 hover:bg-green-50"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Ingresar Nuevo Activo
+                      </Button>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Generar Depreciación de Activo Existente
+                      </label>
+                      <select
+                        onChange={(e) => {
+                          const asset = fixedAssets.find(a => a.id === e.target.value);
+                          if (asset) generateDepreciationEntry(asset);
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                      >
+                        <option value="">Seleccionar activo...</option>
+                        {fixedAssets.map(asset => (
+                          <option key={asset.id} value={asset.id}>
+                            {asset.name} - {asset.brand}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Formulario de nuevo activo */}
+            {showAssetForm && (
+              <Card className="bg-green-50 border-green-200">
+                <CardHeader>
+                  <CardTitle className="text-green-700">Crear Nuevo Activo Fijo</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Nombre *</label>
+                      <input
+                        type="text"
+                        value={newAsset.name}
+                        onChange={(e) => setNewAsset(prev => ({ ...prev, name: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Marca</label>
+                      <input
+                        type="text"
+                        value={newAsset.brand}
+                        onChange={(e) => setNewAsset(prev => ({ ...prev, brand: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Valor de Compra *</label>
+                      <input
+                        type="number"
+                        value={newAsset.purchase_value}
+                        onChange={(e) => setNewAsset(prev => ({ ...prev, purchase_value: Number(e.target.value) }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Vida Útil (años)</label>
+                      <input
+                        type="number"
+                        value={newAsset.useful_life_years}
+                        onChange={(e) => setNewAsset(prev => ({ ...prev, useful_life_years: Number(e.target.value) }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex space-x-3 mt-4">
+                    <Button
+                      variant="primary"
+                      onClick={handleCreateAsset}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Crear Activo y Asiento
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowAssetForm(false)}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Líneas del asiento */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Líneas del Asiento</span>
+                  <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    isBalanced ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                    {isBalanced ? '✅ Balanceado' : '❌ Desbalanceado'}
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {entryData.lines.map((line, index) => (
+                    <div key={index} className="grid grid-cols-12 gap-3 items-center p-4 bg-gray-50 rounded-lg">
+                      <div className="col-span-2">
+                        <input
+                          type="text"
+                          value={line.account_code}
+                          onChange={(e) => updateLine(index, 'account_code', e.target.value)}
+                          placeholder="Código"
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="col-span-3">
+                        <input
+                          type="text"
+                          value={line.account_name}
+                          onChange={(e) => updateLine(index, 'account_name', e.target.value)}
+                          placeholder="Nombre de cuenta"
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <input
+                          type="number"
+                          value={line.debit_amount}
+                          onChange={(e) => updateLine(index, 'debit_amount', Number(e.target.value))}
+                          placeholder="Debe"
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <input
+                          type="number"
+                          value={line.credit_amount}
+                          onChange={(e) => updateLine(index, 'credit_amount', Number(e.target.value))}
+                          placeholder="Haber"  
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <input
+                          type="text"
+                          value={line.description}
+                          onChange={(e) => updateLine(index, 'description', e.target.value)}
+                          placeholder="Detalle"
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                      <div className="col-span-1">
+                        {entryData.lines.length > 2 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeLine(index)}
+                            className="text-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-between items-center mt-4 pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={addLine}
+                    className="border-blue-300 hover:bg-blue-50"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Agregar Línea
+                  </Button>
+
+                  <div className="flex items-center space-x-6 text-sm">
+                    <div className="flex items-center space-x-2">
+                      <ArrowUpRight className="w-4 h-4 text-green-600" />
+                      <span>Debe: ${totalDebit.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <ArrowDownRight className="w-4 h-4 text-red-600" />
+                      <span>Haber: ${totalCredit.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <DollarSign className="w-4 h-4 text-purple-600" />
+                      <span>Diferencia: ${Math.abs(totalDebit - totalCredit).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Botones de acción */}
+            <div className="flex justify-end space-x-3 pt-4 border-t">
+              <Button
+                variant="outline"
+                onClick={() => setShowCreateModal(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleCreateEntry}
+                disabled={!isBalanced || !entryData.description.trim()}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              >
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Crear Asiento
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 }
