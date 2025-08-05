@@ -127,13 +127,8 @@ export async function GET(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // Obtener estadísticas generales
-    const { data: statsData, error: statsError } = await supabase
-      .rpc('get_journal_statistics', {
-        p_company_id: company_id
-      });
-
-    const stats = statsData?.[0] || {
+    // Obtener estadísticas generales (con fallback si falla la función)
+    let stats = {
       total_entries: 0,
       total_debit: 0,
       total_credit: 0,
@@ -142,7 +137,52 @@ export async function GET(request: NextRequest) {
       monthly_trend: []
     };
 
+    try {
+      const { data: statsData, error: statsError } = await supabase
+        .rpc('get_journal_statistics', {
+          p_company_id: company_id
+        });
+
+      if (statsError) {
+        console.warn('⚠️ Error obteniendo estadísticas avanzadas, usando básicas:', statsError);
+        
+        // Fallback: obtener estadísticas básicas directamente
+        const { data: basicStats, error: basicError } = await supabase
+          .from('journal_entries')
+          .select(`
+            id,
+            total_debit,
+            total_credit,
+            entry_type,
+            status
+          `)
+          .eq('company_id', company_id);
+
+        if (!basicError && basicStats) {
+          stats = {
+            total_entries: basicStats.length,
+            total_debit: basicStats.reduce((sum, entry) => sum + (entry.total_debit || 0), 0),
+            total_credit: basicStats.reduce((sum, entry) => sum + (entry.total_credit || 0), 0),
+            entries_by_type: basicStats.reduce((acc, entry) => {
+              acc[entry.entry_type] = (acc[entry.entry_type] || 0) + 1;
+              return acc;
+            }, {}),
+            entries_by_status: basicStats.reduce((acc, entry) => {
+              acc[entry.status] = (acc[entry.status] || 0) + 1;
+              return acc;
+            }, {}),
+            monthly_trend: []
+          };
+        }
+      } else {
+        stats = statsData?.[0] || stats;
+      }
+    } catch (error) {
+      console.warn('⚠️ Error obteniendo estadísticas, usando valores por defecto:', error);
+    }
+
     console.log('✅ Asientos obtenidos:', entries?.length || 0);
+    console.log('📊 Estadísticas:', stats);
 
     return NextResponse.json({
       success: true,
@@ -151,8 +191,8 @@ export async function GET(request: NextRequest) {
         pagination: {
           page,
           limit,
-          total: stats.total_entries,
-          has_more: (offset + limit) < stats.total_entries
+          total: stats.total_entries || 0,
+          has_more: (offset + limit) < (stats.total_entries || 0)
         },
         statistics: stats
       }

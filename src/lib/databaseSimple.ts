@@ -5,12 +5,53 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Configuración Supabase
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// Configuración Supabase con validación
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl) {
+  console.error('❌ NEXT_PUBLIC_SUPABASE_URL no está configurada');
+  throw new Error('Configuración de Supabase incompleta: falta NEXT_PUBLIC_SUPABASE_URL');
+}
+
+if (!supabaseServiceKey) {
+  console.error('❌ SUPABASE_SERVICE_ROLE_KEY no está configurada');
+  throw new Error('Configuración de Supabase incompleta: falta SUPABASE_SERVICE_ROLE_KEY');
+}
+
+console.log('🔧 Configurando Supabase:', {
+  url: supabaseUrl,
+  hasServiceKey: !!supabaseServiceKey
+});
 
 // Cliente con privilegios para operaciones de servidor
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// Función para obtener conexión (para compatibilidad con APIs)
+export function getDatabaseConnection() {
+  return supabase;
+}
+
+// Función para probar la conexión
+export async function testConnection() {
+  try {
+    const { data, error } = await supabase
+      .from('journal_entries')
+      .select('count')
+      .limit(1);
+    
+    if (error) {
+      console.error('❌ Error conectando a Supabase:', error);
+      return false;
+    }
+    
+    console.log('✅ Conexión a Supabase exitosa');
+    return true;
+  } catch (error) {
+    console.error('💥 Error crítico en conexión:', error);
+    return false;
+  }
+}
 
 // Funciones directas para F29
 export async function insertF29Form(data: any) {
