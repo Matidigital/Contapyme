@@ -35,9 +35,9 @@ export default function Home() {
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center">
               <img 
-                src="/images/logo-contapymepuq.svg" 
+                src="/images/logo.webp" 
                 alt="ContaPymePuq" 
-                className="h-12 w-auto" 
+                className="h-20 w-auto drop-shadow-lg" 
               />
             </div>
             <div className="flex items-center space-x-4">

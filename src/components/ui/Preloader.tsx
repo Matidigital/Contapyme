@@ -96,8 +96,8 @@ export default function Preloader({ onComplete }: PreloaderProps) {
             stage === 'brandReveal' ? 'shadow-blue-500/50 shadow-2xl' : ''
           }`}>
             <Image
-              src="/images/logo.png"
-              alt="ContaPyme Logo"
+              src="/images/logo.webp"
+              alt="ContaPymePuq Logo"
               fill
               className="object-contain p-2"
               priority

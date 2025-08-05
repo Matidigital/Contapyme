@@ -97,9 +97,9 @@ const Header: React.FC<HeaderProps> = ({
             {/* Brand - Solo Logo */}
             <Link href="/" className="flex items-center">
               <img 
-                src="/images/logo-contapymepuq.svg" 
+                src="/images/logo.webp" 
                 alt="ContaPymePuq" 
-                className="h-10 w-auto" 
+                className="h-14 w-auto drop-shadow-md" 
               />
             </Link>
 
