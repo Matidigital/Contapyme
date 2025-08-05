@@ -3,114 +3,58 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { IndicatorValue, IndicatorsDashboard } from '@/types';
+import { usePageIndicators } from '@/hooks/useIndicators';
 
 export default function EconomicIndicatorsPage() {
-  const [indicators, setIndicators] = useState<IndicatorsDashboard>({
-    monetary: [],
-    currency: [],
-    crypto: [],
-    labor: []
-  });
-  const [loading, setLoading] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState<string>('');
+  // Usar el hook centralizado
+  const { 
+    indicators, 
+    loading, 
+    error, 
+    lastUpdated, 
+    dataSource, 
+    fetchIndicators, 
+    updateIndicators: updateIndicatorsHook 
+  } = usePageIndicators();
+
   const [updating, setUpdating] = useState(false);
   const [selectedIndicator, setSelectedIndicator] = useState<string | null>(null);
-  const [error, setError] = useState<string>('');
-  const [dataSource, setDataSource] = useState<string>('hybrid_system');
 
-  // Cargar indicadores al montar e iniciar actualizaciones automáticas
+  // Inicialización con Claude (solo una vez)
   useEffect(() => {
-    const initializeIndicators = async () => {
-      // Cargar datos existentes primero
-      await fetchIndicators();
-      
-      // Iniciar actualización con Claude después de cargar
+    const initializeWithClaude = async () => {
+      // Esperar un poco para que carguen los datos base
       setTimeout(() => {
         console.log('🤖 Iniciando actualización inicial con Claude en página de indicadores...');
         updateWithClaude();
       }, 3000);
     };
     
-    initializeIndicators();
+    initializeWithClaude();
   }, []);
 
-  // Auto-actualización con Claude cada 40 minutos (offset del banner)
+  // Auto-actualización con Claude cada 40 minutos (offset del ticker)
   useEffect(() => {
     const claudeInterval = setInterval(() => {
       console.log('🤖 Actualización automática programada con Claude en página');
       updateWithClaude();
-    }, 40 * 60 * 1000); // 40 minutos (offset para no coincidir con banner)
-
-    // Actualización de respaldo cada 75 minutos
-    const fallbackInterval = setInterval(() => {
-      console.log('🔄 Actualización de respaldo programada en página');
-      updateIndicators();
-    }, 75 * 60 * 1000); // 75 minutos
+    }, 40 * 60 * 1000); // 40 minutos (offset para no coincidir con ticker)
 
     return () => {
       clearInterval(claudeInterval);
-      clearInterval(fallbackInterval);
     };
   }, []);
-
-  const fetchIndicators = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      
-      // Usar API híbrida que siempre funciona
-      const response = await fetch('/api/indicators/hybrid');
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Error al cargar indicadores');
-      }
-
-      setIndicators(data.indicators);
-      setLastUpdated(data.last_updated);
-      setDataSource(data.source || 'hybrid_system');
-    } catch (err) {
-      console.error('Error fetching indicators:', err);
-      setError(err instanceof Error ? err.message : 'Error desconocido');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const updateIndicators = async () => {
     try {
       setUpdating(true);
-      setError('');
-
-      // Usar API híbrida para actualización
-      const response = await fetch('/api/indicators/hybrid', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Error al actualizar indicadores');
-      }
-
-      // Actualizar datos inmediatamente
-      setIndicators(data.indicators);
-      setLastUpdated(data.last_updated);
-      setDataSource(data.source || 'hybrid_system');
+      await updateIndicatorsHook();
       
-      // Mostrar notificación con información de la fuente
-      const sourceMessage = data.source === 'real_data' 
-        ? '✅ Datos reales obtenidos de APIs oficiales'
-        : '✅ Datos actualizados con simulación inteligente';
-      
-      alert(`${sourceMessage}\n${data.message}`);
+      // Mostrar notificación simple
+      alert('✅ Indicadores actualizados correctamente');
       
     } catch (err) {
       console.error('Error updating indicators:', err);
-      setError(err instanceof Error ? err.message : 'Error al actualizar');
     } finally {
       setUpdating(false);
     }

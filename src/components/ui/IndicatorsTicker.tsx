@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { TrendingUp, TrendingDown } from 'lucide-react'
+import { useTickerIndicators } from '@/hooks/useIndicators'
+import { IndicatorValue } from '@/types'
 
 interface Indicator {
   code: string
@@ -44,70 +46,94 @@ function IndicatorItem({ indicator }: { indicator: Indicator }) {
   )
 }
 
+// Convertir IndicatorValue a formato Indicator para el ticker
+function convertToTickerFormat(indicatorValue: IndicatorValue): Indicator {
+  // Simular cambio y tendencia basado en variación aleatoria pequeña
+  const change = (Math.random() - 0.5) * 0.5 // Cambio pequeño para efecto visual
+  const trend: 'up' | 'down' | 'stable' = 
+    Math.abs(change) < 0.1 ? 'stable' :
+    change > 0 ? 'up' : 'down'
+
+  return {
+    code: indicatorValue.code.toUpperCase(),
+    name: getShortName(indicatorValue.name),
+    value: indicatorValue.value,
+    unit: getDisplayUnit(indicatorValue.unit, indicatorValue.format_type),
+    change: parseFloat(change.toFixed(2)),
+    trend
+  }
+}
+
+// Obtener nombre corto para el ticker
+function getShortName(name: string): string {
+  const shortNames: Record<string, string> = {
+    'Unidad de Fomento': 'UF',
+    'Unidad Tributaria Mensual': 'UTM',
+    'Dólar Observado': 'USD',
+    'Euro': 'EUR',
+    'Bitcoin': 'BTC',
+    'Tasa de Política Monetaria': 'TPM',
+    'Sueldo Mínimo': 'Sueldo Min',
+    'Índice de Precios al Consumidor': 'IPC'
+  }
+  return shortNames[name] || name
+}
+
+// Obtener unidad de visualización
+function getDisplayUnit(unit: string, formatType: string): string {
+  if (formatType === 'percentage') return '%'
+  if (unit === 'USD') return 'US$'
+  if (unit === 'CLP') return '$'
+  return unit
+}
+
 export default function IndicatorsTicker() {
+  const { indicators: rawIndicators, loading, error, dataSource } = useTickerIndicators()
   const [indicators, setIndicators] = useState<Indicator[]>([])
-  const [isLoading, setIsLoading] = useState(true)
 
+  // Convertir indicadores del sistema centralizado al formato del ticker
   useEffect(() => {
-    const fetchIndicators = async () => {
-      try {
-        // Usar datos demo confiables mientras se configura la base de datos
-        console.log('Usando datos demo para ticker - sistema en desarrollo')
-        // En producción, el sistema de indicadores se activará automáticamente
-        
-        // Datos con variaciones dinámicas simuladas (actualización cada fetch)
-        const baseIndicators = [
-          { code: 'UF', name: 'UF', baseValue: 37924.18, unit: '$', volatility: 0.02 },
-          { code: 'UTM', name: 'UTM', baseValue: 66014, unit: '$', volatility: 0.0 },
-          { code: 'USD', name: 'USD', baseValue: 923.85, unit: '$', volatility: 2.0 },
-          { code: 'EUR', name: 'EUR', baseValue: 1008.92, unit: '$', volatility: 1.5 },
-          { code: 'TPM', name: 'TPM', baseValue: 11.25, unit: '%', volatility: 0.0 },
-          { code: 'COBRE', name: 'Cobre', baseValue: 4.18, unit: 'US$/lb', volatility: 0.15 }
-        ]
+    if (!loading && rawIndicators) {
+      const allIndicators: IndicatorValue[] = [
+        ...rawIndicators.monetary,
+        ...rawIndicators.currency,
+        ...rawIndicators.crypto,
+        ...rawIndicators.labor
+      ]
 
-        const demoIndicators: Indicator[] = baseIndicators.map(base => {
-          // Generar variación realista basada en la volatilidad
-          const variation = (Math.random() - 0.5) * 2 * base.volatility
-          const currentValue = base.baseValue + variation
-          
-          // Calcular cambio y tendencia
-          const change = parseFloat(variation.toFixed(2))
-          const trend: 'up' | 'down' | 'stable' = 
-            Math.abs(change) < 0.1 ? 'stable' :
-            change > 0 ? 'up' : 'down'
-          
-          return {
-            code: base.code,
-            name: base.name,
-            value: parseFloat(currentValue.toFixed(2)),
-            unit: base.unit,
-            change,
-            trend
-          }
-        })
-        
-        setIndicators(demoIndicators)
-        setIsLoading(false)
-      } catch (error) {
-        console.warn('Error fetching indicators for ticker:', error)
-        setIsLoading(false)
-      }
+      // Filtrar y convertir los indicadores más relevantes para el ticker
+      const relevantIndicators = allIndicators.filter(ind => 
+        ['uf', 'utm', 'dolar', 'euro', 'bitcoin', 'tpm'].includes(ind.code.toLowerCase())
+      )
+
+      const tickerIndicators = relevantIndicators.map(convertToTickerFormat)
+      setIndicators(tickerIndicators)
+      
+      console.log(`📊 Ticker actualizado con ${tickerIndicators.length} indicadores desde: ${dataSource}`)
     }
+  }, [rawIndicators, loading, dataSource])
 
-    fetchIndicators()
-    
-    // Actualizar cada 30 segundos
-    const interval = setInterval(fetchIndicators, 30000)
-    return () => clearInterval(interval)
-  }, [])
-
-  if (isLoading) {
+  if (loading || indicators.length === 0) {
     return (
       <div className="relative z-10 bg-gradient-to-r from-slate-800 via-blue-900 to-slate-800 border-b border-blue-700/30">
         <div className="py-2 px-4">
           <div className="flex items-center justify-center">
             <div className="animate-pulse text-blue-200 text-sm">
-              Cargando indicadores económicos...
+              {loading ? 'Cargando indicadores económicos...' : 'Conectando con sistema de indicadores...'}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="relative z-10 bg-gradient-to-r from-slate-800 via-red-900 to-slate-800 border-b border-red-700/30">
+        <div className="py-2 px-4">
+          <div className="flex items-center justify-center">
+            <div className="text-red-200 text-sm">
+              Error en indicadores económicos - Reintentando...
             </div>
           </div>
         </div>
