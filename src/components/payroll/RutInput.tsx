@@ -93,6 +93,11 @@ export default function RutInput({
 
   // Obtener valor formateado para mostrar
   const getDisplayValue = () => {
+    // Si el valor ya está formateado, devolverlo tal como está
+    if (value.includes('.') || value.includes('-')) {
+      return value;
+    }
+    // Si no está formateado, formatearlo
     return formatRut(value);
   };
 
@@ -104,8 +109,9 @@ export default function RutInput({
     // Limitar a 9 dígitos (8 números + 1 dígito verificador)
     if (clean.length > 9) return;
     
-    // Actualizar valor sin formato para el formulario
-    onChange(clean);
+    // Actualizar valor formateado para el formulario
+    const formatted = formatRut(clean);
+    onChange(formatted);
     
     // Validar si tiene el largo correcto
     if (clean.length >= 8) {
