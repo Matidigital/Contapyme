@@ -173,8 +173,6 @@ export async function POST(request: NextRequest) {
           base_salary,
           salary_type: salary_type || 'monthly',
           weekly_hours: weekly_hours || 45,
-          health_insurance,
-          pension_fund,
           status: 'active',
           created_by
         })
@@ -196,6 +194,41 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // Crear configuración previsional si se proporcionaron datos
+      if (health_insurance && pension_fund) {
+        // Obtener comisión AFP
+        const afpCommissions: Record<string, number> = {
+          'Capital': 1.44,
+          'Cuprum': 1.44,
+          'Habitat': 1.27,
+          'Modelo': 0.77,
+          'PlanVital': 1.16,
+          'ProVida': 1.45,
+          'Uno': 0.69
+        };
+
+        const { error: configError } = await supabase
+          .from('payroll_config')
+          .insert({
+            employee_id: employee.id,
+            afp_name: pension_fund,
+            afp_commission: afpCommissions[pension_fund] || 1.27,
+            health_system: health_insurance === 'FONASA' ? 'fonasa' : 'isapre',
+            health_provider: health_insurance === 'FONASA' ? null : health_insurance,
+            health_plan: health_insurance === 'FONASA' ? null : 'Plan Base',
+            health_plan_uf: health_insurance === 'FONASA' ? null : 2.5,
+            afc_contract_type: contract_type || 'indefinido',
+            family_charges: 0,
+            has_agreed_deposit: false,
+            agreed_deposit_amount: 0
+          });
+
+        if (configError) {
+          console.error('Error al crear configuración previsional:', configError);
+          // No fallar la creación completa, solo advertir
+        }
+      }
+
       // Retornar empleado con contrato
       return NextResponse.json({
         success: true,
@@ -203,7 +236,7 @@ export async function POST(request: NextRequest) {
           ...employee,
           employment_contracts: [contract]
         },
-        message: 'Empleado y contrato creados exitosamente'
+        message: 'Empleado, contrato y configuración previsional creados exitosamente'
       }, { status: 201 });
     }
 

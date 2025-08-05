@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Header } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
-import { ArrowLeft, Save, User, Phone, Mail, Home, Calendar, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Save, User, Phone, Mail, Home, Calendar, AlertCircle, Calculator, Settings, DollarSign } from 'lucide-react';
+import RutInput from '@/components/payroll/RutInput';
 
 interface EmployeeFormData {
   // Información Personal
@@ -50,6 +51,8 @@ export default function NewEmployeePage() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('personal');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isRutValid, setIsRutValid] = useState(false);
+  const [showPayrollConfig, setShowPayrollConfig] = useState(false);
   
   const [formData, setFormData] = useState<EmployeeFormData>({
     // Información Personal
@@ -106,6 +109,7 @@ export default function NewEmployeePage() {
     
     // Validaciones básicas
     if (!formData.rut) newErrors.rut = 'RUT es requerido';
+    if (!isRutValid) newErrors.rut = 'RUT inválido';
     if (!formData.firstName) newErrors.firstName = 'Nombre es requerido';
     if (!formData.lastName) newErrors.lastName = 'Apellido es requerido';
     if (!formData.birthDate) newErrors.birthDate = 'Fecha de nacimiento es requerida';
@@ -113,6 +117,10 @@ export default function NewEmployeePage() {
     if (!formData.position) newErrors.position = 'Cargo es requerido';
     if (!formData.startDate) newErrors.startDate = 'Fecha de inicio es requerida';
     if (!formData.baseSalary) newErrors.baseSalary = 'Salario base es requerido';
+    
+    // Validaciones adicionales para configuración previsional
+    if (!formData.healthInsurance) newErrors.healthInsurance = 'Previsión de salud es requerida';
+    if (!formData.pensionFund) newErrors.pensionFund = 'AFP es requerida';
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -129,6 +137,8 @@ export default function NewEmployeePage() {
         setActiveTab('contact');
       } else if (errors.position || errors.startDate || errors.baseSalary) {
         setActiveTab('contract');
+      } else if (errors.healthInsurance || errors.pensionFund) {
+        setActiveTab('payroll');
       }
       return;
     }
@@ -218,11 +228,11 @@ export default function NewEmployeePage() {
           <form onSubmit={handleSubmit}>
             {/* Navigation Tabs */}
             <div className="border-b border-gray-200 mb-6">
-              <nav className="-mb-px flex space-x-8">
+              <nav className="-mb-px flex space-x-8 overflow-x-auto">
                 <button
                   type="button"
                   onClick={() => setActiveTab('personal')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                     activeTab === 'personal'
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -234,7 +244,7 @@ export default function NewEmployeePage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab('contact')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                     activeTab === 'contact'
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -246,7 +256,7 @@ export default function NewEmployeePage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab('contract')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                     activeTab === 'contract'
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -254,6 +264,18 @@ export default function NewEmployeePage() {
                 >
                   <Calendar className="w-4 h-4 inline-block mr-2" />
                   Contrato
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('payroll')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
+                    activeTab === 'payroll'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <Settings className="w-4 h-4 inline-block mr-2" />
+                  Configuración Previsional
                 </button>
               </nav>
             </div>
@@ -271,19 +293,13 @@ export default function NewEmployeePage() {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         RUT *
                       </label>
-                      <input
-                        type="text"
-                        name="rut"
+                      <RutInput
                         value={formData.rut}
-                        onChange={handleInputChange}
-                        placeholder="12.345.678-9"
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                          errors.rut ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        onChange={(value) => setFormData(prev => ({ ...prev, rut: value }))}
+                        onValidChange={setIsRutValid}
+                        required
+                        className={errors.rut ? 'border-red-500' : ''}
                       />
-                      {errors.rut && (
-                        <p className="mt-1 text-sm text-red-600">{errors.rut}</p>
-                      )}
                     </div>
 
                     <div>
@@ -730,47 +746,6 @@ export default function NewEmployeePage() {
                         </select>
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Previsión de Salud
-                        </label>
-                        <select
-                          name="healthInsurance"
-                          value={formData.healthInsurance}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Seleccionar</option>
-                          <option value="FONASA">FONASA</option>
-                          <option value="Banmédica">Banmédica</option>
-                          <option value="Consalud">Consalud</option>
-                          <option value="Colmena">Colmena</option>
-                          <option value="Cruz Blanca">Cruz Blanca</option>
-                          <option value="Vida Tres">Vida Tres</option>
-                          <option value="Más Vida">Más Vida</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          AFP
-                        </label>
-                        <select
-                          name="pensionFund"
-                          value={formData.pensionFund}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Seleccionar</option>
-                          <option value="Capital">Capital</option>
-                          <option value="Cuprum">Cuprum</option>
-                          <option value="Habitat">Habitat</option>
-                          <option value="Modelo">Modelo</option>
-                          <option value="PlanVital">PlanVital</option>
-                          <option value="ProVida">ProVida</option>
-                          <option value="Uno">Uno</option>
-                        </select>
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -787,6 +762,251 @@ export default function NewEmployeePage() {
                         Al guardar este empleado, se creará automáticamente un contrato con la información proporcionada.
                         Podrás modificar o agregar más contratos desde la sección de gestión de contratos.
                       </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Payroll Configuration Tab */}
+            {activeTab === 'payroll' && (
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Configuración AFP</CardTitle>
+                    <CardDescription>Administradora de Fondos de Pensiones</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          AFP *
+                        </label>
+                        <select
+                          name="pensionFund"
+                          value={formData.pensionFund}
+                          onChange={handleInputChange}
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                            errors.pensionFund ? 'border-red-500' : 'border-gray-300'
+                          }`}
+                        >
+                          <option value="">Seleccionar AFP</option>
+                          <option value="Capital">Capital (1.44%)</option>
+                          <option value="Cuprum">Cuprum (1.44%)</option>
+                          <option value="Habitat">Habitat (1.27%)</option>
+                          <option value="Modelo">Modelo (0.77%)</option>
+                          <option value="PlanVital">PlanVital (1.16%)</option>
+                          <option value="ProVida">ProVida (1.45%)</option>
+                          <option value="Uno">Uno (0.69%)</option>
+                        </select>
+                        {errors.pensionFund && (
+                          <p className="mt-1 text-sm text-red-600">{errors.pensionFund}</p>
+                        )}
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Tipo de Contrato (para AFC)
+                        </label>
+                        <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-md">
+                          <p><strong>Contrato {formData.contractType === 'indefinido' ? 'Indefinido' : 'Plazo Fijo'}</strong></p>
+                          <p className="mt-1">Trabajador: 0.6%</p>
+                          <p>Empleador: {formData.contractType === 'indefinido' ? '2.4%' : '3.0%'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Configuración de Salud</CardTitle>
+                    <CardDescription>Sistema de salud y planes</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Sistema de Salud *
+                        </label>
+                        <select
+                          name="healthInsurance"
+                          value={formData.healthInsurance}
+                          onChange={handleInputChange}
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                            errors.healthInsurance ? 'border-red-500' : 'border-gray-300'
+                          }`}
+                        >
+                          <option value="">Seleccionar</option>
+                          <option value="FONASA">FONASA (7%)</option>
+                          <optgroup label="Isapres">
+                            <option value="Banmédica">Banmédica</option>
+                            <option value="Consalud">Consalud</option>
+                            <option value="Colmena">Colmena</option>
+                            <option value="Cruz Blanca">Cruz Blanca</option>
+                            <option value="Vida Tres">Vida Tres</option>
+                            <option value="Más Vida">Más Vida</option>
+                          </optgroup>
+                        </select>
+                        {errors.healthInsurance && (
+                          <p className="mt-1 text-sm text-red-600">{errors.healthInsurance}</p>
+                        )}
+                      </div>
+
+                      {formData.healthInsurance && formData.healthInsurance !== 'FONASA' && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Plan de Salud (UF)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            placeholder="Ej: 2.5"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          <p className="mt-1 text-xs text-gray-500">
+                            Valor del plan en UF. Si es mayor al 7%, el trabajador paga la diferencia.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Otros Descuentos y Beneficios</CardTitle>
+                    <CardDescription>Configuración adicional opcional</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-900">APV - Ahorro Previsional Voluntario</h4>
+                          <p className="text-sm text-gray-500">Descuento adicional para ahorro</p>
+                        </div>
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                      </div>
+                      
+                      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-900">Seguro Complementario</h4>
+                          <p className="text-sm text-gray-500">Seguro adicional de salud</p>
+                        </div>
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-900">Préstamo Empresa</h4>
+                          <p className="text-sm text-gray-500">Descuento por préstamo de la empresa</p>
+                        </div>
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Calculadora de liquidación */}
+                {formData.baseSalary && formData.healthInsurance && formData.pensionFund && (
+                  <Card className="bg-green-50 border-green-200">
+                    <CardHeader>
+                      <CardTitle className="text-green-900">Vista Previa de Liquidación</CardTitle>
+                      <CardDescription>
+                        Cálculo estimado basado en los datos ingresados (sueldo base: {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0 }).format(parseFloat(formData.baseSalary))})
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div className="text-center p-3 bg-white rounded-lg border">
+                          <p className="text-sm text-gray-600">Sueldo Bruto</p>
+                          <p className="text-lg font-semibold text-green-700">
+                            {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0 }).format(parseFloat(formData.baseSalary) * 1.25)}
+                          </p>
+                          <p className="text-xs text-gray-500">Incluye gratificación</p>
+                        </div>
+                        <div className="text-center p-3 bg-white rounded-lg border">
+                          <p className="text-sm text-gray-600">Descuentos</p>
+                          <p className="text-lg font-semibold text-red-600">
+                            -{new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0 }).format(parseFloat(formData.baseSalary) * 0.20)}
+                          </p>
+                          <p className="text-xs text-gray-500">AFP + Salud + Imp. único</p>
+                        </div>
+                        <div className="text-center p-3 bg-white rounded-lg border">
+                          <p className="text-sm text-gray-600">Líquido a Pagar</p>
+                          <p className="text-lg font-semibold text-blue-700">
+                            {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0 }).format(parseFloat(formData.baseSalary) * 1.05)}
+                          </p>
+                          <p className="text-xs text-gray-500">Estimación</p>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-white p-4 rounded-lg border">
+                        <h4 className="font-medium text-gray-900 mb-3">Desglose de Descuentos Estimados:</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                          <div>
+                            <span className="text-gray-600">AFP ({formData.pensionFund}):</span>
+                            <br />
+                            <span className="font-medium">
+                              {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0 }).format(parseFloat(formData.baseSalary) * 0.11)}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Salud ({formData.healthInsurance}):</span>
+                            <br />
+                            <span className="font-medium">
+                              {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0 }).format(parseFloat(formData.baseSalary) * 0.07)}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Seguro Cesantía:</span>
+                            <br />
+                            <span className="font-medium">
+                              {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0 }).format(parseFloat(formData.baseSalary) * 0.006)}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Impuesto Único:</span>
+                            <br />
+                            <span className="font-medium">
+                              {parseFloat(formData.baseSalary) > 700000 ? 
+                                new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0 }).format(parseFloat(formData.baseSalary) * 0.04) : 
+                                'Exento'
+                              }
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Información sobre cálculo de liquidación */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                  <div className="flex">
+                    <Calculator className="h-6 w-6 text-blue-600 mt-0.5" />
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-blue-900">
+                        Cálculo Automático de Liquidaciones
+                      </h3>
+                      <div className="mt-2 text-sm text-blue-700">
+                        <p>Al guardar el empleado, podrás:</p>
+                        <ul className="list-disc list-inside mt-2 space-y-1">
+                          <li>Generar liquidaciones de sueldo mensuales automáticamente</li>
+                          <li>Calcular impuesto único de segunda categoría</li>
+                          <li>Integración automática con F29 (códigos 10 y 161)</li>
+                          <li>Exportar libro de remuneraciones en Excel</li>
+                        </ul>
+                      </div>
                     </div>
                   </div>
                 </div>
