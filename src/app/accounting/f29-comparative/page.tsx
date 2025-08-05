@@ -246,15 +246,16 @@ export default function F29ComparativePage() {
     }).format(amount);
   };
 
-  const formatPeriod = (period: string) => {
-    if (period.length !== 6) return period;
-    const year = period.substring(0, 4);
-    const month = period.substring(4, 6);
+  const formatPeriod = (period: string | number) => {
+    const periodStr = String(period || '');
+    if (periodStr.length !== 6) return periodStr;
+    const year = periodStr.substring(0, 4);
+    const month = periodStr.substring(4, 6);
     const monthNames = [
       '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
       'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
     ];
-    return `${monthNames[parseInt(month)]} ${year}`;
+    return `${monthNames[parseInt(month)] || month} ${year}`;
   };
 
   // Función para generar análisis comparativo desde datos reales extraídos
@@ -317,7 +318,7 @@ export default function F29ComparativePage() {
       : 0;
     
     if (mejorVsPeor > 0) {
-      insights.push(`🎯 ${formatPeriod(mejorMes.period)} fue tu mejor mes con ${formatCurrency(mejorMes.ventas_netas)} (+${mejorVsPeor.toFixed(0)}% vs peor mes)`);
+      insights.push(`🎯 ${formatPeriod(String(mejorMes.period || ''))} fue tu mejor mes con ${formatCurrency(mejorMes.ventas_netas)} (+${mejorVsPeor.toFixed(0)}% vs peor mes)`);
     }
 
     // Análisis de margen bruto promedio
@@ -337,10 +338,10 @@ export default function F29ComparativePage() {
     }
 
     // Generar rango temporal
-    const periodos = f29DataPoints.map(f => f.period).filter(p => p);
+    const periodos = f29DataPoints.map(f => String(f.period || '')).filter(p => p);
     const rangoTemporal = {
-      inicio: periodos.length > 0 ? Math.min(...periodos) : '202401',
-      fin: periodos.length > 0 ? Math.max(...periodos) : '202412'
+      inicio: periodos.length > 0 ? periodos.sort()[0] : '202401',
+      fin: periodos.length > 0 ? periodos.sort()[periodos.length - 1] : '202412'
     };
 
     return {
@@ -885,7 +886,7 @@ export default function F29ComparativePage() {
                 <span>Análisis Comparativo Completo</span>
               </CardTitle>
               <CardDescription>
-                {analysis.periodos_analizados} períodos analizados • {analysis.rango_temporal?.inicio?.substring(0,4) || 'N/A'} - {analysis.rango_temporal?.fin?.substring(0,4) || 'N/A'}
+                {analysis.periodos_analizados} períodos analizados • {String(analysis.rango_temporal?.inicio || '').substring(0,4) || 'N/A'} - {String(analysis.rango_temporal?.fin || '').substring(0,4) || 'N/A'}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -910,7 +911,7 @@ export default function F29ComparativePage() {
                 <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
                   <h4 className="text-sm font-medium text-purple-700 mb-2">Mejor Mes</h4>
                   <p className="text-2xl font-bold text-purple-900">
-                    {formatPeriod(analysis.metricas_clave?.mejor_mes?.period || '202401')}
+                    {formatPeriod(String(analysis.metricas_clave?.mejor_mes?.period || '202401'))}
                   </p>
                   <p className="text-sm text-purple-600">
                     {formatCurrency(analysis.metricas_clave?.mejor_mes?.ventas || 0)}
