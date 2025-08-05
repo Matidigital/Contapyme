@@ -14,6 +14,7 @@ interface HeaderProps {
   actions?: React.ReactNode
   className?: string
   showNavigation?: boolean
+  variant?: 'default' | 'gradient' | 'premium'
 }
 
 interface BreadcrumbItem {
@@ -69,7 +70,8 @@ const Header: React.FC<HeaderProps> = ({
   backHref = '/',
   actions,
   className,
-  showNavigation = true
+  showNavigation = true,
+  variant = 'default'
 }) => {
   const pathname = usePathname()
   const [isNavOpen, setIsNavOpen] = useState(false)
@@ -149,8 +151,20 @@ const Header: React.FC<HeaderProps> = ({
       description: 'UF, UTM, divisas en tiempo real'
     }
   ]
+  const getHeaderClasses = () => {
+    const baseClasses = "relative z-20"
+    switch (variant) {
+      case 'gradient':
+        return cn(baseClasses, "bg-gradient-to-r from-blue-50 via-white to-purple-50 border-b border-blue-200/30", className)
+      case 'premium':
+        return cn(baseClasses, "bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-sm", className)
+      default:
+        return cn(baseClasses, "bg-white border-b border-gray-200", className)
+    }
+  }
+
   return (
-    <header className={cn("bg-white border-b border-gray-200", className)}>
+    <header className={getHeaderClasses()}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between py-2">
           {/* Left section */}

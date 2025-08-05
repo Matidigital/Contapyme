@@ -210,10 +210,23 @@ export default function F29AnalysisPage() {
         subtitle="Analiza un formulario F29 y obtén métricas detalladas con IA"
         showBackButton={true}
         backHref="/accounting"
+        variant="premium"
         actions={
-          <Button variant="outline" size="sm" onClick={() => window.open('/accounting/f29-comparative', '_blank')}>
-            📊 Análisis Comparativo
-          </Button>
+          <div className="flex items-center space-x-3">
+            <div className="hidden md:flex items-center space-x-2 px-3 py-1 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full text-xs font-medium text-blue-800">
+              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+              <span>IA Activa • 95% Precisión</span>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => window.open('/accounting/f29-comparative', '_blank')}
+              className="border-purple-200 hover:bg-purple-50 hover:border-purple-300 hover:scale-105 transition-transform"
+            >
+              <TrendingUp className="w-4 h-4 mr-1" />
+              Análisis Comparativo
+            </Button>
+          </div>
         }
       />
 
