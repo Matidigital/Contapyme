@@ -7,6 +7,8 @@ import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } fro
 import { Calculator, Users, FileText, AlertCircle, CheckCircle, Download, Eye } from 'lucide-react';
 import { PayrollCalculator } from '@/lib/payrollCalculator';
 import { SimpleLiquidationService } from '@/lib/simpleLiquidationService';
+import { LiquidationPDFTemplate } from '@/components/payroll/LiquidationPDFTemplate';
+import { exportToPDF, generatePDFFilename } from '@/lib/pdfExport';
 
 interface Employee {
   id: string;
@@ -37,6 +39,7 @@ export default function GenerateLiquidationPage() {
   const [calculating, setCalculating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [liquidationResult, setLiquidationResult] = useState<LiquidationData | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const COMPANY_ID = '8033ee69-b420-4d91-ba0e-482f46cd6fce';
 
@@ -180,6 +183,39 @@ export default function GenerateLiquidationPage() {
       'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
     ];
     return `${monthNames[month - 1]} ${year}`;
+  };
+
+  const handleExportPDF = async () => {
+    if (!liquidationResult || !selectedEmployee) {
+      setError('No hay liquidación para exportar');
+      return;
+    }
+
+    setExporting(true);
+    try {
+      const selectedEmployeeData = employees.find(emp => emp.id === selectedEmployee);
+      const employeeName = selectedEmployeeData ? 
+        `${selectedEmployeeData.first_name} ${selectedEmployeeData.last_name}` : 
+        'Empleado';
+      
+      const period = formatPeriod(formData.period_year, formData.period_month);
+      
+      const success = await exportToPDF({
+        elementId: 'liquidation-pdf-content',
+        employeeName,
+        period,
+        filename: generatePDFFilename(employeeName, period)
+      });
+
+      if (!success) {
+        setError('Error al generar PDF');
+      }
+    } catch (err) {
+      setError('Error al exportar PDF');
+      console.error('PDF export error:', err);
+    } finally {
+      setExporting(false);
+    }
   };
 
   const selectedEmployeeData = employees.find(emp => emp.id === selectedEmployee);
@@ -588,9 +624,14 @@ export default function GenerateLiquidationPage() {
                         <Eye className="h-4 w-4 mr-2" />
                         Ver Detalle
                       </Button>
-                      <Button variant="outline" className="flex-1">
+                      <Button 
+                        variant="outline" 
+                        className="flex-1"
+                        onClick={handleExportPDF}
+                        disabled={exporting}
+                      >
                         <Download className="h-4 w-4 mr-2" />
-                        Exportar PDF
+                        {exporting ? 'Generando PDF...' : 'Exportar PDF'}
                       </Button>
                     </div>
                   </div>
@@ -614,6 +655,21 @@ export default function GenerateLiquidationPage() {
           </div>
         </div>
       </div>
+
+      {/* Template PDF oculto (solo para exportación) */}
+      {liquidationResult && (
+        <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+          <LiquidationPDFTemplate
+            liquidationData={liquidationResult}
+            employeeName={selectedEmployeeData ? 
+              `${selectedEmployeeData.first_name} ${selectedEmployeeData.last_name}` : 
+              'Empleado'
+            }
+            period={formatPeriod(formData.period_year, formData.period_month)}
+            companyName="ContaPyme"
+          />
+        </div>
+      )}
     </div>
   );
 }
