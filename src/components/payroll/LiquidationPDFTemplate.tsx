@@ -88,258 +88,490 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
     <div 
       id="liquidation-pdf-content"
       style={{
-        fontFamily: 'Courier New, monospace',
-        width: '794px',
+        fontFamily: 'Arial, sans-serif',
+        width: '800px',
         margin: '0 auto',
-        padding: '20px',
+        padding: '30px',
         backgroundColor: 'white',
         color: '#000',
-        fontSize: '11px',
-        lineHeight: '1.3'
+        fontSize: '12px',
+        lineHeight: '1.4',
+        border: '2px solid #000',
+        boxSizing: 'border-box'
       }}
     >
-      {/* Company Header */}
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '10px' }}>
+      {/* Header Empresa */}
+      <table style={{ 
+        width: '100%', 
+        borderCollapse: 'collapse', 
+        marginBottom: '20px',
+        border: '1px solid #000',
+        backgroundColor: '#f8f9fa'
+      }}>
         <tr>
-          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>EMPRESA</td>
-          <td style={{ padding: '2px 0', fontSize: '11px' }}>{companyName}</td>
-          <td style={{ padding: '2px 0', fontSize: '11px' }}></td>
-          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>Nro. Interno</td>
-          <td style={{ padding: '2px 0', fontSize: '11px' }}>001</td>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px', 
+            fontWeight: 'bold',
+            borderRight: '1px solid #000',
+            width: '15%'
+          }}>EMPRESA:</td>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px',
+            borderRight: '1px solid #000',
+            width: '35%'
+          }}>{companyName}</td>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px', 
+            fontWeight: 'bold',
+            borderRight: '1px solid #000',
+            width: '15%'
+          }}>Nro. Interno:</td>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px',
+            width: '35%'
+          }}>001</td>
         </tr>
         <tr>
-          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>R.U.T.</td>
-          <td style={{ padding: '2px 0', fontSize: '11px' }}>{companyRut}</td>
-          <td style={{ padding: '2px 0', fontSize: '11px' }}></td>
-          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>Fecha Ingreso</td>
-          <td style={{ padding: '2px 0', fontSize: '11px' }}>{employeeStartDate}</td>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px', 
+            fontWeight: 'bold',
+            borderRight: '1px solid #000',
+            borderTop: '1px solid #000'
+          }}>R.U.T.:</td>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px',
+            borderRight: '1px solid #000',
+            borderTop: '1px solid #000'
+          }}>{companyRut}</td>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px', 
+            fontWeight: 'bold',
+            borderRight: '1px solid #000',
+            borderTop: '1px solid #000'
+          }}>Fecha Ingreso:</td>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px',
+            borderTop: '1px solid #000'
+          }}>{employeeStartDate}</td>
         </tr>
         <tr>
-          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>DIRECCION</td>
-          <td style={{ padding: '2px 0', fontSize: '11px' }}>{companyAddress}</td>
-          <td style={{ padding: '2px 0', fontSize: '11px' }}></td>
-          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>Dias Trab.</td>
-          <td style={{ padding: '2px 0', fontSize: '11px' }}>30</td>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px', 
+            fontWeight: 'bold',
+            borderRight: '1px solid #000',
+            borderTop: '1px solid #000'
+          }}>DIRECCIÓN:</td>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px',
+            borderRight: '1px solid #000',
+            borderTop: '1px solid #000'
+          }}>{companyAddress}</td>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px', 
+            fontWeight: 'bold',
+            borderRight: '1px solid #000',
+            borderTop: '1px solid #000'
+          }}>Días Trab.:</td>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px',
+            borderTop: '1px solid #000'
+          }}>30</td>
         </tr>
         <tr>
-          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>FONO</td>
-          <td style={{ padding: '2px 0', fontSize: '11px' }}>{companyPhone}</td>
-          <td style={{ padding: '2px 0', fontSize: '11px' }}></td>
-          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>Dias Licencia</td>
-          <td style={{ padding: '2px 0', fontSize: '11px' }}>0</td>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px', 
+            fontWeight: 'bold',
+            borderRight: '1px solid #000',
+            borderTop: '1px solid #000'
+          }}>TELÉFONO:</td>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px',
+            borderRight: '1px solid #000',
+            borderTop: '1px solid #000'
+          }}>{companyPhone}</td>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px', 
+            fontWeight: 'bold',
+            borderRight: '1px solid #000',
+            borderTop: '1px solid #000'
+          }}>Días Licencia:</td>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px',
+            borderTop: '1px solid #000'
+          }}>0</td>
         </tr>
       </table>
 
-      {/* Title */}
-      <div style={{ textAlign: 'center', margin: '20px 0', fontSize: '14px', fontWeight: 'bold' }}>
-        LIQUIDACION DE SUELDO
+      {/* Título */}
+      <div style={{ 
+        textAlign: 'center', 
+        margin: '20px 0', 
+        fontSize: '16px', 
+        fontWeight: 'bold',
+        border: '2px solid #000',
+        padding: '10px',
+        backgroundColor: '#e9ecef'
+      }}>
+        LIQUIDACIÓN DE SUELDO
       </div>
 
-      {/* Employee Info */}
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '15px' }}>
+      {/* Datos Empleado */}
+      <table style={{ 
+        width: '100%', 
+        borderCollapse: 'collapse', 
+        marginBottom: '20px',
+        border: '1px solid #000'
+      }}>
         <tr>
-          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>TRABAJADOR</td>
-          <td style={{ padding: '2px 0', fontSize: '11px' }}>{employeeName.toUpperCase()}</td>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px', 
+            fontWeight: 'bold',
+            borderRight: '1px solid #000',
+            width: '20%'
+          }}>TRABAJADOR:</td>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px',
+            borderRight: '1px solid #000',
+            width: '30%'
+          }}>{employeeName.toUpperCase()}</td>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px', 
+            fontWeight: 'bold',
+            borderRight: '1px solid #000',
+            width: '15%'
+          }}>RUT:</td>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px',
+            width: '35%'
+          }}>{employeeRut}</td>
         </tr>
         <tr>
-          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>RUT</td>
-          <td style={{ padding: '2px 0', fontSize: '11px' }}>{employeeRut}</td>
-        </tr>
-        <tr>
-          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>MES</td>
-          <td style={{ padding: '2px 0', fontSize: '11px' }}>{period.toUpperCase()}</td>
-        </tr>
-        <tr>
-          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>CARGO</td>
-          <td style={{ padding: '2px 0', fontSize: '11px' }}>{employeePosition.toUpperCase()}</td>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px', 
+            fontWeight: 'bold',
+            borderRight: '1px solid #000',
+            borderTop: '1px solid #000'
+          }}>MES:</td>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px',
+            borderRight: '1px solid #000',
+            borderTop: '1px solid #000'
+          }}>{period.toUpperCase()}</td>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px', 
+            fontWeight: 'bold',
+            borderRight: '1px solid #000',
+            borderTop: '1px solid #000'
+          }}>CARGO:</td>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px',
+            borderTop: '1px solid #000'
+          }}>{employeePosition.toUpperCase()}</td>
         </tr>
       </table>
 
-      {/* Main Table - Haberes y Descuentos */}
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px' }}>
+      {/* Tabla Principal - Haberes y Descuentos */}
+      <table style={{ 
+        width: '100%', 
+        borderCollapse: 'collapse', 
+        marginBottom: '20px',
+        border: '2px solid #000'
+      }}>
+        {/* Headers */}
         <tr>
-          <td style={{ padding: '5px 0', fontSize: '12px', fontWeight: 'bold', textAlign: 'center' }}>HABERES</td>
-          <td style={{ padding: '5px 0', fontSize: '12px', fontWeight: 'bold', textAlign: 'center' }}>DESCUENTOS</td>
+          <td style={{ 
+            padding: '12px', 
+            fontSize: '13px', 
+            fontWeight: 'bold', 
+            textAlign: 'center',
+            borderRight: '2px solid #000',
+            borderBottom: '2px solid #000',
+            backgroundColor: '#d1ecf1',
+            width: '50%'
+          }}>HABERES</td>
+          <td style={{ 
+            padding: '12px', 
+            fontSize: '13px', 
+            fontWeight: 'bold', 
+            textAlign: 'center',
+            borderBottom: '2px solid #000',
+            backgroundColor: '#f8d7da',
+            width: '50%'
+          }}>DESCUENTOS</td>
         </tr>
-        
-        <tr style={{ height: '10px' }}><td colSpan={2}></td></tr>
 
-        {/* Sueldo Base */}
+        {/* Sueldo Base y AFP */}
         <tr>
-          <td style={{ padding: '2px 0', fontSize: '11px' }}>
-            SUELDO BASE &nbsp;&nbsp;&nbsp; $ {(liquidationData.base_salary || 0).toLocaleString('es-CL')}
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px',
+            borderRight: '2px solid #000',
+            borderBottom: '1px solid #ccc'
+          }}>
+            SUELDO BASE: <span style={{ float: 'right', fontWeight: 'bold' }}>
+              ${(liquidationData.base_salary || 0).toLocaleString('es-CL')}
+            </span>
           </td>
-          <td style={{ padding: '2px 0', fontSize: '11px' }}>
-            AFP &nbsp; HABITAT &nbsp; 10,00% &nbsp; {(liquidationData.afp_amount || 0).toLocaleString('es-CL')}
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px',
+            borderBottom: '1px solid #ccc'
+          }}>
+            AFP HABITAT (10%): <span style={{ float: 'right', fontWeight: 'bold' }}>
+              ${(liquidationData.afp_amount || 0).toLocaleString('es-CL')}
+            </span>
           </td>
         </tr>
 
         {/* Gratificación Legal */}
         {legalGratification > 0 && (
           <tr>
-            <td style={{ padding: '2px 0', fontSize: '11px' }}>
-              GRATIFICACION LEGAL &nbsp;&nbsp;&nbsp; $ {legalGratification.toLocaleString('es-CL')}
+            <td style={{ 
+              padding: '8px', 
+              fontSize: '11px',
+              borderRight: '2px solid #000',
+              borderBottom: '1px solid #ccc'
+            }}>
+              GRATIFICACIÓN LEGAL: <span style={{ float: 'right', fontWeight: 'bold' }}>
+                ${legalGratification.toLocaleString('es-CL')}
+              </span>
             </td>
-            <td></td>
+            <td style={{ 
+              padding: '8px', 
+              fontSize: '11px',
+              borderBottom: '1px solid #ccc'
+            }}></td>
           </tr>
         )}
 
-        {/* Otros haberes */}
+        {/* Bonos */}
         {(liquidationData.bonuses || 0) > 0 && (
           <tr>
-            <td style={{ padding: '2px 0', fontSize: '11px' }}>
-              BONO &nbsp;&nbsp;&nbsp; $ {(liquidationData.bonuses || 0).toLocaleString('es-CL')}
+            <td style={{ 
+              padding: '8px', 
+              fontSize: '11px',
+              borderRight: '2px solid #000',
+              borderBottom: '1px solid #ccc'
+            }}>
+              BONOS: <span style={{ float: 'right', fontWeight: 'bold' }}>
+                ${(liquidationData.bonuses || 0).toLocaleString('es-CL')}
+              </span>
             </td>
-            <td></td>
+            <td style={{ 
+              padding: '8px', 
+              fontSize: '11px',
+              borderBottom: '1px solid #ccc'
+            }}></td>
           </tr>
         )}
 
+        {/* Horas Extra */}
         {(liquidationData.overtime_amount || 0) > 0 && (
           <tr>
-            <td style={{ padding: '2px 0', fontSize: '11px' }}>
-              HORAS EXTRAS &nbsp;&nbsp;&nbsp; $ {(liquidationData.overtime_amount || 0).toLocaleString('es-CL')}
+            <td style={{ 
+              padding: '8px', 
+              fontSize: '11px',
+              borderRight: '2px solid #000',
+              borderBottom: '1px solid #ccc'
+            }}>
+              HORAS EXTRAS: <span style={{ float: 'right', fontWeight: 'bold' }}>
+                ${(liquidationData.overtime_amount || 0).toLocaleString('es-CL')}
+              </span>
             </td>
-            <td></td>
+            <td style={{ 
+              padding: '8px', 
+              fontSize: '11px',
+              borderBottom: '1px solid #ccc'
+            }}>
+              FONASA (7%): <span style={{ float: 'right', fontWeight: 'bold' }}>
+                ${(liquidationData.health_amount || 0).toLocaleString('es-CL')}
+              </span>
+            </td>
           </tr>
         )}
 
-        {/* Salud */}
+        {/* Línea de separación */}
         <tr>
-          <td></td>
-          <td style={{ padding: '2px 0', fontSize: '11px' }}>
-            FONASA O ISAPRE &nbsp;&nbsp; 7,00% &nbsp; {(liquidationData.health_amount || 0).toLocaleString('es-CL')}
+          <td style={{ 
+            padding: '10px', 
+            fontSize: '12px', 
+            fontWeight: 'bold',
+            borderRight: '2px solid #000',
+            borderTop: '2px solid #000',
+            borderBottom: '2px solid #000',
+            backgroundColor: '#d1ecf1',
+            textAlign: 'center'
+          }}>
+            TOTAL IMPONIBLE: ${totalImponible.toLocaleString('es-CL')}
+          </td>
+          <td style={{ 
+            padding: '10px', 
+            fontSize: '12px', 
+            fontWeight: 'bold',
+            borderTop: '2px solid #000',
+            borderBottom: '2px solid #000',
+            backgroundColor: '#f8d7da',
+            textAlign: 'center'
+          }}>
+            TOTAL DESCUENTOS: ${totalDescuentos.toLocaleString('es-CL')}
           </td>
         </tr>
 
-        <tr style={{ height: '10px' }}><td colSpan={2}></td></tr>
-
-        {/* Totales Imponibles */}
+        {/* Asignaciones no imponibles */}
         <tr>
-          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>
-            TOTAL IMPONIBLE &nbsp;&nbsp;&nbsp; {totalImponible.toLocaleString('es-CL')}
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px',
+            borderRight: '2px solid #000',
+            borderBottom: '1px solid #ccc'
+          }}>
+            COLACIÓN: <span style={{ float: 'right', fontWeight: 'bold' }}>
+              ${(liquidationData.food_allowance || 0).toLocaleString('es-CL')}
+            </span>
           </td>
-          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>
-            DESCTOS. LEGALES &nbsp;&nbsp;&nbsp; {totalDescuentos.toLocaleString('es-CL')}
-          </td>
-        </tr>
-
-        <tr style={{ height: '15px' }}><td colSpan={2}></td></tr>
-
-        {/* No imponibles */}
-        <tr>
-          <td style={{ padding: '2px 0', fontSize: '11px' }}>
-            ASIG. DE CAJA &nbsp;&nbsp;&nbsp; $ {(liquidationData.family_allowance || 0).toLocaleString('es-CL')}
-          </td>
-          <td style={{ padding: '2px 0', fontSize: '11px' }}>
-            IMPUESTO UNICO &nbsp;&nbsp; $ {(liquidationData.income_tax_amount || 0).toLocaleString('es-CL')}
-          </td>
-        </tr>
-
-        <tr>
-          <td style={{ padding: '2px 0', fontSize: '11px' }}>
-            MOVILIZACION &nbsp;&nbsp;&nbsp; $ {(liquidationData.transport_allowance || 0).toLocaleString('es-CL')}
-          </td>
-          <td style={{ padding: '2px 0', fontSize: '11px' }}>
-            ADICIONAL SALUD &nbsp;&nbsp; $ 0
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px',
+            borderBottom: '1px solid #ccc'
+          }}>
+            IMPUESTO ÚNICO: <span style={{ float: 'right', fontWeight: 'bold' }}>
+              ${(liquidationData.income_tax_amount || 0).toLocaleString('es-CL')}
+            </span>
           </td>
         </tr>
 
         <tr>
-          <td style={{ padding: '2px 0', fontSize: '11px' }}>
-            COLACION &nbsp;&nbsp;&nbsp; $ {(liquidationData.food_allowance || 0).toLocaleString('es-CL')}
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px',
+            borderRight: '2px solid #000',
+            borderBottom: '1px solid #ccc'
+          }}>
+            MOVILIZACIÓN: <span style={{ float: 'right', fontWeight: 'bold' }}>
+              ${(liquidationData.transport_allowance || 0).toLocaleString('es-CL')}
+            </span>
           </td>
-          <td style={{ padding: '2px 0', fontSize: '11px' }}>
-            OTROS DESCUENTOS &nbsp;&nbsp; $ {(liquidationData.total_other_deductions || 0).toLocaleString('es-CL')}
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px',
+            borderBottom: '1px solid #ccc'
+          }}>
+            OTROS DESCUENTOS: <span style={{ float: 'right', fontWeight: 'bold' }}>
+              ${(liquidationData.total_other_deductions || 0).toLocaleString('es-CL')}
+            </span>
           </td>
         </tr>
 
-        <tr style={{ height: '10px' }}><td colSpan={2}></td></tr>
-
-        {/* Totales finales */}
         <tr>
-          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>
-            TOTAL HABER &nbsp;&nbsp; $ {totalImponible.toLocaleString('es-CL')}
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px',
+            borderRight: '2px solid #000'
+          }}>
+            ASIG. FAMILIAR: <span style={{ float: 'right', fontWeight: 'bold' }}>
+              ${(liquidationData.family_allowance || 0).toLocaleString('es-CL')}
+            </span>
           </td>
-          <td style={{ padding: '2px 0', fontSize: '11px', fontWeight: 'bold' }}>
-            TOTAL DESCUENTOS &nbsp;&nbsp; $ {totalDescuentos.toLocaleString('es-CL')}
-          </td>
+          <td style={{ 
+            padding: '8px', 
+            fontSize: '11px'
+          }}></td>
         </tr>
       </table>
 
       {/* Resumen Final */}
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '20px' }}>
-        <tr>
-          <td style={{ padding: '5px 0', fontSize: '11px', fontWeight: 'bold' }}>
-            RENTA IMPONIBLE &nbsp;&nbsp; $ {totalImponible.toLocaleString('es-CL')}
-          </td>
-        </tr>
-        <tr>
-          <td style={{ padding: '5px 0', fontSize: '11px', fontWeight: 'bold' }}>
-            DESCTOS &nbsp;&nbsp; $ {totalDescuentos.toLocaleString('es-CL')}
-          </td>
-        </tr>
-        <tr>
-          <td style={{ padding: '5px 0', fontSize: '14px', fontWeight: 'bold' }}>
-            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {liquidoAPagar.toLocaleString('es-CL')}
-          </td>
-        </tr>
-      </table>
-
-      <div style={{ margin: '30px 0' }}></div>
-
-      {/* Sueldo Líquido */}
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <tr>
-          <td style={{ padding: '5px 0', fontSize: '11px' }}>son:</td>
-          <td style={{ padding: '5px 0', fontSize: '12px', fontWeight: 'bold' }}>
-            SUELDO LIQUIDO &nbsp;&nbsp; $ {liquidoAPagar.toLocaleString('es-CL')}
-          </td>
-        </tr>
-        <tr>
-          <td style={{ padding: '5px 0', fontSize: '10px' }}>
-            {numberToWords(liquidoAPagar)}
-          </td>
-          <td style={{ padding: '5px 0', fontSize: '12px', fontWeight: 'bold' }}>
-            ANTICIPOS &nbsp;&nbsp; $ 0
-          </td>
-        </tr>
-        <tr>
-          <td></td>
-          <td style={{ padding: '5px 0', fontSize: '12px', fontWeight: 'bold' }}>
-            LIQUIDO A PAGAR &nbsp;&nbsp; $ {liquidoAPagar.toLocaleString('es-CL')}
-          </td>
-        </tr>
-      </table>
-
-      <div style={{ margin: '40px 0' }}></div>
+      <div style={{ 
+        border: '3px solid #000', 
+        padding: '20px', 
+        textAlign: 'center',
+        backgroundColor: '#fff3cd',
+        marginBottom: '20px'
+      }}>
+        <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '10px' }}>
+          RESUMEN FINAL
+        </div>
+        <div style={{ fontSize: '12px', marginBottom: '5px' }}>
+          <strong>TOTAL HABERES:</strong> ${(totalImponible + (liquidationData.food_allowance || 0) + (liquidationData.transport_allowance || 0) + (liquidationData.family_allowance || 0)).toLocaleString('es-CL')}
+        </div>
+        <div style={{ fontSize: '12px', marginBottom: '15px' }}>
+          <strong>TOTAL DESCUENTOS:</strong> ${totalDescuentos.toLocaleString('es-CL')}
+        </div>
+        <div style={{ 
+          fontSize: '18px', 
+          fontWeight: 'bold', 
+          color: '#155724',
+          border: '2px solid #155724',
+          padding: '10px',
+          backgroundColor: '#d4edda'
+        }}>
+          SUELDO LÍQUIDO: ${liquidoAPagar.toLocaleString('es-CL')}
+        </div>
+        <div style={{ fontSize: '10px', marginTop: '10px', fontStyle: 'italic' }}>
+          Son: {numberToWords(liquidoAPagar)}
+        </div>
+      </div>
 
       {/* Firmas */}
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <table style={{ 
+        width: '100%', 
+        borderCollapse: 'collapse',
+        border: '1px solid #000'
+      }}>
         <tr>
-          <td style={{ textAlign: 'center', padding: '20px 0', borderTop: '1px solid #000', width: '40%' }}>
-            FIRMA REPRESENTANTE LEGAL
+          <td style={{ 
+            textAlign: 'center', 
+            padding: '30px 10px 10px 10px',
+            borderRight: '1px solid #000',
+            width: '50%'
+          }}>
+            <div style={{ borderTop: '1px solid #000', paddingTop: '5px' }}>
+              FIRMA REPRESENTANTE LEGAL
+            </div>
+            <div style={{ fontSize: '10px', marginTop: '10px' }}>
+              {companyName}
+            </div>
+            <div style={{ fontSize: '10px' }}>
+              {companyRut}
+            </div>
           </td>
-          <td style={{ width: '20%' }}></td>
-          <td style={{ textAlign: 'center', padding: '20px 0', borderTop: '1px solid #000', width: '40%' }}>
-            RECIBO Y FIRMO CONFORME
-          </td>
-        </tr>
-        <tr>
-          <td style={{ textAlign: 'center', fontSize: '10px', padding: '5px 0' }}>
-            {companyName}
-          </td>
-          <td></td>
-          <td style={{ textAlign: 'center', fontSize: '10px', padding: '5px 0' }}>
-            {employeeName.toUpperCase()}
-          </td>
-        </tr>
-        <tr>
-          <td style={{ textAlign: 'center', fontSize: '10px', padding: '5px 0' }}>
-            {companyRut}
-          </td>
-          <td></td>
-          <td style={{ textAlign: 'center', fontSize: '10px', padding: '5px 0' }}>
-            {employeeRut}
+          <td style={{ 
+            textAlign: 'center', 
+            padding: '30px 10px 10px 10px',
+            width: '50%'
+          }}>
+            <div style={{ borderTop: '1px solid #000', paddingTop: '5px' }}>
+              RECIBO Y FIRMO CONFORME
+            </div>
+            <div style={{ fontSize: '10px', marginTop: '10px' }}>
+              {employeeName.toUpperCase()}
+            </div>
+            <div style={{ fontSize: '10px' }}>
+              {employeeRut}
+            </div>
           </td>
         </tr>
       </table>
