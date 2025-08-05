@@ -97,10 +97,9 @@ const Header: React.FC<HeaderProps> = ({
             {/* Brand - Solo Logo */}
             <Link href="/" className="flex items-center">
               <img 
-                src="/images/logo.webp" 
+                src="/images/logo.png" 
                 alt="ContaPymePuq" 
-                className="h-20 w-auto drop-shadow-lg mix-blend-multiply hover:scale-105 transition-transform duration-200" 
-                style={{ filter: 'brightness(1.1) contrast(1.1)' }}
+                className="h-20 w-auto drop-shadow-lg hover:scale-105 transition-transform duration-200" 
               />
             </Link>
 

@@ -35,10 +35,9 @@ export default function Home() {
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center">
               <img 
-                src="/images/logo.webp" 
+                src="/images/logo.png" 
                 alt="ContaPymePuq" 
-                className="h-24 w-auto drop-shadow-lg mix-blend-multiply" 
-                style={{ filter: 'brightness(1.1) contrast(1.1)' }}
+                className="h-24 w-auto drop-shadow-lg" 
               />
             </div>
             <div className="flex items-center space-x-4">
