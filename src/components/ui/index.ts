@@ -10,3 +10,6 @@ export {
   CardContent, 
   CardFooter 
 } from './Card'
+
+export { default as Preloader } from './Preloader'
+export { default as IndicatorsTicker } from './IndicatorsTicker'

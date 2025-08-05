@@ -80,7 +80,7 @@ export default function CompanyForm({ company, onSuccess }: CompanyFormProps) {
           setError(insertError.message)
         } else {
           onSuccess?.()
-          router.push('/dashboard')
+          router.push('/explore')
           router.refresh()
         }
       }

@@ -6,7 +6,7 @@ export default async function RegisterPage() {
   const session = await getSession()
   
   if (session) {
-    redirect('/dashboard')
+    redirect('/explore')
   }
 
   return <RegisterForm />

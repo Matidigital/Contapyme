@@ -18,7 +18,7 @@ export default function DesignSystemPage() {
         title="Sistema de Diseño"
         subtitle="Componentes UI de ContaPyme"
         showBackButton={true}
-        backHref="/dashboard"
+        backHref="/"
         actions={
           <Button variant="primary" size="sm">
             Nuevo

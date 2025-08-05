@@ -26,8 +26,8 @@ export default function AccountingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
-              <Link href="/dashboard" className="text-gray-600 hover:text-gray-900 mr-4">
-                ← Volver al Dashboard
+              <Link href="/explore" className="text-gray-600 hover:text-gray-900 mr-4">
+                ← Volver a Explorar
               </Link>
               <h1 className="text-2xl font-bold text-gray-900">Módulo de Contabilidad</h1>
             </div>

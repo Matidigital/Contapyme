@@ -15,6 +15,13 @@ export default function PayrollPage() {
         title="Módulo de Remuneraciones"
         subtitle="Gestiona empleados, contratos y nóminas"
         showBackButton
+        actions={
+          <Link href="/explore">
+            <Button variant="outline" size="sm">
+              ← Volver a Explorar
+            </Button>
+          </Link>
+        }
       />
 
       {/* Main Content */}

@@ -26,7 +26,7 @@ export default function LoginForm() {
       if (error) {
         setError(error.message)
       } else {
-        router.push('/dashboard')
+        router.push('/explore')
         router.refresh()
       }
     } catch (err) {
