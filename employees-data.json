@@ -1,0 +1,129 @@
+{
+  "employees": {
+    "8033ee69-b420-4d91-ba0e-482f46cd6fce": [
+      {
+        "id": "file-employee-1",
+        "company_id": "8033ee69-b420-4d91-ba0e-482f46cd6fce",
+        "rut": "12.345.678-9",
+        "first_name": "Juan",
+        "last_name": "Pérez",
+        "middle_name": "Carlos",
+        "birth_date": "1985-05-15",
+        "gender": "masculino",
+        "marital_status": "casado",
+        "nationality": "chilena",
+        "email": "juan.perez@empresa.cl",
+        "phone": "+56912345678",
+        "address": "Av. Principal 123",
+        "city": "Santiago",
+        "region": "Metropolitana",
+        "status": "active",
+        "created_at": "2024-01-01T00:00:00.000Z",
+        "updated_at": "2025-08-05T20:42:50.476Z",
+        "employment_contracts": [
+          {
+            "id": "file-contract-1",
+            "position": "Desarrollador Senior",
+            "department": "Tecnología",
+            "contract_type": "indefinido",
+            "start_date": "2024-01-01",
+            "base_salary": 1500000,
+            "salary_type": "monthly",
+            "status": "active"
+          }
+        ],
+        "payroll_config": [
+          {
+            "afp_code": "HABITAT",
+            "health_institution_code": "FONASA",
+            "family_allowances": 2,
+            "legal_gratification_type": "code_47",
+            "has_unemployment_insurance": true
+          }
+        ]
+      },
+      {
+        "id": "file-employee-2",
+        "company_id": "8033ee69-b420-4d91-ba0e-482f46cd6fce",
+        "rut": "98.765.432-1",
+        "first_name": "María",
+        "last_name": "González",
+        "middle_name": "Isabel",
+        "birth_date": "1990-08-22",
+        "gender": "femenino",
+        "marital_status": "soltera",
+        "nationality": "chilena",
+        "email": "maria.gonzalez@empresa.cl",
+        "phone": "+56987654321",
+        "address": "Calle Sur 456",
+        "city": "Santiago",
+        "region": "Metropolitana",
+        "status": "active",
+        "created_at": "2023-06-15T00:00:00.000Z",
+        "updated_at": "2025-08-05T20:42:50.476Z",
+        "employment_contracts": [
+          {
+            "id": "file-contract-2",
+            "position": "Contadora",
+            "department": "Finanzas",
+            "contract_type": "indefinido",
+            "start_date": "2023-06-15",
+            "base_salary": 1200000,
+            "salary_type": "monthly",
+            "status": "active"
+          }
+        ],
+        "payroll_config": [
+          {
+            "afp_code": "PROVIDA",
+            "health_institution_code": "ISAPRE_CONSALUD",
+            "family_allowances": 1,
+            "legal_gratification_type": "code_50",
+            "has_unemployment_insurance": true
+          }
+        ]
+      },
+      {
+        "id": "file-emp-1754426584025-4wf06bcof",
+        "company_id": "8033ee69-b420-4d91-ba0e-482f46cd6fce",
+        "rut": "16.777.888-9",
+        "first_name": "Ana",
+        "last_name": "Silva",
+        "middle_name": "",
+        "email": "ana.silva@empresa.cl",
+        "status": "active",
+        "created_at": "2025-08-05T20:43:04.025Z",
+        "updated_at": "2025-08-05T20:43:04.025Z",
+        "employment_contracts": [
+          {
+            "id": "contract-1754426584025",
+            "position": "Dise�adora UX/UI",
+            "department": "Dise�o",
+            "contract_type": "indefinido",
+            "start_date": "2025-08-05",
+            "end_date": null,
+            "base_salary": 1400000,
+            "salary_type": "monthly",
+            "weekly_hours": 45,
+            "status": "active"
+          }
+        ],
+        "payroll_config": [
+          {
+            "afp_code": "HABITAT",
+            "health_institution_code": "FONASA",
+            "family_allowances": 0,
+            "legal_gratification_type": "none",
+            "has_unemployment_insurance": true
+          }
+        ]
+      }
+    ]
+  },
+  "metadata": {
+    "created_at": "2025-08-05T20:42:50.476Z",
+    "last_updated": "2025-08-05T20:43:04.025Z",
+    "total_employees": 3,
+    "version": "1.0.0"
+  }
+}

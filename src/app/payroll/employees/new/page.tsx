@@ -146,6 +146,28 @@ export default function NewEmployeePage() {
     setLoading(true);
     
     try {
+      // Mapear valores de AFP a códigos de base de datos
+      const afpMapping: Record<string, string> = {
+        'Capital': 'CAPITAL',
+        'Cuprum': 'CUPRUM', 
+        'Habitat': 'HABITAT',
+        'Modelo': 'MODELO',
+        'PlanVital': 'PLANVITAL',
+        'ProVida': 'PROVIDA',
+        'Uno': 'UNO'
+      };
+
+      // Mapear valores de salud a códigos de base de datos
+      const healthMapping: Record<string, string> = {
+        'FONASA': 'FONASA',
+        'Banmédica': 'BANMEDICA',
+        'Consalud': 'CONSALUD',
+        'Colmena': 'COLMENA',
+        'Cruz Blanca': 'CRUZ_BLANCA',
+        'Vida Tres': 'VIDA_TRES',
+        'Más Vida': 'MAS_VIDA'
+      };
+      
       // Preparar datos para la API
       const apiData = {
         // Company info (valores correctos de la base de datos)
@@ -185,8 +207,15 @@ export default function NewEmployeePage() {
         base_salary: parseFloat(formData.baseSalary),
         salary_type: formData.salaryType,
         weekly_hours: parseFloat(formData.weeklyHours) || 45,
-        health_insurance: formData.healthInsurance || null,
-        pension_fund: formData.pensionFund || null,
+        
+        // Payroll config - Estructura correcta para la API
+        payroll_config: {
+          afp_code: afpMapping[formData.pensionFund] || 'HABITAT',
+          health_institution_code: healthMapping[formData.healthInsurance] || 'FONASA',
+          family_allowances: 0,
+          legal_gratification_type: 'none',
+          has_unemployment_insurance: true
+        }
       };
       
       const response = await fetch('/api/payroll/employees', {
