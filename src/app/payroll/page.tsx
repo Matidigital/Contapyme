@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Header } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
-import { Users, FileText, Clock, Calendar, BarChart3, Plus, ChevronRight, Settings } from 'lucide-react';
+import { Users, FileText, Clock, Calendar, BarChart3, Plus, ChevronRight, Settings, FileSpreadsheet } from 'lucide-react';
 
 interface PayrollStats {
   totalEmployees: number;
@@ -120,6 +120,16 @@ export default function PayrollPage() {
                 }`}
               >
                 Contratos
+              </button>
+              <button
+                onClick={() => setActiveTab('libro-remuneraciones')}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'libro-remuneraciones'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Libro de Remuneraciones
               </button>
             </nav>
           </div>
@@ -240,6 +250,12 @@ export default function PayrollPage() {
                         Nuevo Contrato
                       </Button>
                     </Link>
+                    <Link href="/payroll/libro-remuneraciones">
+                      <Button variant="outline" className="w-full justify-start">
+                        <FileSpreadsheet className="w-4 h-4 mr-2" />
+                        Libro de Remuneraciones
+                      </Button>
+                    </Link>
                     <Link href="/payroll/settings">
                       <Button variant="outline" className="w-full justify-start">
                         <Settings className="w-4 h-4 mr-2" />
@@ -330,6 +346,57 @@ export default function PayrollPage() {
                       Ir a Empleados
                     </Button>
                   </Link>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {activeTab === 'libro-remuneraciones' && (
+            <div>
+              {/* Header Actions */}
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-900">Libro de Remuneraciones</h2>
+                <div className="flex space-x-3">
+                  <Link href="/payroll/libro-remuneraciones">
+                    <Button variant="outline">
+                      <FileSpreadsheet className="w-4 h-4 mr-2" />
+                      Ver Libros Generados
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Libro de Remuneraciones Content */}
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <div className="w-16 h-16 bg-green-100 rounded-full mx-auto mb-4 flex items-center justify-center">
+                    <FileSpreadsheet className="w-8 h-8 text-green-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Gestión de Libros de Remuneraciones</h3>
+                  <p className="text-gray-600 mb-6">
+                    Genera y gestiona libros de remuneraciones electrónicos. Incluye exportación CSV para Previred y formato FUDE UMAG.
+                  </p>
+                  <div className="flex justify-center space-x-4">
+                    <Link href="/payroll/libro-remuneraciones">
+                      <Button variant="primary" size="lg">
+                        <FileSpreadsheet className="w-5 h-5 mr-2" />
+                        Gestionar Libros
+                        <ChevronRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    </Link>
+                  </div>
+                  
+                  {/* Quick Info */}
+                  <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <h4 className="font-semibold text-blue-900 mb-2">📊 Exportación CSV</h4>
+                      <p className="text-sm text-blue-700">Compatible con sistemas contables y formato FUDE UMAG</p>
+                    </div>
+                    <div className="bg-green-50 p-4 rounded-lg">
+                      <h4 className="font-semibold text-green-900 mb-2">💾 Archivo Previred</h4>
+                      <p className="text-sm text-green-700">Genera archivos TXT con formato específico para Previred</p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>

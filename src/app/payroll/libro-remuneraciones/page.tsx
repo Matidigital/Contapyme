@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Header } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
-import { FileSpreadsheet, Download, Plus, Calendar, Users, DollarSign, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { FileSpreadsheet, Download, Plus, Calendar, Users, DollarSign, CheckCircle, Clock, AlertCircle, FileText } from 'lucide-react';
 
 interface PayrollBook {
   id: string;
@@ -108,6 +108,30 @@ export default function LibroRemuneracionesPage() {
     }
   };
 
+  const downloadPrevired = async (book: PayrollBook) => {
+    try {
+      const response = await fetch(`/api/payroll/previred?company_id=${companyId}&period=${book.period}`);
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const [year, month] = book.period.split('-');
+        a.download = `previred_${month}${year}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        alert('Error descargando archivo Previred');
+      }
+    } catch (error) {
+      console.error('Error descargando archivo Previred:', error);
+      alert('Error descargando archivo Previred');
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-CL', {
       style: 'currency',
@@ -201,7 +225,7 @@ export default function LibroRemuneracionesPage() {
                 Generar Nuevo Libro
               </CardTitle>
               <CardDescription>
-                Crea un libro de remuneraciones para un período específico
+                Crea un libro de remuneraciones para un período específico. Incluye exportación CSV y archivo TXT para Previred.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -276,15 +300,26 @@ export default function LibroRemuneracionesPage() {
                             </span>
                           </CardDescription>
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => downloadCSV(book)}
-                          className="flex items-center"
-                        >
-                          <Download className="w-4 h-4 mr-2" />
-                          Descargar CSV
-                        </Button>
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => downloadCSV(book)}
+                            className="flex items-center"
+                          >
+                            <Download className="w-4 h-4 mr-2" />
+                            CSV
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => downloadPrevired(book)}
+                            className="flex items-center"
+                          >
+                            <FileText className="w-4 h-4 mr-2" />
+                            Previred
+                          </Button>
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent>
