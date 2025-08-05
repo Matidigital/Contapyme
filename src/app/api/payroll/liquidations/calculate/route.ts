@@ -7,10 +7,43 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+export async function GET(request: NextRequest) {
+  return NextResponse.json({
+    success: true,
+    message: 'API de cálculo de liquidaciones funcionando',
+    timestamp: new Date().toISOString(),
+    env_check: {
+      supabase_url: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      supabase_service_key: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    }
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
+    // Debug logging
+    console.log('🚀 Liquidations Calculate API called');
+    
+    // Check environment variables
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      console.error('❌ NEXT_PUBLIC_SUPABASE_URL not set');
+      return NextResponse.json(
+        { success: false, error: 'Configuración Supabase incompleta - URL' },
+        { status: 500 }
+      );
+    }
+
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('❌ SUPABASE_SERVICE_ROLE_KEY not set');
+      return NextResponse.json(
+        { success: false, error: 'Configuración Supabase incompleta - Service Key' },
+        { status: 500 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const companyId = searchParams.get('company_id');
+    console.log('📋 Company ID:', companyId);
 
     if (!companyId) {
       return NextResponse.json(
