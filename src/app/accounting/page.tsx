@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Header } from '@/components/layout'
 
 export default function AccountingPage() {
   // Demo mode - no authentication required
@@ -21,22 +22,10 @@ export default function AccountingPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <Link href="/explore" className="text-gray-600 hover:text-gray-900 mr-4">
-                ← Volver a Explorar
-              </Link>
-              <h1 className="text-2xl font-bold text-gray-900">Módulo de Contabilidad</h1>
-            </div>
-            <nav className="flex space-x-4">
-              <span className="text-gray-600">{userProfile?.name}</span>
-            </nav>
-          </div>
-        </div>
-      </div>
+      <Header 
+        title="Módulo de Contabilidad"
+        subtitle="Administra toda la información financiera de tus empresas desde un solo lugar"
+      />
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">

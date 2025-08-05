@@ -29,7 +29,7 @@ export default function Home() {
         <div className="absolute top-40 left-40 w-80 h-80 bg-cyan-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000" />
       </div>
 
-      {/* Navigation */}
+      {/* Custom Navigation for Homepage */}
       <nav className="relative z-20 bg-white/80 backdrop-blur-lg border-b border-gray-200 sticky top-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
