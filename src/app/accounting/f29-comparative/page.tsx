@@ -705,7 +705,7 @@ export default function F29ComparativePage() {
                 <span>Análisis Comparativo Completo</span>
               </CardTitle>
               <CardDescription>
-                {analysis.periodos_analizados} períodos analizados • {analysis.rango_temporal.inicio.substring(0,4)} - {analysis.rango_temporal.fin.substring(0,4)}
+                {analysis.periodos_analizados} períodos analizados • {analysis.rango_temporal?.inicio?.substring(0,4) || 'N/A'} - {analysis.rango_temporal?.fin?.substring(0,4) || 'N/A'}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -714,15 +714,15 @@ export default function F29ComparativePage() {
                 <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
                   <h4 className="text-sm font-medium text-blue-700 mb-2">Ventas Totales</h4>
                   <p className="text-3xl font-bold text-blue-900">
-                    {formatCurrency(analysis.metricas_clave.total_ventas)}
+                    {formatCurrency(analysis.metricas_clave?.total_ventas || 0)}
                   </p>
-                  <p className="text-sm text-blue-600">Promedio mensual: {formatCurrency(analysis.metricas_clave.promedio_mensual)}</p>
+                  <p className="text-sm text-blue-600">Promedio mensual: {formatCurrency(analysis.metricas_clave?.promedio_mensual || 0)}</p>
                 </div>
 
                 <div className="bg-green-50 rounded-xl p-6 border border-green-200">
                   <h4 className="text-sm font-medium text-green-700 mb-2">Crecimiento</h4>
                   <p className="text-3xl font-bold text-green-900">
-                    +{analysis.metricas_clave.crecimiento_periodo}%
+                    +{analysis.metricas_clave?.crecimiento_periodo || 0}%
                   </p>
                   <p className="text-sm text-green-600">Durante el período analizado</p>
                 </div>
@@ -730,10 +730,10 @@ export default function F29ComparativePage() {
                 <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
                   <h4 className="text-sm font-medium text-purple-700 mb-2">Mejor Mes</h4>
                   <p className="text-2xl font-bold text-purple-900">
-                    {formatPeriod(analysis.metricas_clave.mejor_mes.period)}
+                    {formatPeriod(analysis.metricas_clave?.mejor_mes?.period || '202401')}
                   </p>
                   <p className="text-sm text-purple-600">
-                    {formatCurrency(analysis.metricas_clave.mejor_mes.ventas)}
+                    {formatCurrency(analysis.metricas_clave?.mejor_mes?.ventas || 0)}
                   </p>
                 </div>
               </div>
@@ -742,7 +742,7 @@ export default function F29ComparativePage() {
               <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">💡 Insights Estratégicos</h3>
                 <div className="space-y-3">
-                  {analysis.insights_iniciales.map((insight, index) => (
+                  {(analysis.insights_iniciales || []).map((insight, index) => (
                     <div key={index} className="flex items-start space-x-3">
                       <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
                       <p className="text-gray-700">{insight}</p>
