@@ -626,6 +626,33 @@ export default function GenerateLiquidationPage() {
                       </div>
                     )}
 
+                    {/* Desglose de Descuentos Principales - NUEVO */}
+                    {(liquidationResult.afp_amount > 0 || liquidationResult.health_amount > 0 || liquidationResult.unemployment_amount > 0) && (
+                      <div className="mt-4 p-3 bg-gray-50 rounded-md">
+                        <div className="text-xs font-medium text-gray-700 mb-2">Descuentos Principales:</div>
+                        <div className="space-y-1 text-xs text-gray-600">
+                          {liquidationResult.afp_amount > 0 && (
+                            <div className="flex justify-between">
+                              <span>AFP {liquidationResult.afp_code || 'HABITAT'} (10.0%)</span>
+                              <span>{formatCurrency(liquidationResult.afp_amount)}</span>
+                            </div>
+                          )}
+                          {liquidationResult.health_amount > 0 && (
+                            <div className="flex justify-between">
+                              <span>{liquidationResult.health_institution_code === 'FONASA' ? 'FONASA' : 'ISAPRE'} (7.0%)</span>
+                              <span>{formatCurrency(liquidationResult.health_amount)}</span>
+                            </div>
+                          )}
+                          {liquidationResult.unemployment_amount > 0 && (
+                            <div className="flex justify-between">
+                              <span>Seguro Cesantía ({liquidationResult.unemployment_percentage || 0.6}%)</span>
+                              <span>{formatCurrency(liquidationResult.unemployment_amount)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Acciones */}
                     <div className="flex space-x-2">
                       <Button variant="outline" className="flex-1">

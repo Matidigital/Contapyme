@@ -25,12 +25,23 @@ export default function LibroRemuneracionesPage() {
   const [loading, setLoading] = useState(true);
   const [generatingBook, setGeneratingBook] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState('');
+  const [periodAvailability, setPeriodAvailability] = useState<any>(null);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
 
   const companyId = '8033ee69-b420-4d91-ba0e-482f46cd6fce'; // ID empresa demo
 
   useEffect(() => {
     loadBooks();
   }, []);
+
+  // Verificar disponibilidad cuando se selecciona un período
+  useEffect(() => {
+    if (selectedPeriod) {
+      checkPeriodAvailability(selectedPeriod);
+    } else {
+      setPeriodAvailability(null);
+    }
+  }, [selectedPeriod]);
 
   const loadBooks = async () => {
     try {
@@ -39,11 +50,31 @@ export default function LibroRemuneracionesPage() {
       
       if (result.success) {
         setBooks(result.data);
+        // Mostrar fuente de datos al usuario
+        if (result.source) {
+          console.log(`📊 Datos cargados desde: ${result.source === 'database' ? 'Base de datos' : 'Demo'}`);
+        }
       }
     } catch (error) {
       console.error('Error cargando libros:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkPeriodAvailability = async (period: string) => {
+    setCheckingAvailability(true);
+    try {
+      const response = await fetch(`/api/payroll/liquidations/available?company_id=${companyId}&period=${period}`);
+      const result = await response.json();
+      
+      if (result.success) {
+        setPeriodAvailability(result.data);
+      }
+    } catch (error) {
+      console.error('Error checking period availability:', error);
+    } finally {
+      setCheckingAvailability(false);
     }
   };
 
@@ -71,11 +102,18 @@ export default function LibroRemuneracionesPage() {
       const result = await response.json();
 
       if (result.success) {
-        alert('Libro de remuneraciones generado exitosamente');
+        const message = result.message || 'Libro de remuneraciones generado exitosamente';
+        alert(message);
         setSelectedPeriod('');
         loadBooks();
       } else {
-        alert(result.error || 'Error generando libro');
+        // Mostrar error más descriptivo
+        const errorMessage = result.error || 'Error generando libro';
+        if (errorMessage.includes('No se encontraron liquidaciones')) {
+          alert('⚠️ No hay liquidaciones para este período.\n\nDebes generar liquidaciones primero en:\n"Generar Liquidación" → Seleccionar empleados → Calcular');
+        } else {
+          alert(errorMessage);
+        }
       }
     } catch (error) {
       console.error('Error generando libro:', error);
@@ -229,35 +267,88 @@ export default function LibroRemuneracionesPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center space-x-4">
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Período
-                  </label>
-                  <select
-                    value={selectedPeriod}
-                    onChange={(e) => setSelectedPeriod(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Seleccionar período</option>
-                    {generatePeriodOptions().map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+              <div className="space-y-4">
+                <div className="flex items-center space-x-4">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Período
+                    </label>
+                    <select
+                      value={selectedPeriod}
+                      onChange={(e) => setSelectedPeriod(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Seleccionar período</option>
+                      {generatePeriodOptions().map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="pt-6">
+                    <Button
+                      onClick={generateBook}
+                      loading={generatingBook}
+                      disabled={!selectedPeriod || generatingBook || (periodAvailability && !periodAvailability.can_generate_book)}
+                      className="px-6"
+                    >
+                      <FileSpreadsheet className="w-4 w-4 mr-2" />
+                      {generatingBook ? 'Generando...' : 'Generar Libro'}
+                    </Button>
+                  </div>
                 </div>
-                <div className="pt-6">
-                  <Button
-                    onClick={generateBook}
-                    loading={generatingBook}
-                    disabled={!selectedPeriod || generatingBook}
-                    className="px-6"
-                  >
-                    <FileSpreadsheet className="w-4 h-4 mr-2" />
-                    Generar Libro
-                  </Button>
-                </div>
+
+                {/* ✅ Información de Disponibilidad del Período */}
+                {checkingAvailability && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                      <span className="text-sm text-blue-700">Verificando liquidaciones disponibles...</span>
+                    </div>
+                  </div>
+                )}
+
+                {periodAvailability && (
+                  <div className={`p-4 rounded-md border ${
+                    periodAvailability.can_generate_book 
+                      ? 'bg-green-50 border-green-200' 
+                      : 'bg-yellow-50 border-yellow-200'
+                  }`}>
+                    <div className="flex items-start space-x-3">
+                      {periodAvailability.can_generate_book ? (
+                        <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+                      ) : (
+                        <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
+                      )}
+                      <div className="flex-1">
+                        <h4 className={`font-medium ${
+                          periodAvailability.can_generate_book ? 'text-green-800' : 'text-yellow-800'
+                        }`}>
+                          {periodAvailability.can_generate_book 
+                            ? '✅ Listo para generar libro' 
+                            : '⚠️ Faltan liquidaciones'
+                          }
+                        </h4>
+                        <div className="mt-1 text-sm space-y-1">
+                          <div className={periodAvailability.can_generate_book ? 'text-green-700' : 'text-yellow-700'}>
+                            • <strong>{periodAvailability.liquidations_available}</strong> de <strong>{periodAvailability.total_employees}</strong> empleados con liquidación ({periodAvailability.coverage_percentage}%)
+                          </div>
+                          {periodAvailability.missing_liquidations > 0 && (
+                            <div className="text-yellow-700">
+                              • Faltan <strong>{periodAvailability.missing_liquidations}</strong> liquidaciones para completar
+                            </div>
+                          )}
+                          {!periodAvailability.can_generate_book && (
+                            <div className="text-yellow-700 mt-2">
+                              → Genera liquidaciones faltantes en: <strong>"Generar Liquidación"</strong>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

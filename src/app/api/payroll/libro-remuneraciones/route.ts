@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
-// Datos demo para libro de remuneraciones
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// Datos demo para libro de remuneraciones (fallback)
 const demoPayrollBooks = [
   {
     id: '550e8400-e29b-41d4-a716-446655440001',
@@ -91,19 +97,76 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log('🔍 API libro remuneraciones DEMO - company:', companyId, 'period:', period, 'format:', format);
+    console.log('🔍 API libro remuneraciones - company:', companyId, 'period:', period, 'format:', format);
 
-    // Filtrar libros por company_id y period si se especifica
-    let books = demoPayrollBooks.filter(book => book.company_id === companyId);
-    
+    // ✅ USAR DATOS REALES DE SUPABASE
+    let query = supabase
+      .from('payroll_books')
+      .select(`
+        id,
+        period,
+        book_number,
+        company_name,
+        company_rut,
+        generation_date,
+        status,
+        total_employees,
+        total_haberes,
+        total_descuentos,
+        total_liquido,
+        payroll_book_details (
+          employee_rut,
+          apellido_paterno,
+          apellido_materno,
+          nombres,
+          cargo,
+          area
+        )
+      `)
+      .eq('company_id', companyId)
+      .order('generation_date', { ascending: false });
+
     if (period) {
-      books = books.filter(book => book.period === period);
+      query = query.eq('period', period);
     }
 
-    // Si se solicita formato CSV
+    const { data: books, error: booksError } = await query;
+
+    // Si no hay libros reales, usar datos demo como fallback
+    if (booksError || !books || books.length === 0) {
+      console.log('📋 Usando datos demo como fallback');
+      let demoBooks = demoPayrollBooks.filter(book => book.company_id === companyId);
+      
+      if (period) {
+        demoBooks = demoBooks.filter(book => book.period === period);
+      }
+
+      // Si se solicita formato CSV con datos demo
+      if (format === 'csv' && demoBooks.length > 0) {
+        const book = demoBooks[0];
+        const csvContent = generateCSV(book);
+        
+        return new NextResponse(csvContent, {
+          status: 200,
+          headers: {
+            'Content-Type': 'text/csv; charset=utf-8',
+            'Content-Disposition': `attachment; filename="libro_remuneraciones_${book.period}.csv"`
+          }
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: demoBooks,
+        count: demoBooks.length,
+        source: 'demo'
+      });
+    }
+
+    // Si se solicita formato CSV con datos reales
     if (format === 'csv' && books.length > 0) {
       const book = books[0];
-      const csvContent = generateCSV(book);
+      const csvContent = await generateRealCSV(book, companyId);
       
       return new NextResponse(csvContent, {
         status: 200,
@@ -114,12 +177,13 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    console.log('✅ Libros demo obtenidos:', books.length);
+    console.log('✅ Libros reales obtenidos:', books.length);
 
     return NextResponse.json({
       success: true,
       data: books,
-      count: books.length
+      count: books.length,
+      source: 'database'
     });
   } catch (error) {
     console.error('Error en GET /api/payroll/libro-remuneraciones:', error);
@@ -130,12 +194,12 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Generar nuevo libro de remuneraciones (simulado)
+// POST - Generar nuevo libro de remuneraciones CON DATOS REALES
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
-    console.log('🔍 API POST libro remuneraciones DEMO - datos:', JSON.stringify(body, null, 2));
+    console.log('🔍 API POST libro remuneraciones - datos:', JSON.stringify(body, null, 2));
     
     if (!body.company_id || !body.period || !body.company_name || !body.company_rut) {
       return NextResponse.json(
@@ -143,73 +207,184 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const { company_id, period, company_name, company_rut } = body;
+    const [year, month] = period.split('-');
     
-    // Verificar si ya existe un libro para este período
-    const existingBook = demoPayrollBooks.find(book => 
-      book.company_id === body.company_id && book.period === body.period
-    );
+    // ✅ Verificar si ya existe un libro para este período en la BD real
+    const { data: existingBook, error: existingError } = await supabase
+      .from('payroll_books')
+      .select('id')
+      .eq('company_id', company_id)
+      .eq('period', period)
+      .single();
     
-    if (existingBook) {
+    if (existingBook && !existingError) {
       return NextResponse.json(
         { error: 'Ya existe un libro de remuneraciones para este período' },
         { status: 409 }
       );
     }
-    
-    // Simular generación de nuevo libro
-    const newBook = {
-      id: `550e8400-e29b-41d4-a716-${Date.now()}`,
-      company_id: body.company_id,
-      period: body.period,
-      book_number: demoPayrollBooks.length + 1,
-      company_name: body.company_name,
-      company_rut: body.company_rut,
-      generation_date: new Date().toISOString(),
-      status: 'draft' as const,
-      total_employees: 5,
-      total_haberes: Math.floor(Math.random() * 1000000) + 4000000, // Entre 4M y 5M
-      total_descuentos: Math.floor(Math.random() * 200000) + 800000, // Entre 800k y 1M
-      total_liquido: 0, // Se calculará después
-      payroll_book_details: [
-        {
-          employee_rut: '12.345.678-9',
-          apellido_paterno: 'González',
-          apellido_materno: 'Silva',
-          nombres: 'Juan Carlos',
-          cargo: 'Desarrollador Senior',
-          area: 'Tecnología'
-        },
-        {
-          employee_rut: '87.654.321-0',
-          apellido_paterno: 'Martínez',
-          apellido_materno: 'López',
-          nombres: 'María Elena',
-          cargo: 'Contadora',
-          area: 'Administración'
-        },
-        {
-          employee_rut: '11.222.333-4',
-          apellido_paterno: 'Rodriguez',
-          apellido_materno: 'Pérez',
-          nombres: 'Carlos Alberto',
-          cargo: 'Gerente Comercial',
-          area: 'Ventas'
-        }
-      ]
-    };
-    
-    // Calcular líquido
-    newBook.total_liquido = newBook.total_haberes - newBook.total_descuentos;
-    
-    // Agregar al array demo
-    demoPayrollBooks.unshift(newBook);
-    
-    console.log('✅ Libro de remuneraciones DEMO generado:', newBook.id);
+
+    // ✅ OBTENER LIQUIDACIONES REALES DEL PERÍODO
+    const { data: liquidations, error: liquidationsError } = await supabase
+      .from('payroll_liquidations')
+      .select(`
+        id,
+        employee_id,
+        period_year,
+        period_month,
+        days_worked,
+        base_salary,
+        total_gross_income,
+        total_deductions,
+        net_salary,
+        afp_amount,
+        health_amount,
+        unemployment_amount,
+        income_tax_amount,
+        family_allowance,
+        food_allowance,
+        transport_allowance,
+        employees (
+          id,
+          rut,
+          first_name,
+          last_name,
+          middle_name,
+          employment_contracts!inner (
+            position,
+            department,
+            weekly_hours,
+            status
+          )
+        )
+      `)
+      .eq('company_id', company_id)
+      .eq('period_year', parseInt(year))
+      .eq('period_month', parseInt(month))
+      .eq('employees.employment_contracts.status', 'active');
+
+    if (liquidationsError) {
+      console.error('Error obteniendo liquidaciones:', liquidationsError);
+      return NextResponse.json(
+        { error: 'Error al obtener liquidaciones del período' },
+        { status: 500 }
+      );
+    }
+
+    if (!liquidations || liquidations.length === 0) {
+      return NextResponse.json(
+        { error: 'No se encontraron liquidaciones para este período. Debe generar liquidaciones primero.' },
+        { status: 404 }
+      );
+    }
+
+    // ✅ Obtener siguiente número de libro
+    const { data: lastBook } = await supabase
+      .from('payroll_books')
+      .select('book_number')
+      .eq('company_id', company_id)
+      .order('book_number', { ascending: false })
+      .limit(1);
+
+    const bookNumber = (lastBook && lastBook[0]?.book_number || 0) + 1;
+
+    // ✅ Calcular totales reales
+    const totalEmployees = liquidations.length;
+    const totalHaberes = liquidations.reduce((sum, liq) => sum + (liq.total_gross_income || 0), 0);
+    const totalDescuentos = liquidations.reduce((sum, liq) => sum + (liq.total_deductions || 0), 0);
+    const totalLiquido = liquidations.reduce((sum, liq) => sum + (liq.net_salary || 0), 0);
+
+    // ✅ Crear libro en la base de datos
+    const { data: newBook, error: bookError } = await supabase
+      .from('payroll_books')
+      .insert({
+        company_id,
+        period,
+        book_number: bookNumber,
+        company_name,
+        company_rut,
+        generated_by: company_id, // TODO: usar user ID real
+        status: 'draft',
+        total_employees: totalEmployees,
+        total_haberes: totalHaberes,
+        total_descuentos: totalDescuentos,
+        total_liquido: totalLiquido
+      })
+      .select()
+      .single();
+
+    if (bookError) {
+      console.error('Error creando libro:', bookError);
+      return NextResponse.json(
+        { error: 'Error al crear libro de remuneraciones' },
+        { status: 500 }
+      );
+    }
+
+    // ✅ Crear detalles por empleado con datos REALES
+    const bookDetails = liquidations.map(liquidation => {
+      const employee = liquidation.employees;
+      const contract = employee?.employment_contracts?.[0];
+      
+      return {
+        payroll_book_id: newBook.id,
+        employee_id: liquidation.employee_id,
+        employee_rut: employee?.rut || 'N/A',
+        apellido_paterno: employee?.last_name || '',
+        apellido_materno: employee?.middle_name || '',
+        nombres: employee?.first_name || '',
+        cargo: contract?.position || '',
+        area: contract?.department || '',
+        centro_costo: 'GENERAL',
+        dias_trabajados: liquidation.days_worked || 30,
+        horas_semanales: contract?.weekly_hours || 45,
+        horas_no_trabajadas: 0,
+        base_imp_prevision: liquidation.total_gross_income || 0,
+        base_imp_cesantia: liquidation.total_gross_income || 0,
+        sueldo_base: liquidation.base_salary || 0,
+        colacion: liquidation.food_allowance || 0,
+        movilizacion: liquidation.transport_allowance || 0,
+        asignacion_familiar: liquidation.family_allowance || 0,
+        total_haberes: liquidation.total_gross_income || 0,
+        prevision_afp: liquidation.afp_amount || 0,
+        salud: liquidation.health_amount || 0,
+        cesantia: liquidation.unemployment_amount || 0, // ✅ INCLUYE CESANTÍA 0.6%
+        impuesto_unico: liquidation.income_tax_amount || 0,
+        total_descuentos: liquidation.total_deductions || 0,
+        sueldo_liquido: liquidation.net_salary || 0
+      };
+    });
+
+    const { error: detailsError } = await supabase
+      .from('payroll_book_details')
+      .insert(bookDetails);
+
+    if (detailsError) {
+      console.error('Error creando detalles:', detailsError);
+      return NextResponse.json(
+        { error: 'Error al crear detalles del libro' },
+        { status: 500 }
+      );
+    }
+
+    console.log(`✅ Libro de remuneraciones REAL generado: ${newBook.id} con ${totalEmployees} empleados`);
     
     return NextResponse.json({
       success: true,
-      data: newBook,
-      message: 'Libro de remuneraciones generado exitosamente (DEMO)'
+      data: {
+        ...newBook,
+        payroll_book_details: bookDetails.slice(0, 3).map(detail => ({
+          employee_rut: detail.employee_rut,
+          apellido_paterno: detail.apellido_paterno,
+          apellido_materno: detail.apellido_materno,
+          nombres: detail.nombres,
+          cargo: detail.cargo,
+          area: detail.area
+        }))
+      },
+      message: `Libro de remuneraciones generado exitosamente con ${totalEmployees} empleados`
     }, { status: 201 });
     
   } catch (error) {
@@ -314,4 +489,133 @@ function formatPeriod(period: string): string {
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
   return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()} a las ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}${date.getHours() >= 12 ? 'PM' : 'AM'}`;
+}
+
+// ✅ Función para generar CSV con DATOS REALES de Supabase
+async function generateRealCSV(book: any, companyId: string): Promise<string> {
+  // Obtener detalles completos del libro
+  const { data: bookDetails, error } = await supabase
+    .from('payroll_book_details')
+    .select('*')
+    .eq('payroll_book_id', book.id)
+    .order('apellido_paterno', { ascending: true });
+
+  if (error || !bookDetails || bookDetails.length === 0) {
+    // Fallback a datos demo si hay error
+    return generateCSV(book);
+  }
+
+  const headers = [
+    'RUT', 'AP PATERNO', 'AP MATERNO', 'NOMBRES', 'CARGO', 'AREA', 'CENTRO COSTO',
+    'DÍAS TRABAJADOS', 'HORAS SEMANALES', 'HORAS NO TRABAJADAS',
+    'BASE IMP. PREVISIÓN', 'BASE IMP. CESANTÍA', 'SUELDO BASE',
+    'APORTE ASISTENCIA', 'HORAS EXTRAS', 'ASIGNACIÓN FAMILIAR',
+    'ASIGNACION DE ANTIGUEDAD', 'ASIGNACION DE PERDIDA DE CAJA',
+    'ASIGNACION DE TRAMO', 'ASIGNACIÓN DE ZONA',
+    'ASIGNACION RESPONSABILIDAD DIRECTIVA', 'BONO COMPENSATORIO',
+    'BONO DE ASESORIA CENTRO DE ALUMNO', 'BONO DE RESPONSABILIDAD',
+    'BONO LEUMAG', 'BONO NOCTURNO', 'BONO POR CARGO', 'BONO POR DESEMPEÑO',
+    'B.R.P', 'B.R.P MENCION', 'COLACIÓN', 'GRATIFICACION MENSUAL',
+    'LEY 19464', 'MOVILIZACIÓN', 'OTROS HABERES IMPONIBLES Y TRIBUTABLES',
+    'PLANILLA SUPLEMENTARIA', 'TOTAL HABERES',
+    'PREVIS', 'APV', 'SALUD', 'SALUD VOLUNTARIA', 'CESANTÍA', 'IMPUESTO',
+    'CUENTA_2', 'SOBREGIRO DESC.', 'ACCIONES COOPEUCH', 'AGRUPACION ALUEN',
+    'AHORRO COOPEUCH', 'APORTE JORNADAS', 'COMITE SOLIDARIDAD',
+    'CREDITO COOPEUCH', 'CUENTA 2 PESOS', 'CUOTA SINDICAL',
+    'DESCUENTO OPTICA', 'FALP', 'MUTUAL DE SEGUROS', 'PRÉSTAMO DE EMPRESA',
+    'PROTEGER', 'RETENCION 3% PRESTAMO SOLIDARIO', 'SEGURO COMPLEMENTARIO',
+    'CRÉDITO PERSONAL CAJA LOS ANDES', 'LEASING (AHORRO) CAJA LOS ANDES',
+    'SEGURO DE VIDA CAJA LOS ANDES', 'TOTAL DESCUENTOS', 'SUELDO LÍQUIDO', 'SOBREGIRO'
+  ];
+
+  // Encabezados del libro
+  const bookHeaders = [
+    `Libro: Remuneraciones${';'.repeat(headers.length - 1)}`,
+    `Empresa: ${book.company_name} (${book.company_rut})${';'.repeat(headers.length - 1)}`,
+    `Periodo: ${formatPeriod(book.period)}${';'.repeat(headers.length - 1)}`,
+    `Fecha Generación: ${formatDate(book.generation_date)}${';'.repeat(headers.length - 1)}`,
+    `Total Empleados: ${book.total_employees}${';'.repeat(headers.length - 1)}`,
+    `Total Haberes: $${book.total_haberes?.toLocaleString('es-CL')}${';'.repeat(headers.length - 1)}`,
+    `Total Descuentos: $${book.total_descuentos?.toLocaleString('es-CL')}${';'.repeat(headers.length - 1)}`,
+    `Total Líquido: $${book.total_liquido?.toLocaleString('es-CL')}${';'.repeat(headers.length - 1)}`,
+    ';'.repeat(headers.length - 1),
+    headers.join(';')
+  ];
+
+  // ✅ Datos REALES de empleados desde la base de datos
+  const employeeRows = bookDetails.map((detail: any) => {
+    return [
+      detail.employee_rut || '',
+      detail.apellido_paterno || '',
+      detail.apellido_materno || '',
+      detail.nombres || '',
+      detail.cargo || '',
+      detail.area || '',
+      detail.centro_costo || 'GENERAL',
+      detail.dias_trabajados || 30,
+      detail.horas_semanales || 45,
+      detail.horas_no_trabajadas || 0,
+      (detail.base_imp_prevision || 0).toFixed(0),
+      (detail.base_imp_cesantia || 0).toFixed(0),
+      (detail.sueldo_base || 0).toFixed(0),
+      (detail.aporte_asistencia || 0).toFixed(0),
+      (detail.horas_extras || 0).toFixed(0),
+      (detail.asignacion_familiar || 0).toFixed(0),
+      (detail.asignacion_antiguedad || 0).toFixed(0),
+      (detail.asignacion_perdida_caja || 0).toFixed(0),
+      (detail.asignacion_tramo || 0).toFixed(0),
+      (detail.asignacion_zona || 0).toFixed(0),
+      (detail.asignacion_responsabilidad_directiva || 0).toFixed(0),
+      (detail.bono_compensatorio || 0).toFixed(0),
+      (detail.bono_asesoria_centro_alumno || 0).toFixed(0),
+      (detail.bono_responsabilidad || 0).toFixed(0),
+      (detail.bono_leumag || 0).toFixed(0),
+      (detail.bono_nocturno || 0).toFixed(0),
+      (detail.bono_cargo || 0).toFixed(0),
+      (detail.bono_desempeno || 0).toFixed(0),
+      (detail.brp || 0).toFixed(0),
+      (detail.brp_mencion || 0).toFixed(0),
+      (detail.colacion || 0).toFixed(0),
+      (detail.gratificacion_mensual || 0).toFixed(0),
+      (detail.ley_19464 || 0).toFixed(0),
+      (detail.movilizacion || 0).toFixed(0),
+      (detail.otros_haberes_imponibles || 0).toFixed(0),
+      (detail.planilla_suplementaria || 0).toFixed(0),
+      (detail.total_haberes || 0).toFixed(0),
+      (detail.prevision_afp || 0).toFixed(0),
+      (detail.apv || 0).toFixed(0),
+      (detail.salud || 0).toFixed(0),
+      (detail.salud_voluntaria || 0).toFixed(0),
+      (detail.cesantia || 0).toFixed(0), // ✅ CESANTÍA REAL 0.6%
+      (detail.impuesto_unico || 0).toFixed(0),
+      (detail.cuenta_2 || 0).toFixed(0),
+      (detail.sobregiro_desc || 0).toFixed(0),
+      (detail.acciones_coopeuch || 0).toFixed(0),
+      (detail.agrupacion_aluen || 0).toFixed(0),
+      (detail.ahorro_coopeuch || 0).toFixed(0),
+      (detail.aporte_jornadas || 0).toFixed(0),
+      (detail.comite_solidaridad || 0).toFixed(0),
+      (detail.credito_coopeuch || 0).toFixed(0),
+      (detail.cuenta_2_pesos || 0).toFixed(0),
+      (detail.cuota_sindical || 0).toFixed(0),
+      (detail.descuento_optica || 0).toFixed(0),
+      (detail.falp || 0).toFixed(0),
+      (detail.mutual_seguros || 0).toFixed(0),
+      (detail.prestamo_empresa || 0).toFixed(0),
+      (detail.proteger || 0).toFixed(0),
+      (detail.retencion_3_prestamo_solidario || 0).toFixed(0),
+      (detail.seguro_complementario || 0).toFixed(0),
+      (detail.credito_personal_caja_andes || 0).toFixed(0),
+      (detail.leasing_ahorro_caja_andes || 0).toFixed(0),
+      (detail.seguro_vida_caja_andes || 0).toFixed(0),
+      (detail.total_descuentos || 0).toFixed(0),
+      (detail.sueldo_liquido || 0).toFixed(0),
+      (detail.sobregiro || 0).toFixed(0)
+    ].join(';');
+  });
+
+  return [
+    ...bookHeaders,
+    ...employeeRows
+  ].join('\n');
 }

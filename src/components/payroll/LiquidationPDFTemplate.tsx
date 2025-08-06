@@ -81,11 +81,13 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
                       (liquidationData.overtime_amount || 0) + 
                       (liquidationData.commissions || 0);
 
+  // ✅ CORREGIDO: Incluir cesantía con campo correcto
   const totalDescuentos = (liquidationData.afp_amount || 0) + 
                          (liquidationData.afp_commission_amount || 0) +
                          (liquidationData.health_amount || 0) + 
                          (liquidationData.additional_health_amount || 0) +
                          (liquidationData.sis_amount || 0) + 
+                         (liquidationData.unemployment_amount || 0) + // ✅ Cesantía correcta
                          (liquidationData.income_tax_amount || 0) +
                          (liquidationData.total_other_deductions || 0);
 
@@ -479,8 +481,8 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
           </tr>
         )}
 
-        {/* Seguro Cesantía - Solo para contratos indefinidos */}
-        {liquidationData.contract_type === 'indefinido' && (liquidationData.sis_amount || 0) > 0 && (
+        {/* ✅ Seguro de Cesantía - CORREGIDO para usar campo correcto */}
+        {(liquidationData.unemployment_amount || 0) > 0 && (
           <tr>
             <td style={{ 
               padding: '8px', 
@@ -493,8 +495,8 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
               fontSize: '11px',
               borderBottom: '1px solid #ccc'
             }}>
-              SEGURO CESANTÍA (0,6%): <span style={{ float: 'right', fontWeight: 'bold' }}>
-                ${(liquidationData.sis_amount || 0).toLocaleString('es-CL')}
+              SEGURO CESANTÍA ({liquidationData.unemployment_percentage || 0.6}%): <span style={{ float: 'right', fontWeight: 'bold' }}>
+                ${(liquidationData.unemployment_amount || 0).toLocaleString('es-CL')}
               </span>
             </td>
           </tr>
