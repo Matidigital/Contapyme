@@ -6,7 +6,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// GET - Obtener libro diario consolidado
+// GET - Obtener libro diario con asientos multi-línea
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -14,31 +14,41 @@ export async function GET(request: NextRequest) {
     const start_date = searchParams.get('start_date'); // YYYY-MM-DD
     const end_date = searchParams.get('end_date'); // YYYY-MM-DD
     const reference_type = searchParams.get('reference_type'); // COMPRA, VENTA, REMUNERACION, ACTIVO_FIJO
-    const limit = parseInt(searchParams.get('limit') || '100');
+    const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
     console.log('🔍 API Journal Book - GET:', { 
       period, start_date, end_date, reference_type, limit, offset 
     });
 
-    // Query base para el libro diario
+    // Query base para obtener asientos con sus líneas de detalle
     let query = supabase
       .from('journal_book')
       .select(`
         jbid,
+        entry_number,
         date,
-        debit,
-        credit,
         description,
         document_number,
         reference_type,
         reference_id,
         status,
-        created_at
+        total_debit,
+        total_credit,
+        is_balanced,
+        created_at,
+        journal_book_details (
+          id,
+          line_number,
+          account_code,
+          account_name,
+          debit_amount,
+          credit_amount,
+          description
+        )
       `)
       .eq('status', 'active')
-      .order('date', { ascending: false })
-      .order('created_at', { ascending: false })
+      .order('entry_number', { ascending: false })
       .range(offset, offset + limit - 1);
 
     // Filtro por período (YYYY-MM)
@@ -77,7 +87,7 @@ export async function GET(request: NextRequest) {
     // Obtener estadísticas del período
     let statsQuery = supabase
       .from('journal_book')
-      .select('debit, credit, reference_type, date')
+      .select('total_debit, total_credit, reference_type, date')
       .eq('status', 'active');
 
     if (period) {
@@ -105,8 +115,8 @@ export async function GET(request: NextRequest) {
     // Calcular estadísticas
     const stats = statsData?.reduce(
       (acc, entry) => {
-        acc.total_debit += entry.debit || 0;
-        acc.total_credit += entry.credit || 0;
+        acc.total_debit += entry.total_debit || 0;
+        acc.total_credit += entry.total_credit || 0;
         acc.total_entries += 1;
 
         // Conteo por tipo de referencia
@@ -115,8 +125,8 @@ export async function GET(request: NextRequest) {
           acc.by_type[type] = { count: 0, debit: 0, credit: 0 };
         }
         acc.by_type[type].count += 1;
-        acc.by_type[type].debit += entry.debit || 0;
-        acc.by_type[type].credit += entry.credit || 0;
+        acc.by_type[type].debit += entry.total_debit || 0;
+        acc.by_type[type].credit += entry.total_credit || 0;
 
         return acc;
       },
@@ -158,7 +168,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Crear asiento manual en el libro diario
+// POST - Crear asiento manual multi-línea
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -166,70 +176,92 @@ export async function POST(request: NextRequest) {
 
     const {
       date,
-      debit,
-      credit,
       description,
       document_number = null,
       reference_type = 'MANUAL',
-      reference_id = null
+      reference_id = null,
+      entry_lines // Array de líneas: [{account_code, account_name, debit_amount, credit_amount, description}]
     } = body;
 
     // Validaciones
-    if (!date || !description) {
+    if (!date || !description || !entry_lines || !Array.isArray(entry_lines)) {
       return NextResponse.json(
-        { success: false, error: 'date y description son requeridos' },
+        { success: false, error: 'date, description y entry_lines son requeridos' },
         { status: 400 }
       );
     }
 
-    if (!debit || !credit || debit !== credit) {
+    if (entry_lines.length < 2) {
       return NextResponse.json(
-        { success: false, error: 'debit y credit deben ser iguales y mayores a 0' },
+        { success: false, error: 'Un asiento debe tener al menos 2 líneas' },
         { status: 400 }
       );
     }
 
-    if (debit <= 0 || credit <= 0) {
+    // Validar que cada línea tenga los datos necesarios
+    for (let i = 0; i < entry_lines.length; i++) {
+      const line = entry_lines[i];
+      if (!line.account_code || !line.account_name) {
+        return NextResponse.json(
+          { success: false, error: `Línea ${i + 1}: account_code y account_name son requeridos` },
+          { status: 400 }
+        );
+      }
+
+      const debit = parseFloat(line.debit_amount) || 0;
+      const credit = parseFloat(line.credit_amount) || 0;
+
+      // Cada línea debe tener SOLO débito O SOLO crédito
+      if ((debit > 0 && credit > 0) || (debit === 0 && credit === 0)) {
+        return NextResponse.json(
+          { success: false, error: `Línea ${i + 1}: debe tener SOLO débito O SOLO crédito` },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Calcular totales
+    const totalDebit = entry_lines.reduce((sum, line) => sum + (parseFloat(line.debit_amount) || 0), 0);
+    const totalCredit = entry_lines.reduce((sum, line) => sum + (parseFloat(line.credit_amount) || 0), 0);
+
+    // Validar que esté balanceado
+    if (Math.abs(totalDebit - totalCredit) > 0.01) { // Tolerancia para decimales
       return NextResponse.json(
-        { success: false, error: 'debit y credit deben ser mayores a 0' },
+        { success: false, error: `Asiento desbalanceado: Débito=${totalDebit}, Crédito=${totalCredit}` },
         { status: 400 }
       );
     }
 
-    // Generar ID único
-    const timestamp = Date.now();
-    const jbid = `JB${timestamp}`;
-
-    // Crear asiento en journal_book
-    const { data: journalEntry, error } = await supabase
-      .from('journal_book')
-      .insert({
-        jbid,
-        date,
-        debit,
-        credit,
-        description,
-        document_number,
-        reference_type,
-        reference_id
-      })
-      .select()
-      .single();
+    // Usar la función de PostgreSQL para crear el asiento completo
+    const { data: result, error } = await supabase
+      .rpc('create_complete_journal_entry', {
+        p_date: date,
+        p_description: description,
+        p_document_number: document_number,
+        p_reference_type: reference_type,
+        p_reference_id: reference_id,
+        p_entry_lines: entry_lines
+      });
 
     if (error) {
       console.error('Error creating journal entry:', error);
       return NextResponse.json(
-        { success: false, error: 'Error al crear asiento en libro diario' },
+        { success: false, error: 'Error al crear asiento contable' },
         { status: 500 }
       );
     }
 
-    console.log(`✅ Asiento creado en libro diario: ${jbid} por $${debit.toLocaleString('es-CL')}`);
+    console.log(`✅ Asiento creado: ${result} con ${entry_lines.length} líneas`);
 
     return NextResponse.json({
       success: true,
-      data: journalEntry,
-      message: `Asiento manual ${jbid} creado exitosamente`
+      data: {
+        jbid: result,
+        entry_lines_count: entry_lines.length,
+        total_debit: totalDebit,
+        total_credit: totalCredit
+      },
+      message: `Asiento ${result} creado exitosamente con ${entry_lines.length} líneas`
     });
 
   } catch (error) {
@@ -247,7 +279,7 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     console.log('🔍 API Journal Book - PUT:', body);
 
-    const { jbid, date, debit, credit, description, document_number } = body;
+    const { jbid, date, description, document_number, entry_lines } = body;
 
     if (!jbid) {
       return NextResponse.json(
@@ -284,44 +316,70 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Validar balance si se actualizan los montos
-    if ((debit && credit) && debit !== credit) {
-      return NextResponse.json(
-        { success: false, error: 'debit y credit deben ser iguales' },
-        { status: 400 }
-      );
+    // Si se envían nuevas líneas, validar balance
+    if (entry_lines && Array.isArray(entry_lines)) {
+      const totalDebit = entry_lines.reduce((sum, line) => sum + (parseFloat(line.debit_amount) || 0), 0);
+      const totalCredit = entry_lines.reduce((sum, line) => sum + (parseFloat(line.credit_amount) || 0), 0);
+
+      if (Math.abs(totalDebit - totalCredit) > 0.01) {
+        return NextResponse.json(
+          { success: false, error: 'Las nuevas líneas no están balanceadas' },
+          { status: 400 }
+        );
+      }
+
+      // Eliminar líneas existentes
+      await supabase
+        .from('journal_book_details')
+        .delete()
+        .eq('jbid', jbid);
+
+      // Crear nuevas líneas
+      for (let i = 0; i < entry_lines.length; i++) {
+        const line = entry_lines[i];
+        await supabase
+          .from('journal_book_details')
+          .insert({
+            jbid,
+            line_number: i + 1,
+            account_code: line.account_code,
+            account_name: line.account_name,
+            debit_amount: parseFloat(line.debit_amount) || 0,
+            credit_amount: parseFloat(line.credit_amount) || 0,
+            description: line.description || null
+          });
+      }
+
+      // Los triggers automáticamente actualizarán los totales
     }
 
-    // Preparar datos para actualizar
+    // Actualizar encabezado si se proporcionan datos
     const updateData: any = {};
     if (date) updateData.date = date;
-    if (debit && credit) {
-      updateData.debit = debit;
-      updateData.credit = credit;
-    }
     if (description) updateData.description = description;
     if (document_number !== undefined) updateData.document_number = document_number;
 
-    const { data: updatedEntry, error } = await supabase
-      .from('journal_book')
-      .update(updateData)
-      .eq('jbid', jbid)
-      .select()
-      .single();
+    if (Object.keys(updateData).length > 0) {
+      const { data: updatedEntry, error } = await supabase
+        .from('journal_book')
+        .update(updateData)
+        .eq('jbid', jbid)
+        .select()
+        .single();
 
-    if (error) {
-      console.error('Error updating journal entry:', error);
-      return NextResponse.json(
-        { success: false, error: 'Error al actualizar asiento' },
-        { status: 500 }
-      );
+      if (error) {
+        console.error('Error updating journal entry:', error);
+        return NextResponse.json(
+          { success: false, error: 'Error al actualizar asiento' },
+          { status: 500 }
+        );
+      }
     }
 
     console.log(`✅ Asiento actualizado: ${jbid}`);
 
     return NextResponse.json({
       success: true,
-      data: updatedEntry,
       message: 'Asiento actualizado exitosamente'
     });
 

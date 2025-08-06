@@ -6,17 +6,30 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Header } from '@/components/layout/Header';
 import { formatCurrency, formatDate } from '@/lib/utils';
 
+interface JournalEntryLine {
+  id: string;
+  line_number: number;
+  account_code: string;
+  account_name: string;
+  debit_amount: number;
+  credit_amount: number;
+  description: string;
+}
+
 interface JournalEntry {
   jbid: string;
+  entry_number: number;
   date: string;
-  debit: number;
-  credit: number;
   description: string;
   document_number?: string;
   reference_type: string;
   reference_id?: string;
   status: string;
+  total_debit: number;
+  total_credit: number;
+  is_balanced: boolean;
   created_at: string;
+  journal_book_details?: JournalEntryLine[];
 }
 
 interface JournalStats {
@@ -26,12 +39,19 @@ interface JournalStats {
   by_type: Record<string, { count: number; debit: number; credit: number }>;
 }
 
+interface NewJournalEntryLine {
+  account_code: string;
+  account_name: string;
+  debit_amount: number;
+  credit_amount: number;
+  description: string;
+}
+
 interface NewJournalEntry {
   date: string;
-  debit: number;
-  credit: number;
   description: string;
   document_number: string;
+  entry_lines: NewJournalEntryLine[];
 }
 
 export default function JournalBookPage() {
@@ -48,10 +68,12 @@ export default function JournalBookPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newEntry, setNewEntry] = useState<NewJournalEntry>({
     date: new Date().toISOString().split('T')[0],
-    debit: 0,
-    credit: 0,
     description: '',
-    document_number: ''
+    document_number: '',
+    entry_lines: [
+      { account_code: '', account_name: '', debit_amount: 0, credit_amount: 0, description: '' },
+      { account_code: '', account_name: '', debit_amount: 0, credit_amount: 0, description: '' }
+    ]
   });
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
@@ -85,19 +107,40 @@ export default function JournalBookPage() {
     }
   };
 
-  // Crear nuevo asiento manual
+  // Crear nuevo asiento manual multi-línea
   const handleCreateEntry = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) return;
 
-    // Validar que debe = haber
-    if (newEntry.debit !== newEntry.credit) {
-      setMessage('Error: El débito debe ser igual al crédito');
+    // Validar líneas
+    if (newEntry.entry_lines.length < 2) {
+      setMessage('Error: Un asiento debe tener al menos 2 líneas');
       return;
     }
 
-    if (newEntry.debit <= 0) {
-      setMessage('Error: Los montos deben ser mayores a 0');
+    // Validar que cada línea tenga datos
+    for (let i = 0; i < newEntry.entry_lines.length; i++) {
+      const line = newEntry.entry_lines[i];
+      if (!line.account_code || !line.account_name) {
+        setMessage(`Error: Línea ${i + 1} debe tener código y nombre de cuenta`);
+        return;
+      }
+      if (line.debit_amount === 0 && line.credit_amount === 0) {
+        setMessage(`Error: Línea ${i + 1} debe tener un monto mayor a 0`);
+        return;
+      }
+      if (line.debit_amount > 0 && line.credit_amount > 0) {
+        setMessage(`Error: Línea ${i + 1} debe tener SOLO débito O SOLO crédito`);
+        return;
+      }
+    }
+
+    // Calcular totales
+    const totalDebit = newEntry.entry_lines.reduce((sum, line) => sum + line.debit_amount, 0);
+    const totalCredit = newEntry.entry_lines.reduce((sum, line) => sum + line.credit_amount, 0);
+
+    if (Math.abs(totalDebit - totalCredit) > 0.01) {
+      setMessage(`Error: Asiento desbalanceado - Débito: ${formatCurrency(totalDebit)}, Crédito: ${formatCurrency(totalCredit)}`);
       return;
     }
 
@@ -118,13 +161,7 @@ export default function JournalBookPage() {
       if (data.success) {
         setMessage('Asiento creado exitosamente');
         setShowAddModal(false);
-        setNewEntry({
-          date: new Date().toISOString().split('T')[0],
-          debit: 0,
-          credit: 0,
-          description: '',
-          document_number: ''
-        });
+        resetNewEntry();
         await fetchEntries(); // Recargar la lista
       } else {
         setMessage(`Error: ${data.error}`);
@@ -135,6 +172,52 @@ export default function JournalBookPage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // Función para resetear el formulario
+  const resetNewEntry = () => {
+    setNewEntry({
+      date: new Date().toISOString().split('T')[0],
+      description: '',
+      document_number: '',
+      entry_lines: [
+        { account_code: '', account_name: '', debit_amount: 0, credit_amount: 0, description: '' },
+        { account_code: '', account_name: '', debit_amount: 0, credit_amount: 0, description: '' }
+      ]
+    });
+  };
+
+  // Agregar nueva línea de asiento
+  const addEntryLine = () => {
+    setNewEntry(prev => ({
+      ...prev,
+      entry_lines: [
+        ...prev.entry_lines,
+        { account_code: '', account_name: '', debit_amount: 0, credit_amount: 0, description: '' }
+      ]
+    }));
+  };
+
+  // Eliminar línea de asiento
+  const removeEntryLine = (index: number) => {
+    if (newEntry.entry_lines.length <= 2) {
+      setMessage('Error: Un asiento debe tener al menos 2 líneas');
+      return;
+    }
+    setNewEntry(prev => ({
+      ...prev,
+      entry_lines: prev.entry_lines.filter((_, i) => i !== index)
+    }));
+  };
+
+  // Actualizar línea específica
+  const updateEntryLine = (index: number, field: keyof NewJournalEntryLine, value: any) => {
+    setNewEntry(prev => ({
+      ...prev,
+      entry_lines: prev.entry_lines.map((line, i) => 
+        i === index ? { ...line, [field]: value } : line
+      )
+    }));
   };
 
   // Generar asientos desde remuneraciones
@@ -401,8 +484,8 @@ export default function JournalBookPage() {
                             {getTypeName(entry.reference_type)}
                           </span>
                         </td>
-                        <td className="p-3 text-sm text-right text-blue-600 font-medium">{formatCurrency(entry.debit)}</td>
-                        <td className="p-3 text-sm text-right text-green-600 font-medium">{formatCurrency(entry.credit)}</td>
+                        <td className="p-3 text-sm text-right text-blue-600 font-medium">{formatCurrency(entry.total_debit)}</td>
+                        <td className="p-3 text-sm text-right text-green-600 font-medium">{formatCurrency(entry.total_credit)}</td>
                         <td className="p-3 text-center">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                             entry.status === 'active' 
@@ -425,7 +508,7 @@ export default function JournalBookPage() {
       {/* Modal para nuevo asiento manual */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full max-h-screen overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-screen overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold">Nuevo Asiento Manual</h2>
@@ -481,76 +564,171 @@ export default function JournalBookPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Débito *
+                {/* Líneas de asiento */}
+                <div>
+                  <div className="flex justify-between items-center mb-3">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Líneas de Asiento *
                     </label>
-                    <input
-                      type="number"
-                      value={newEntry.debit}
-                      onChange={(e) => {
-                        const debit = parseFloat(e.target.value) || 0;
-                        setNewEntry(prev => ({ ...prev, debit, credit: debit })); // Auto-balance
-                      }}
-                      required
-                      min="0"
-                      step="1"
-                      placeholder="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={addEntryLine}
+                      leftIcon="+"
+                    >
+                      Agregar Línea
+                    </Button>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Crédito *
-                    </label>
-                    <input
-                      type="number"
-                      value={newEntry.credit}
-                      onChange={(e) => {
-                        const credit = parseFloat(e.target.value) || 0;
-                        setNewEntry(prev => ({ ...prev, credit }));
-                      }}
-                      required
-                      min="0"
-                      step="1"
-                      placeholder="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                  
+                  <div className="space-y-4 max-h-60 overflow-y-auto border border-gray-200 rounded-lg p-4">
+                    {newEntry.entry_lines.map((line, index) => (
+                      <div key={index} className="bg-gray-50 p-3 rounded-lg relative">
+                        {newEntry.entry_lines.length > 2 && (
+                          <button
+                            type="button"
+                            onClick={() => removeEntryLine(index)}
+                            className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        )}
+                        
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              Código Cuenta *
+                            </label>
+                            <input
+                              type="text"
+                              value={line.account_code}
+                              onChange={(e) => updateEntryLine(index, 'account_code', e.target.value)}
+                              placeholder="ej: 1.1.1.001"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              Nombre Cuenta *
+                            </label>
+                            <input
+                              type="text"
+                              value={line.account_name}
+                              onChange={(e) => updateEntryLine(index, 'account_name', e.target.value)}
+                              placeholder="ej: Caja"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              Débito
+                            </label>
+                            <input
+                              type="number"
+                              value={line.debit_amount || ''}
+                              onChange={(e) => {
+                                const value = parseFloat(e.target.value) || 0;
+                                updateEntryLine(index, 'debit_amount', value);
+                                if (value > 0) {
+                                  updateEntryLine(index, 'credit_amount', 0);
+                                }
+                              }}
+                              min="0"
+                              step="1"
+                              placeholder="0"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              Crédito
+                            </label>
+                            <input
+                              type="number"
+                              value={line.credit_amount || ''}
+                              onChange={(e) => {
+                                const value = parseFloat(e.target.value) || 0;
+                                updateEntryLine(index, 'credit_amount', value);
+                                if (value > 0) {
+                                  updateEntryLine(index, 'debit_amount', 0);
+                                }
+                              }}
+                              min="0"
+                              step="1"
+                              placeholder="0"
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Descripción Línea
+                          </label>
+                          <input
+                            type="text"
+                            value={line.description}
+                            onChange={(e) => updateEntryLine(index, 'description', e.target.value)}
+                            placeholder="Descripción específica de esta línea"
+                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                {/* Validación de balance */}
-                {newEntry.debit !== newEntry.credit && (newEntry.debit > 0 || newEntry.credit > 0) && (
-                  <div className="bg-red-50 border border-red-200 rounded-md p-3">
-                    <div className="flex">
-                      <div className="text-red-600 text-sm">
-                        <strong>⚠️ Asiento desbalanceado:</strong>
+                {/* Validación de balance multi-línea */}
+                {(() => {
+                  const totalDebit = newEntry.entry_lines.reduce((sum, line) => sum + line.debit_amount, 0);
+                  const totalCredit = newEntry.entry_lines.reduce((sum, line) => sum + line.credit_amount, 0);
+                  const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
+                  const hasAmounts = totalDebit > 0 || totalCredit > 0;
+                  
+                  if (!hasAmounts) return null;
+                  
+                  if (!isBalanced) {
+                    return (
+                      <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                        <div className="text-red-600 text-sm">
+                          <strong>⚠️ Asiento desbalanceado:</strong>
+                          <br />
+                          Total Débito: {formatCurrency(totalDebit)}
+                          <br />
+                          Total Crédito: {formatCurrency(totalCredit)}
+                          <br />
+                          Diferencia: {formatCurrency(Math.abs(totalDebit - totalCredit))}
+                          <br />
+                          <em>Los totales deben ser iguales</em>
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  return (
+                    <div className="bg-green-50 border border-green-200 rounded-md p-3">
+                      <div className="text-green-600 text-sm">
+                        <strong>✓ Asiento balanceado:</strong> {formatCurrency(totalDebit)}
                         <br />
-                        Débito: {formatCurrency(newEntry.debit)}
-                        <br />
-                        Crédito: {formatCurrency(newEntry.credit)}
-                        <br />
-                        <em>El débito debe ser igual al crédito</em>
+                        <em>{newEntry.entry_lines.length} líneas correctamente balanceadas</em>
                       </div>
                     </div>
-                  </div>
-                )}
-
-                {/* Confirmación de balance */}
-                {newEntry.debit === newEntry.credit && newEntry.debit > 0 && (
-                  <div className="bg-green-50 border border-green-200 rounded-md p-3">
-                    <div className="text-green-600 text-sm">
-                      <strong>✓ Asiento balanceado:</strong> {formatCurrency(newEntry.debit)}
-                    </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 <div className="flex gap-3 pt-4">
                   <Button 
                     type="button" 
                     variant="outline" 
-                    onClick={() => setShowAddModal(false)}
+                    onClick={() => {
+                      setShowAddModal(false);
+                      resetNewEntry();
+                    }}
                     disabled={submitting}
                     fullWidth
                   >
@@ -558,7 +736,11 @@ export default function JournalBookPage() {
                   </Button>
                   <Button 
                     type="submit"
-                    disabled={submitting || newEntry.debit !== newEntry.credit}
+                    disabled={submitting || (() => {
+                      const totalDebit = newEntry.entry_lines.reduce((sum, line) => sum + line.debit_amount, 0);
+                      const totalCredit = newEntry.entry_lines.reduce((sum, line) => sum + line.credit_amount, 0);
+                      return Math.abs(totalDebit - totalCredit) > 0.01;
+                    })()}
                     loading={submitting}
                     fullWidth
                   >
