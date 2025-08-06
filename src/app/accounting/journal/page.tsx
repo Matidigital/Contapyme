@@ -1213,15 +1213,22 @@ function CreateJournalEntryModal({
                     <div key={index} className="grid grid-cols-12 gap-3 items-start p-4 bg-gray-50 rounded-lg">
                       <div className="col-span-4">
                         <label className="block text-xs text-gray-600 mb-1">Cuenta Contable</label>
-                        <AccountSelector
-                          accounts={accounts}
-                          loading={accountsLoading}
-                          selectedAccount={line.account_code ? { code: line.account_code, name: line.account_name } : null}
-                          onSelectAccount={(account) => {
-                            updateLine(index, 'account_code', account.code);
-                            updateLine(index, 'account_name', account.name);
-                          }}
-                        />
+                        <div className="space-y-1">
+                          <input
+                            type="text"
+                            value={line.account_code}
+                            onChange={(e) => updateLine(index, 'account_code', e.target.value)}
+                            placeholder="Código (ej: 11010001)"
+                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                          />
+                          <input
+                            type="text"
+                            value={line.account_name}
+                            onChange={(e) => updateLine(index, 'account_name', e.target.value)}
+                            placeholder="Nombre cuenta (ej: Caja)"
+                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                          />
+                        </div>
                       </div>
                       <div className="col-span-2">
                         <label className="block text-xs text-gray-600 mb-1">Tipo</label>
@@ -1344,105 +1351,3 @@ function CreateJournalEntryModal({
     );
 }
 
-// Componente Selector de Cuentas Contables
-function AccountSelector({ 
-  accounts, 
-  loading, 
-  selectedAccount, 
-  onSelectAccount 
-}: {
-  accounts: any[];
-  loading: boolean;
-  selectedAccount: { code: string; name: string } | null;
-  onSelectAccount: (account: { code: string; name: string }) => void;
-}) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showDropdown, setShowDropdown] = useState(false);
-  
-  // Filtrar cuentas imputables (nivel 4)
-  const detailAccounts = accounts.filter(acc => (acc.is_detail || acc.isDetail) && (acc.is_active !== false && acc.isActive !== false));
-  
-  // Filtrar por búsqueda
-  const filteredAccounts = detailAccounts.filter(acc => 
-    acc.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    acc.name.toLowerCase().includes(searchTerm.toLowerCase())
-  ).slice(0, 10); // Limitar a 10 resultados
-  
-  const handleSelectAccount = (account: any) => {
-    onSelectAccount({ code: account.code, name: account.name });
-    setSearchTerm('');
-    setShowDropdown(false);
-  };
-  
-  return (
-    <div className="relative">
-      <div className="flex space-x-1">
-        <input
-          type="text"
-          value={selectedAccount ? selectedAccount.code : searchTerm}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            setShowDropdown(true);
-          }}
-          onFocus={() => setShowDropdown(true)}
-          placeholder={loading ? "Cargando..." : "Buscar cuenta..."}
-          className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-          disabled={loading}
-        />
-        {selectedAccount && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              onSelectAccount({ code: '', name: '' });
-              setSearchTerm('');
-              setShowDropdown(false);
-            }}
-            className="px-2 text-red-600 hover:bg-red-50"
-          >
-            ×
-          </Button>
-        )}
-      </div>
-      
-      {selectedAccount && (
-        <div className="mt-1 text-xs text-gray-600 truncate">
-          {selectedAccount.name}
-        </div>
-      )}
-      
-      {showDropdown && !selectedAccount && (
-        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-          {loading ? (
-            <div className="p-3 text-center text-gray-500">
-              <RefreshCw className="w-4 h-4 animate-spin inline mr-2" />
-              Cargando cuentas...
-            </div>
-          ) : filteredAccounts.length === 0 ? (
-            <div className="p-3 text-center text-gray-500">
-              {searchTerm ? 'No se encontraron cuentas' : 'Ingresa código o nombre'}
-            </div>
-          ) : (
-            filteredAccounts.map((account) => (
-              <div
-                key={account.code}
-                onClick={() => handleSelectAccount(account)}
-                className="p-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-              >
-                <div className="font-medium text-sm">{account.code}</div>
-                <div className="text-xs text-gray-600 truncate">{account.name}</div>
-                <div className="text-xs text-blue-600 capitalize">{account.account_type}</div>
-              </div>
-            ))
-          )}
-          
-          {searchTerm && filteredAccounts.length > 0 && (
-            <div className="p-2 text-xs text-center text-gray-500 border-t bg-gray-50">
-              Mostrando {filteredAccounts.length} de {detailAccounts.length} cuentas
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
