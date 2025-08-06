@@ -13,3 +13,4 @@ export {
 
 export { default as Preloader } from './Preloader'
 export { default as IndicatorsTicker } from './IndicatorsTicker'
+export { LazyLoader, LazyRoute, useLazyComponent } from './LazyLoader'
