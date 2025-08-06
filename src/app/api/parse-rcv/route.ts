@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { parseRCV } from '@/lib/rcvParser';
+import { parseRCV } from '@/lib/parsers/rcvParser';
 
 export async function POST(request: NextRequest) {
   console.log('🚀 API RCV: Iniciando procesamiento...');
