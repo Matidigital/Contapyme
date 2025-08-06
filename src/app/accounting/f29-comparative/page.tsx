@@ -5,11 +5,12 @@
 // Versión Modernizada - Eliminadas redundancias
 // ==========================================
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { Header } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { FileText, Upload, TrendingUp, AlertCircle, CheckCircle, X, BarChart3, Zap, Brain, Activity, Target, Shield } from 'lucide-react';
-import { useF29AnalyticsWorker } from '@/hooks/useF29AnalyticsWorker';
+// Comentado para optimización - Web Worker puede causar overhead en móvil
+// import { useF29AnalyticsWorker } from '@/hooks/useF29AnalyticsWorker';
 
 interface UploadResult {
   file_name: string;
@@ -58,16 +59,16 @@ export default function F29ComparativePage() {
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Estado para análisis avanzado con Worker
+  // Estado para análisis avanzado optimizado (sin Worker)
   const [advancedAnalysis, setAdvancedAnalysis] = useState<any>(null);
   const [analyzingWithWorker, setAnalyzingWithWorker] = useState(false);
   
-  // Hook del Worker de análisis avanzado
-  const {
-    isWorkerReady,
-    workerError,
-    performFullAnalysis
-  } = useF29AnalyticsWorker();
+  // Simulación optimizada sin Web Worker para evitar overhead
+  const isWorkerReady = useMemo(() => true, []);
+  const workerError = useMemo(() => null, []);
+  
+  // Referencias estables para evitar dependency loops
+  const analysisTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Datos de prueba para demo
   const demoCompanyId = '550e8400-e29b-41d4-a716-446655440001';

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { 
   Package, 
@@ -23,193 +23,153 @@ import { Header } from '@/components/layout';
 import { FixedAsset, FixedAssetReport } from '@/types';
 import AddFixedAssetForm from '@/components/fixed-assets/AddFixedAssetForm';
 import EditFixedAssetForm from '@/components/fixed-assets/EditFixedAssetForm';
+import { useOptimisticAssets } from '@/hooks/useOptimisticAssets';
+import { useRealtimeAssets } from '@/hooks/useRealtimeAssets';
+import { useDepreciationWorker } from '@/hooks/useDepreciationWorker';
 
 interface FixedAssetsPageProps {}
 
 // Constantes de paginación
 const ITEMS_PER_PAGE = 20;
 
-// Hook optimizado para activos (sin dependencias externas problemáticas)
-function useOptimizedAssets() {
-  const [assets, setAssets] = useState<FixedAsset[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [report, setReport] = useState<FixedAssetReport | null>(null);
-  
-  // Referencias estables para evitar recreaciones
-  const fetchAssetsRef = useRef<(() => Promise<void>) | null>(null);
-  const lastFetchRef = useRef<number>(0);
-
-  // Fetch optimizado con throttling
-  const fetchAssets = useCallback(async () => {
-    const now = Date.now();
-    // Throttle: máximo 1 request cada 2 segundos
-    if (now - lastFetchRef.current < 2000) {
-      return;
-    }
-    
-    lastFetchRef.current = now;
-    setLoading(true);
-    
-    try {
-      // Fetch assets y report en paralelo
-      const [assetsRes, reportRes] = await Promise.all([
-        fetch('/api/fixed-assets?status=all'),
-        fetch('/api/fixed-assets/reports?type=summary')
-      ]);
-
-      if (assetsRes.ok) {
-        const assetsData = await assetsRes.json();
-        setAssets(assetsData.assets || []);
-      }
-
-      if (reportRes.ok) {
-        const reportData = await reportRes.json();
-        setReport(reportData.report || null);
-      }
-
-    } catch (error) {
-      console.error('Error fetching assets:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Guardar referencia estable
-  fetchAssetsRef.current = fetchAssets;
-
-  // Fetch inicial con cleanup
-  useEffect(() => {
-    let mounted = true;
-    
-    const loadData = async () => {
-      if (mounted && fetchAssetsRef.current) {
-        await fetchAssetsRef.current();
-      }
-    };
-    
-    loadData();
-    
-    return () => {
-      mounted = false;
-    };
-  }, []); // Sin dependencias = solo al montar
-
-  // Operaciones CRUD optimizadas
-  const createAsset = useCallback(async (assetData: any) => {
-    try {
-      const response = await fetch('/api/fixed-assets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(assetData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al crear activo');
-      }
-
-      const result = await response.json();
-      
-      // Optimistic update local
-      setAssets(prev => [result.asset, ...prev]);
-      
-      // Refrescar report después de 1 segundo
-      setTimeout(() => {
-        if (fetchAssetsRef.current) {
-          fetchAssetsRef.current();
-        }
-      }, 1000);
-      
-      return result.asset;
-    } catch (error: any) {
-      throw new Error(error.message || 'Error al crear activo');
-    }
-  }, []);
-
-  const updateAsset = useCallback(async (id: string, updateData: any) => {
-    try {
-      const response = await fetch(`/api/fixed-assets/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updateData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al actualizar activo');
-      }
-
-      const result = await response.json();
-      
-      // Optimistic update local
-      setAssets(prev => prev.map(asset => 
-        asset.id === id ? result.asset : asset
-      ));
-      
-      return result.asset;
-    } catch (error: any) {
-      throw new Error(error.message || 'Error al actualizar activo');
-    }
-  }, []);
-
-  const deleteAsset = useCallback(async (id: string) => {
-    try {
-      const response = await fetch(`/api/fixed-assets/${id}`, {
-        method: 'DELETE'
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al eliminar activo');
-      }
-
-      // Optimistic update local
-      setAssets(prev => prev.filter(asset => asset.id !== id));
-      
-      return true;
-    } catch (error: any) {
-      throw new Error(error.message || 'Error al eliminar activo');
-    }
-  }, []);
-
-  const refreshAssets = useCallback(() => {
-    if (fetchAssetsRef.current) {
-      return fetchAssetsRef.current();
-    }
-  }, []);
-
-  return {
-    assets,
-    loading,
-    report,
-    createAsset,
-    updateAsset,
-    deleteAsset,
-    refreshAssets
-  };
-}
-
 export default function FixedAssetsPage({}: FixedAssetsPageProps) {
   const { 
     assets, 
-    loading, 
-    report,
-    createAsset,
-    updateAsset,
-    deleteAsset,
-    refreshAssets
-  } = useOptimizedAssets();
+    loading: assetsLoading, 
+    createAssetOptimistic,
+    updateAssetOptimistic,
+    deleteAssetOptimistic,
+    refreshAssets,
+    setAssets
+  } = useOptimisticAssets();
 
-  // Estados locales (sin dependencias externas)
+  // Web Worker para cálculos pesados
+  const { 
+    isWorkerReady, 
+    workerError, 
+    calculateAssetsReport: calculateReportWorker,
+    calculateSingleDepreciation
+  } = useDepreciationWorker();
+
+  // Real-time subscriptions para sincronización automática
+  const { isConnected, connectionError, lastUpdate } = useRealtimeAssets(
+    // onAssetInserted - cuando otro usuario crea un activo
+    (newAsset) => {
+      console.log('🔄 Sincronizando nuevo activo desde otra sesión:', newAsset.name);
+      setAssets(prev => {
+        // Evitar duplicados
+        if (prev.find(a => a.id === newAsset.id)) return prev;
+        return [newAsset, ...prev];
+      });
+    },
+    // onAssetUpdated - cuando otro usuario modifica un activo
+    (updatedAsset) => {
+      console.log('🔄 Sincronizando activo modificado desde otra sesión:', updatedAsset.name);
+      setAssets(prev => prev.map(asset => 
+        asset.id === updatedAsset.id ? updatedAsset : asset
+      ));
+    },
+    // onAssetDeleted - cuando otro usuario elimina un activo
+    (deletedAssetId) => {
+      console.log('🔄 Sincronizando activo eliminado desde otra sesión:', deletedAssetId);
+      setAssets(prev => prev.filter(asset => asset.id !== deletedAssetId));
+    }
+  );
+  
+  const [report, setReport] = useState<FixedAssetReport | null>(null);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<FixedAsset | null>(null);
+  
+  // Estados de paginación
   const [currentPage, setCurrentPage] = useState(1);
   const [showReportDetails, setShowReportDetails] = useState(false);
 
-  // Filtrado memoizado (solo cuando cambian los inputs relevantes)
+  // Cargar datos iniciales con Web Worker
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Refrescar activos usando optimistic hook
+      await refreshAssets();
+      
+      // Si hay activos y Worker está disponible, calcular reporte con Worker
+      if (assets.length > 0 && isWorkerReady) {
+        console.log('🧮 Calculando reporte con Web Worker...');
+        try {
+          const workerReport = await calculateReportWorker(assets);
+          setReport(workerReport);
+          console.log('✅ Reporte calculado con Web Worker exitosamente');
+        } catch (workerError) {
+          console.warn('Worker falló, usando API tradicional:', workerError);
+          // Fallback a API tradicional
+          const reportRes = await fetch('/api/fixed-assets/reports?type=summary');
+          if (reportRes.ok) {
+            const reportData = await reportRes.json();
+            setReport(reportData.report || null);
+          }
+        }
+      } else {
+        // Cargar reporte usando API tradicional
+        const reportRes = await fetch('/api/fixed-assets/reports?type=summary');
+        if (reportRes.ok) {
+          const reportData = await reportRes.json();
+          console.log('Report data received from API:', reportData);
+          setReport(reportData.report || null);
+        } else {
+          console.error('Failed to load report:', reportRes.status);
+        }
+      }
+
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [refreshAssets, assets, isWorkerReady, calculateReportWorker]);
+
+  // Manejar éxito en creación de activo (optimistic ya se encarga)
+  const handleAssetCreated = () => {
+    console.log('✅ Activo creado con optimistic update');
+    // Solo refrescar reporte después de un momento
+    setTimeout(() => {
+      fetchData(); // Solo para actualizar el reporte
+    }, 1000);
+  };
+
+  // Manejar éxito en edición de activo (optimistic ya se encarga)
+  const handleAssetUpdated = () => {
+    console.log('✅ Activo actualizado con optimistic update');
+    setSelectedAsset(null);
+    setShowEditForm(false);
+    // Solo refrescar reporte después de un momento
+    setTimeout(() => {
+      fetchData(); // Solo para actualizar el reporte
+    }, 800);
+  };
+
+  // Abrir modal de edición
+  const openEditModal = (asset: FixedAsset) => {
+    setSelectedAsset(asset);
+    setShowEditForm(true);
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Debug: log de estados disponibles
+  useEffect(() => {
+    if (assets.length > 0) {
+      const uniqueStatuses = [...new Set(assets.map(asset => asset.status))];
+      console.log('Estados disponibles en activos:', uniqueStatuses);
+      console.log('Estado seleccionado:', selectedStatus);
+    }
+  }, [assets, selectedStatus]);
+
+  // Filtrar activos por búsqueda y estado
   const filteredAssets = useMemo(() => {
     return assets.filter(asset => {
       // Filtro por texto de búsqueda
@@ -217,7 +177,8 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
         asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (asset.serial_number && asset.serial_number.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (asset.brand && asset.brand.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (asset.model && asset.model.toLowerCase().includes(searchTerm.toLowerCase()))
+        (asset.model && asset.model.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (asset.category && asset.category.toLowerCase().includes(searchTerm.toLowerCase()))
       );
 
       // Filtro por estado
@@ -227,25 +188,36 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
     });
   }, [assets, searchTerm, selectedStatus]);
 
-  // Paginación memoizada
-  const paginatedAssets = useMemo(() => {
-    const totalPages = Math.ceil(filteredAssets.length / ITEMS_PER_PAGE);
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    
-    return {
-      assets: filteredAssets.slice(startIndex, endIndex),
-      totalPages,
-      startIndex,
-      endIndex: Math.min(endIndex, filteredAssets.length)
-    };
-  }, [filteredAssets, currentPage]);
+  // Calcular paginación
+  const totalPages = Math.ceil(filteredAssets.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedAssets = filteredAssets.slice(startIndex, endIndex);
+  
+  // Reset página cuando cambian los filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedStatus]);
 
-  // Cálculos de valor libro memoizados (solo para activos visibles)
+  // Formatear moneda
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('es-CL', {
+      style: 'currency',
+      currency: 'CLP',
+      minimumFractionDigits: 0
+    }).format(amount);
+  };
+
+  // Formatear fecha
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('es-CL');
+  };
+
+  // Memoizar cálculos de valor libro para todos los activos paginados
   const bookValues = useMemo(() => {
     const values = new Map<string, number>();
     
-    paginatedAssets.assets.forEach(asset => {
+    paginatedAssets.forEach(asset => {
       try {
         const monthsSinceDepreciation = Math.max(0, Math.floor(
           (new Date().getTime() - new Date(asset.start_depreciation_date).getTime()) / (1000 * 60 * 60 * 24 * 30)
@@ -267,99 +239,18 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
         
         values.set(asset.id, bookValue);
       } catch (error) {
+        console.error('Error calculating book value for asset:', asset.name, error);
         values.set(asset.id, asset.purchase_value);
       }
     });
     
     return values;
-  }, [paginatedAssets.assets]);
+  }, [paginatedAssets]);
 
-  // Reset página cuando cambian los filtros
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, selectedStatus]);
-
-  // Handlers optimizados con useCallback
-  const handleAssetCreated = useCallback(async () => {
-    setShowAddForm(false);
-    // Refrescar datos después de crear
-    setTimeout(() => {
-      if (refreshAssets) {
-        refreshAssets();
-      }
-    }, 500);
-  }, [refreshAssets]);
-
-  const handleAssetUpdated = useCallback(async () => {
-    setSelectedAsset(null);
-    setShowEditForm(false);
-  }, []);
-
-  const openEditModal = useCallback((asset: FixedAsset) => {
-    setSelectedAsset(asset);
-    setShowEditForm(true);
-  }, []);
-
-  const handleDeleteAsset = useCallback(async (asset: FixedAsset) => {
-    if (confirm(`¿Estás seguro de eliminar el activo "${asset.name}"?`)) {
-      try {
-        await deleteAsset(asset.id);
-        // Refrescar report después de eliminar
-        setTimeout(() => {
-          if (refreshAssets) {
-            refreshAssets();
-          }
-        }, 500);
-      } catch (error: any) {
-        alert(error.message || 'Error al eliminar activo');
-      }
-    }
-  }, [deleteAsset, refreshAssets]);
-
-  const handleExportAssets = useCallback(async () => {
-    try {
-      const response = await fetch('/api/fixed-assets/export?format=csv');
-      
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `activos_fijos_${new Date().toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-      } else {
-        const errorData = await response.json();
-        alert(errorData.error || 'Error al exportar activos fijos');
-      }
-    } catch (error) {
-      console.error('Error exporting assets:', error);
-      alert('Error al exportar activos fijos');
-    }
-  }, []);
-
-  // Formatters memoizados
-  const formatCurrency = useMemo(() => {
-    return (amount: number) => {
-      return new Intl.NumberFormat('es-CL', {
-        style: 'currency',
-        currency: 'CLP',
-        minimumFractionDigits: 0
-      }).format(amount);
-    };
-  }, []);
-
-  const formatDate = useMemo(() => {
-    return (dateString: string) => {
-      return new Date(dateString).toLocaleDateString('es-CL');
-    };
-  }, []);
-
-  const getBookValue = useCallback((assetId: string): number => {
+  // Obtener valor libro memoizado
+  const getBookValue = (assetId: string): number => {
     return bookValues.get(assetId) || 0;
-  }, [bookValues]);
+  };
 
   if (loading) {
     return (
@@ -374,6 +265,13 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Animated Background Elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-400 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-blob" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-400 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-blob animation-delay-2000" />
+        <div className="absolute top-40 left-40 w-80 h-80 bg-cyan-400 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-blob animation-delay-4000" />
+      </div>
+      
       <Header 
         title="Gestión de Activos Fijos"
         subtitle="Control completo con depreciación automática y reportes ejecutivos"
@@ -386,10 +284,63 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
               <Package className="w-3 h-3" />
               <span>CRUD Completo</span>
             </div>
+            <div className={`hidden lg:flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium ${
+              isConnected 
+                ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-800' 
+                : 'bg-gradient-to-r from-gray-100 to-slate-100 text-gray-600'
+            }`}>
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
+              <span>{isConnected ? 'Tiempo Real' : 'Desconectado'}</span>
+            </div>
+            <div className={`hidden xl:flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-medium ${
+              isWorkerReady 
+                ? 'bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800' 
+                : workerError
+                ? 'bg-gradient-to-r from-red-100 to-orange-100 text-red-800'
+                : 'bg-gradient-to-r from-gray-100 to-slate-100 text-gray-600'
+            }`}>
+              <div className={`w-2 h-2 rounded-full ${
+                isWorkerReady 
+                  ? 'bg-blue-500 animate-pulse' 
+                  : workerError 
+                  ? 'bg-red-500'
+                  : 'bg-gray-400'
+              }`}></div>
+              <span>
+                {isWorkerReady 
+                  ? '⚡ Worker' 
+                  : workerError 
+                  ? '❌ Worker' 
+                  : '⏳ Worker'
+                }
+              </span>
+            </div>
             <Button
               variant="outline"
               size="sm"
-              onClick={handleExportAssets}
+              onClick={async () => {
+                try {
+                  const response = await fetch('/api/fixed-assets/export?format=csv');
+                  
+                  if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `activos_fijos_${new Date().toISOString().split('T')[0]}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                  } else {
+                    const errorData = await response.json();
+                    alert(errorData.error || 'Error al exportar activos fijos');
+                  }
+                } catch (error) {
+                  console.error('Error exporting assets:', error);
+                  alert('Error al exportar activos fijos');
+                }
+              }}
               className="border-green-200 hover:bg-green-50 hover:border-green-300"
             >
               <Download className="w-4 h-4 mr-1" />
@@ -412,10 +363,24 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           
-          {/* Tarjetas de Resumen Simplificadas */}
-          {showReportDetails && report ? (
+          {/* Tarjetas de Resumen Modernizadas con Lazy Loading */}
+          {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <Card className="bg-white/90 backdrop-blur-sm border-2 border-blue-100 hover:border-blue-200 transition-all duration-300 hover:shadow-lg p-6">
+              {[1, 2, 3, 4].map(i => (
+                <Card key={i} className="bg-white/90 backdrop-blur-sm border-2 border-gray-100 p-6 animate-pulse">
+                  <div className="flex items-center">
+                    <div className="p-3 bg-gray-200 rounded-xl w-12 h-12"></div>
+                    <div className="ml-4 flex-1">
+                      <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                      <div className="h-7 bg-gray-200 rounded"></div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : report && showReportDetails ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <Card className="bg-white/90 backdrop-blur-sm border-2 border-blue-100 hover:border-blue-200 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] p-6">
                 <div className="flex items-center">
                   <div className="p-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg">
                     <Package className="h-7 w-7 text-white" />
@@ -427,7 +392,7 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                 </div>
               </Card>
 
-              <Card className="bg-white/90 backdrop-blur-sm border-2 border-green-100 hover:border-green-200 transition-all duration-300 hover:shadow-lg p-6">
+              <Card className="bg-white/90 backdrop-blur-sm border-2 border-green-100 hover:border-green-200 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] p-6">
                 <div className="flex items-center">
                   <div className="p-3 bg-gradient-to-r from-green-500 to-green-600 rounded-xl shadow-lg">
                     <DollarSign className="h-7 w-7 text-white" />
@@ -441,7 +406,7 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                 </div>
               </Card>
 
-              <Card className="bg-white/90 backdrop-blur-sm border-2 border-purple-100 hover:border-purple-200 transition-all duration-300 hover:shadow-lg p-6">
+              <Card className="bg-white/90 backdrop-blur-sm border-2 border-purple-100 hover:border-purple-200 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] p-6">
                 <div className="flex items-center">
                   <div className="p-3 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl shadow-lg">
                     <TrendingUp className="h-7 w-7 text-white" />
@@ -455,7 +420,7 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                 </div>
               </Card>
 
-              <Card className="bg-white/90 backdrop-blur-sm border-2 border-orange-100 hover:border-orange-200 transition-all duration-300 hover:shadow-lg p-6">
+              <Card className="bg-white/90 backdrop-blur-sm border-2 border-orange-100 hover:border-orange-200 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] p-6">
                 <div className="flex items-center">
                   <div className="p-3 bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl shadow-lg">
                     <Calendar className="h-7 w-7 text-white" />
@@ -491,9 +456,7 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                     size="sm"
                     onClick={() => {
                       setShowReportDetails(true);
-                      if (!report && refreshAssets) {
-                        refreshAssets();
-                      }
+                      if (!report) fetchData();
                     }}
                     className="border-blue-200 hover:bg-blue-50"
                   >
@@ -504,13 +467,16 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
             </Card>
           )}
 
-          {/* Filtros y Búsqueda */}
+          {/* Filtros y Búsqueda Modernizados */}
           <Card className="bg-white/90 backdrop-blur-sm border-2 border-gray-100 hover:border-gray-200 transition-colors mb-6">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Filter className="w-5 h-5 text-gray-600" />
                 <span>Filtros de Búsqueda</span>
               </CardTitle>
+              <CardDescription>
+                Encuentra activos específicos por nombre, marca, modelo o estado
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex flex-col lg:flex-row gap-4">
@@ -521,7 +487,7 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                     <input
                       type="text"
                       placeholder="Buscar por nombre, marca o número de serie..."
-                      className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-300 transition-all duration-300 bg-white/80"
+                      className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-300 transition-all duration-300 bg-white/80 backdrop-blur-sm"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -531,7 +497,7 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                 {/* Filtro por estado */}
                 <div className="lg:w-48">
                   <select
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-300 transition-all duration-300 bg-white/80 font-medium"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-300 transition-all duration-300 bg-white/80 backdrop-blur-sm font-medium"
                     value={selectedStatus}
                     onChange={(e) => setSelectedStatus(e.target.value)}
                   >
@@ -552,10 +518,10 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                 <h2 className="text-lg font-semibold text-gray-900">
                   Activos Fijos ({filteredAssets.length})
                 </h2>
-                {paginatedAssets.totalPages > 1 && (
+                {totalPages > 1 && (
                   <div className="flex items-center space-x-2">
                     <span className="text-sm text-gray-600">
-                      Página {currentPage} de {paginatedAssets.totalPages}
+                      Página {currentPage} de {totalPages}
                     </span>
                   </div>
                 )}
@@ -609,11 +575,17 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-100">
-                      {paginatedAssets.assets.map((asset) => {
+                      {paginatedAssets.map((asset) => {
                         const bookValue = getBookValue(asset.id);
                         
                         return (
-                          <tr key={asset.id} className="hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 transition-all duration-300">
+                          <tr key={asset.id} className={`hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 transition-all duration-300 ${
+                            (asset as any).isOptimistic 
+              ? (asset as any).isReverting 
+                ? 'bg-red-50 opacity-60 animate-pulse' 
+                : 'bg-blue-50 opacity-90'
+              : ''
+                          }`}>
                             <td className="px-6 py-5 whitespace-nowrap">
                               <div className="flex items-center space-x-3">
                                 <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -682,7 +654,21 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                                   size="sm"
                                   leftIcon={<Trash2 className="w-4 h-4" />}
                                   className="border-red-200 hover:bg-red-50 hover:border-red-300"
-                                  onClick={() => handleDeleteAsset(asset)}
+                                  onClick={() => {
+                                    if (confirm(`¿Estás seguro de eliminar el activo "${asset.name}"?`)) {
+                                      deleteAssetOptimistic(
+                                        asset.id,
+                                        () => {
+                                          console.log('✅ Activo eliminado con optimistic update');
+                                          // Refrescar reporte después de eliminar
+                                          setTimeout(() => fetchData(), 1000);
+                                        },
+                                        (error) => {
+                                          alert(error || 'Error al eliminar activo');
+                                        }
+                                      );
+                                    }
+                                  }}
                                 >
                                   Eliminar
                                 </Button>
@@ -697,7 +683,7 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
               )}
               
               {/* Controles de Paginación */}
-              {paginatedAssets.totalPages > 1 && (
+              {totalPages > 1 && (
                 <div className="mt-6 flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Button
@@ -711,11 +697,44 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                       Anterior
                     </Button>
                     
+                    {/* Números de página */}
+                    <div className="flex items-center space-x-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+                        
+                        if (pageNum < 1 || pageNum > totalPages) return null;
+                        
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={currentPage === pageNum ? "primary" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={currentPage === pageNum 
+                              ? "bg-orange-600 hover:bg-orange-700" 
+                              : "border-gray-300"
+                            }
+                          >
+                            {pageNum}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setCurrentPage(prev => Math.min(paginatedAssets.totalPages, prev + 1))}
-                      disabled={currentPage === paginatedAssets.totalPages}
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
                       className="border-gray-300"
                     >
                       Siguiente
@@ -724,21 +743,90 @@ export default function FixedAssetsPage({}: FixedAssetsPageProps) {
                   </div>
                   
                   <div className="text-sm text-gray-600">
-                    Mostrando {paginatedAssets.startIndex + 1} - {paginatedAssets.endIndex} de {filteredAssets.length} activos
+                    Mostrando {startIndex + 1} - {Math.min(endIndex, filteredAssets.length)} de {filteredAssets.length} activos
                   </div>
                 </div>
               )}
             </CardContent>
           </Card>
+
+          {/* Alertas de Depreciación Modernizadas */}
+          {report && report.assets_near_full_depreciation.length > 0 && (
+            <Card className="bg-white/90 backdrop-blur-sm border-2 border-orange-200 hover:border-orange-300 transition-colors mt-6">
+              <CardHeader className="bg-gradient-to-r from-orange-50 to-yellow-50">
+                <CardTitle className="flex items-center space-x-2">
+                  <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-lg flex items-center justify-center">
+                    <AlertTriangle className="w-4 h-4 text-white" />
+                  </div>
+                  <span>Alertas de Depreciación</span>
+                  <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">
+                    {report.assets_near_full_depreciation.length} activos
+                  </span>
+                </CardTitle>
+                <CardDescription>
+                  Activos próximos a depreciación completa (90%+) que requieren atención
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {report.assets_near_full_depreciation.slice(0, 5).map((asset) => (
+                    <div key={asset.id} className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl border border-orange-200 hover:shadow-md transition-all duration-300">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-lg flex items-center justify-center">
+                          <Package className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900">{asset.name}</p>
+                          <p className="text-sm text-orange-700">🚨 Requiere revisión contable</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <span className="bg-orange-200 text-orange-800 px-2 py-1 rounded-full text-xs font-semibold">
+                            90%+ depreciado
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium text-gray-700">
+                          Valor libro: {formatCurrency(getBookValue(asset.id))}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
+
+      {/* Custom animations */}
+      <style jsx>{`
+        @keyframes blob {
+          0% { transform: translate(0px, 0px) scale(1); }
+          33% { transform: translate(30px, -50px) scale(1.1); }
+          66% { transform: translate(-20px, 20px) scale(0.9); }
+          100% { transform: translate(0px, 0px) scale(1); }
+        }
+        
+        .animate-blob {
+          animation: blob 7s infinite;
+        }
+        
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+      `}</style>
 
       {/* Modal Agregar Activo */}
       <AddFixedAssetForm
         isOpen={showAddForm}
         onClose={() => setShowAddForm(false)}
         onSuccess={handleAssetCreated}
-        createAssetOptimistic={createAsset}
+        createAssetOptimistic={createAssetOptimistic}
       />
 
       {/* Modal Editar Activo */}

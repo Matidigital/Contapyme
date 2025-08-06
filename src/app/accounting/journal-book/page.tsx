@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Header } from '@/components/layout/Header';
@@ -54,7 +54,8 @@ interface NewJournalEntry {
   entry_lines: NewJournalEntryLine[];
 }
 
-export default function JournalBookPage() {
+// Hook optimizado para el libro diario
+function useOptimizedJournalBook() {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [stats, setStats] = useState<JournalStats>({
     total_debit: 0,
@@ -63,31 +64,29 @@ export default function JournalBookPage() {
     by_type: {}
   });
   const [loading, setLoading] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState('');
-  const [selectedType, setSelectedType] = useState('');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [newEntry, setNewEntry] = useState<NewJournalEntry>({
-    date: new Date().toISOString().split('T')[0],
-    description: '',
-    document_number: '',
-    entry_lines: [
-      { account_code: '', account_name: '', debit_amount: 0, credit_amount: 0, description: '' },
-      { account_code: '', account_name: '', debit_amount: 0, credit_amount: 0, description: '' }
-    ]
-  });
-  const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState('');
-
-  // Cargar asientos del libro diario
-  const fetchEntries = async () => {
+  
+  // Refs estables para evitar dependency loops
+  const fetchEntriesRef = useRef<((period?: string, type?: string) => Promise<void>) | null>(null);
+  const lastFetchRef = useRef<number>(0);
+  
+  // Función de fetch con throttling
+  const fetchEntries = useCallback(async (period?: string, type?: string) => {
+    const now = Date.now();
+    // Throttling: máximo 1 request cada 1.5 segundos
+    if (now - lastFetchRef.current < 1500) {
+      return;
+    }
+    
+    lastFetchRef.current = now;
+    
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      if (selectedPeriod) {
-        params.append('period', selectedPeriod);
+      if (period) {
+        params.append('period', period);
       }
-      if (selectedType) {
-        params.append('reference_type', selectedType);
+      if (type) {
+        params.append('reference_type', type);
       }
       params.append('limit', '100');
 
@@ -105,42 +104,87 @@ export default function JournalBookPage() {
     } finally {
       setLoading(false);
     }
+  }, []);
+  
+  // Asignar la función al ref
+  useEffect(() => {
+    fetchEntriesRef.current = fetchEntries;
+  }, [fetchEntries]);
+  
+  // Método público para refrescar
+  const refreshEntries = useCallback((period?: string, type?: string) => {
+    if (fetchEntriesRef.current) {
+      fetchEntriesRef.current(period, type);
+    }
+  }, []);
+  
+  return {
+    entries,
+    stats,
+    loading,
+    refreshEntries
   };
+}
 
-  // Crear nuevo asiento manual multi-línea
-  const handleCreateEntry = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (submitting) return;
+export default function JournalBookPage() {
+  const { entries, stats, loading, refreshEntries } = useOptimizedJournalBook();
+  
+  const [selectedPeriod, setSelectedPeriod] = useState('');
+  const [selectedType, setSelectedType] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newEntry, setNewEntry] = useState<NewJournalEntry>({
+    date: new Date().toISOString().split('T')[0],
+    description: '',
+    document_number: '',
+    entry_lines: [
+      { account_code: '', account_name: '', debit_amount: 0, credit_amount: 0, description: '' },
+      { account_code: '', account_name: '', debit_amount: 0, credit_amount: 0, description: '' }
+    ]
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState('');
 
-    // Validar líneas
+  // Validador memoizado para las líneas del asiento
+  const entryValidation = useMemo(() => {
     if (newEntry.entry_lines.length < 2) {
-      setMessage('Error: Un asiento debe tener al menos 2 líneas');
-      return;
+      return { isValid: false, message: 'Error: Un asiento debe tener al menos 2 líneas' };
     }
 
-    // Validar que cada línea tenga datos
     for (let i = 0; i < newEntry.entry_lines.length; i++) {
       const line = newEntry.entry_lines[i];
       if (!line.account_code || !line.account_name) {
-        setMessage(`Error: Línea ${i + 1} debe tener código y nombre de cuenta`);
-        return;
+        return { isValid: false, message: `Error: Línea ${i + 1} debe tener código y nombre de cuenta` };
       }
       if (line.debit_amount === 0 && line.credit_amount === 0) {
-        setMessage(`Error: Línea ${i + 1} debe tener un monto mayor a 0`);
-        return;
+        return { isValid: false, message: `Error: Línea ${i + 1} debe tener un monto mayor a 0` };
       }
       if (line.debit_amount > 0 && line.credit_amount > 0) {
-        setMessage(`Error: Línea ${i + 1} debe tener SOLO débito O SOLO crédito`);
-        return;
+        return { isValid: false, message: `Error: Línea ${i + 1} debe tener SOLO débito O SOLO crédito` };
       }
     }
 
-    // Calcular totales
     const totalDebit = newEntry.entry_lines.reduce((sum, line) => sum + line.debit_amount, 0);
     const totalCredit = newEntry.entry_lines.reduce((sum, line) => sum + line.credit_amount, 0);
 
     if (Math.abs(totalDebit - totalCredit) > 0.01) {
-      setMessage(`Error: Asiento desbalanceado - Débito: ${formatCurrency(totalDebit)}, Crédito: ${formatCurrency(totalCredit)}`);
+      return { 
+        isValid: false, 
+        message: `Error: Asiento desbalanceado - Débito: ${formatCurrency(totalDebit)}, Crédito: ${formatCurrency(totalCredit)}`,
+        totalDebit,
+        totalCredit
+      };
+    }
+
+    return { isValid: true, message: '', totalDebit, totalCredit };
+  }, [newEntry.entry_lines]);
+
+  // Crear nuevo asiento manual multi-línea
+  const handleCreateEntry = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (submitting) return;
+
+    if (!entryValidation.isValid) {
+      setMessage(entryValidation.message);
       return;
     }
 
@@ -162,7 +206,10 @@ export default function JournalBookPage() {
         setMessage('Asiento creado exitosamente');
         setShowAddModal(false);
         resetNewEntry();
-        await fetchEntries(); // Recargar la lista
+        // Usar refreshEntries optimizado
+        setTimeout(() => {
+          refreshEntries(selectedPeriod, selectedType);
+        }, 500);
       } else {
         setMessage(`Error: ${data.error}`);
       }
@@ -172,10 +219,10 @@ export default function JournalBookPage() {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [submitting, entryValidation, newEntry, refreshEntries, selectedPeriod, selectedType]);
 
-  // Función para resetear el formulario
-  const resetNewEntry = () => {
+  // Función memoizada para resetear el formulario
+  const resetNewEntry = useCallback(() => {
     setNewEntry({
       date: new Date().toISOString().split('T')[0],
       description: '',
@@ -185,10 +232,10 @@ export default function JournalBookPage() {
         { account_code: '', account_name: '', debit_amount: 0, credit_amount: 0, description: '' }
       ]
     });
-  };
+  }, []);
 
   // Agregar nueva línea de asiento
-  const addEntryLine = () => {
+  const addEntryLine = useCallback(() => {
     setNewEntry(prev => ({
       ...prev,
       entry_lines: [
@@ -196,10 +243,10 @@ export default function JournalBookPage() {
         { account_code: '', account_name: '', debit_amount: 0, credit_amount: 0, description: '' }
       ]
     }));
-  };
+  }, []);
 
   // Eliminar línea de asiento
-  const removeEntryLine = (index: number) => {
+  const removeEntryLine = useCallback((index: number) => {
     if (newEntry.entry_lines.length <= 2) {
       setMessage('Error: Un asiento debe tener al menos 2 líneas');
       return;
@@ -208,20 +255,20 @@ export default function JournalBookPage() {
       ...prev,
       entry_lines: prev.entry_lines.filter((_, i) => i !== index)
     }));
-  };
+  }, [newEntry.entry_lines.length]);
 
   // Actualizar línea específica
-  const updateEntryLine = (index: number, field: keyof NewJournalEntryLine, value: any) => {
+  const updateEntryLine = useCallback((index: number, field: keyof NewJournalEntryLine, value: any) => {
     setNewEntry(prev => ({
       ...prev,
       entry_lines: prev.entry_lines.map((line, i) => 
         i === index ? { ...line, [field]: value } : line
       )
     }));
-  };
+  }, []);
 
   // Generar asientos desde remuneraciones
-  const generatePayrollEntries = async () => {
+  const generatePayrollEntries = useCallback(async () => {
     if (!selectedPeriod) {
       setMessage('Error: Selecciona un período para generar asientos de remuneraciones');
       return;
@@ -247,7 +294,10 @@ export default function JournalBookPage() {
 
       if (data.success) {
         setMessage(`${data.data.summary.entries_created} asientos de remuneraciones creados para ${data.data.summary.period}`);
-        await fetchEntries(); // Recargar la lista
+        // Usar refreshEntries optimizado
+        setTimeout(() => {
+          refreshEntries(selectedPeriod, selectedType);
+        }, 500);
       } else {
         setMessage(`Error: ${data.error}`);
       }
@@ -257,35 +307,69 @@ export default function JournalBookPage() {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [selectedPeriod, refreshEntries, selectedType]);
 
-  // Obtener el color del badge según el tipo de referencia
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'COMPRA': return 'bg-blue-100 text-blue-800';
-      case 'VENTA': return 'bg-green-100 text-green-800';
-      case 'REMUNERACION': return 'bg-purple-100 text-purple-800';
-      case 'ACTIVO_FIJO': return 'bg-yellow-100 text-yellow-800';
-      case 'MANUAL': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  // Funciones memoizadas para formateo
+  const getTypeColor = useMemo(() => {
+    return (type: string) => {
+      switch (type) {
+        case 'COMPRA': return 'bg-blue-100 text-blue-800';
+        case 'VENTA': return 'bg-green-100 text-green-800';
+        case 'REMUNERACION': return 'bg-purple-100 text-purple-800';
+        case 'ACTIVO_FIJO': return 'bg-yellow-100 text-yellow-800';
+        case 'MANUAL': return 'bg-gray-100 text-gray-800';
+        default: return 'bg-gray-100 text-gray-800';
+      }
+    };
+  }, []);
 
-  // Obtener el nombre amigable del tipo
-  const getTypeName = (type: string) => {
-    switch (type) {
-      case 'COMPRA': return 'Compra';
-      case 'VENTA': return 'Venta';
-      case 'REMUNERACION': return 'Remuneración';
-      case 'ACTIVO_FIJO': return 'Activo Fijo';
-      case 'MANUAL': return 'Manual';
-      default: return type;
-    }
-  };
+  const getTypeName = useMemo(() => {
+    return (type: string) => {
+      switch (type) {
+        case 'COMPRA': return 'Compra';
+        case 'VENTA': return 'Venta';
+        case 'REMUNERACION': return 'Remuneración';
+        case 'ACTIVO_FIJO': return 'Activo Fijo';
+        case 'MANUAL': return 'Manual';
+        default: return type;
+      }
+    };
+  }, []);
 
+  // Handlers memoizados para filtros
+  const handlePeriodChange = useCallback((period: string) => {
+    setSelectedPeriod(period);
+    setTimeout(() => {
+      refreshEntries(period, selectedType);
+    }, 300);
+  }, [refreshEntries, selectedType]);
+  
+  const handleTypeChange = useCallback((type: string) => {
+    setSelectedType(type);
+    setTimeout(() => {
+      refreshEntries(selectedPeriod, type);
+    }, 300);
+  }, [refreshEntries, selectedPeriod]);
+  
+  const handleClearFilters = useCallback(() => {
+    setSelectedPeriod('');
+    setSelectedType('');
+    setTimeout(() => {
+      refreshEntries('', '');
+    }, 300);
+  }, [refreshEntries]);
+  
+  // Carga inicial solo una vez
   useEffect(() => {
-    fetchEntries();
-  }, [selectedPeriod, selectedType]);
+    let mounted = true;
+    const loadInitialData = async () => {
+      if (mounted) {
+        refreshEntries();
+      }
+    };
+    loadInitialData();
+    return () => { mounted = false; };
+  }, []); // Sin dependencias para evitar loops
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -335,7 +419,7 @@ export default function JournalBookPage() {
                   type="month"
                   id="period"
                   value={selectedPeriod}
-                  onChange={(e) => setSelectedPeriod(e.target.value)}
+                  onChange={(e) => handlePeriodChange(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -346,7 +430,7 @@ export default function JournalBookPage() {
                 <select
                   id="type"
                   value={selectedType}
-                  onChange={(e) => setSelectedType(e.target.value)}
+                  onChange={(e) => handleTypeChange(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Todos los tipos</option>
@@ -360,15 +444,11 @@ export default function JournalBookPage() {
               <div className="flex gap-2">
                 <Button 
                   variant="outline" 
-                  onClick={() => {
-                    setSelectedPeriod('');
-                    setSelectedType('');
-                    fetchEntries();
-                  }}
+                  onClick={handleClearFilters}
                 >
                   Limpiar Filtros
                 </Button>
-                <Button onClick={fetchEntries}>
+                <Button onClick={() => refreshEntries(selectedPeriod, selectedType)}>
                   Actualizar
                 </Button>
               </div>
