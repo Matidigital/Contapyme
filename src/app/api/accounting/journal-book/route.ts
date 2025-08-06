@@ -232,36 +232,84 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Usar la función de PostgreSQL para crear el asiento completo
-    const { data: result, error } = await supabase
-      .rpc('create_complete_journal_entry', {
-        p_date: date,
-        p_description: description,
-        p_document_number: document_number,
-        p_reference_type: reference_type,
-        p_reference_id: reference_id,
-        p_entry_lines: entry_lines
-      });
+    // Obtener el siguiente número de asiento
+    const { data: lastEntry } = await supabase
+      .from('journal_book')
+      .select('entry_number')
+      .order('entry_number', { ascending: false })
+      .limit(1)
+      .maybeSingle(); // Usar maybeSingle para manejar caso sin datos
 
-    if (error) {
-      console.error('Error creating journal entry:', error);
+    const nextEntryNumber = (lastEntry?.entry_number || 0) + 1;
+
+    // Crear el asiento principal
+    const { data: journalEntry, error: entryError } = await supabase
+      .from('journal_book')
+      .insert({
+        entry_number: nextEntryNumber,
+        date: date,
+        description: description,
+        document_number: document_number,
+        reference_type: reference_type,
+        reference_id: reference_id,
+        status: 'active',
+        total_debit: totalDebit,
+        total_credit: totalCredit,
+        is_balanced: Math.abs(totalDebit - totalCredit) < 0.01
+      })
+      .select('jbid')
+      .single();
+
+    if (entryError) {
+      console.error('Error creating journal entry:', entryError);
       return NextResponse.json(
-        { success: false, error: 'Error al crear asiento contable' },
+        { success: false, error: 'Error al crear el asiento contable' },
         { status: 500 }
       );
     }
 
-    console.log(`✅ Asiento creado: ${result} con ${entry_lines.length} líneas`);
+    // Crear las líneas de detalle
+    const detailLines = entry_lines.map((line, index) => ({
+      jbid: journalEntry.jbid,
+      line_number: index + 1,
+      account_code: line.account_code,
+      account_name: line.account_name,
+      debit_amount: parseFloat(line.debit_amount) || 0,
+      credit_amount: parseFloat(line.credit_amount) || 0,
+      description: line.description || null
+    }));
+
+    const { error: detailError } = await supabase
+      .from('journal_book_details')
+      .insert(detailLines);
+
+    if (detailError) {
+      console.error('Error creating journal entry details:', detailError);
+      
+      // Revertir el asiento principal si falla la inserción de detalles
+      await supabase
+        .from('journal_book')
+        .delete()
+        .eq('jbid', journalEntry.jbid);
+
+      return NextResponse.json(
+        { success: false, error: 'Error al crear las líneas del asiento' },
+        { status: 500 }
+      );
+    }
+
+    console.log(`✅ Asiento creado: ${journalEntry.jbid} con ${entry_lines.length} líneas`);
 
     return NextResponse.json({
       success: true,
       data: {
-        jbid: result,
+        jbid: journalEntry.jbid,
+        entry_number: nextEntryNumber,
         entry_lines_count: entry_lines.length,
         total_debit: totalDebit,
         total_credit: totalCredit
       },
-      message: `Asiento ${result} creado exitosamente con ${entry_lines.length} líneas`
+      message: `Asiento ${journalEntry.jbid} creado exitosamente con ${entry_lines.length} líneas`
     });
 
   } catch (error) {
