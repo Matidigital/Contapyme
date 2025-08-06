@@ -314,3 +314,81 @@ export function validatePayrollConfiguration(): string[] {
 
 // 🎯 EXPORTACIÓN PARA PAYROLL CALCULATOR
 export { CHILEAN_PAYROLL_CONFIG as default };
+
+// 🔗 INTEGRACIÓN CON CONFIGURACIÓN DINÁMICA DE BASE DE DATOS
+/**
+ * Combina configuración centralizada con configuración dinámica de empresa
+ * @param dbConfig - Configuración desde la base de datos
+ * @returns Configuración combinada optimizada
+ */
+export function mergeWithDynamicConfig(dbConfig?: any) {
+  if (!dbConfig) {
+    return CHILEAN_PAYROLL_CONFIG;
+  }
+
+  return {
+    // AFP: Usar configuración de base de datos si existe, fallback a centralizada
+    afp_configs: dbConfig.afp_configs?.length > 0 
+      ? dbConfig.afp_configs.map((afp: any) => ({
+          code: afp.code || afp.name,
+          commission_percentage: afp.commission_percentage,
+          sis_percentage: afp.sis_percentage || CHILEAN_OFFICIAL_VALUES.SIS_PERCENTAGE
+        }))
+      : CHILEAN_PAYROLL_CONFIG.afp_configs,
+    
+    // Asignación familiar: Usar valores de DB o centralizados
+    family_allowances: {
+      tramo_a: dbConfig.family_allowances?.tramo_a || FAMILY_ALLOWANCE_BRACKETS.TRAMO_A.amount_per_charge,
+      tramo_b: dbConfig.family_allowances?.tramo_b || FAMILY_ALLOWANCE_BRACKETS.TRAMO_B.amount_per_charge,
+      tramo_c: dbConfig.family_allowances?.tramo_c || FAMILY_ALLOWANCE_BRACKETS.TRAMO_C.amount_per_charge,
+    },
+    
+    // Límites de ingresos: Combinar configuración
+    income_limits: {
+      uf_limit: dbConfig.income_limits?.uf_limit || CHILEAN_OFFICIAL_VALUES.TOPE_IMPONIBLE_UF,
+      minimum_wage: dbConfig.income_limits?.minimum_wage || CHILEAN_OFFICIAL_VALUES.MINIMUM_WAGE,
+      family_allowance_limit: dbConfig.income_limits?.family_allowance_limit || 
+        FAMILY_ALLOWANCE_BRACKETS.TRAMO_C.income_limit
+    }
+  };
+}
+
+// 🏦 OBTENER AFP DISPONIBLES PARA FORMULARIOS
+export function getAvailableAFPs(dbConfig?: any): Array<{code: string, name: string, commission: number}> {
+  const activeAFPs = dbConfig?.afp_configs?.filter((afp: any) => afp.active !== false) || [];
+  
+  if (activeAFPs.length > 0) {
+    return activeAFPs.map((afp: any) => ({
+      code: afp.code || afp.name,
+      name: AFP_CONFIGURATIONS[afp.code as keyof typeof AFP_CONFIGURATIONS]?.name || afp.name,
+      commission: afp.commission_percentage
+    }));
+  }
+  
+  // Fallback a configuración centralizada
+  return Object.entries(AFP_CONFIGURATIONS).map(([code, config]) => ({
+    code,
+    name: config.name,
+    commission: config.commission_percentage
+  }));
+}
+
+// 🏥 OBTENER INSTITUCIONES DE SALUD DISPONIBLES  
+export function getAvailableHealthInstitutions(dbConfig?: any): Array<{code: string, name: string, percentage: number}> {
+  const activeHealth = dbConfig?.health_configs?.filter((health: any) => health.active !== false) || [];
+  
+  if (activeHealth.length > 0) {
+    return activeHealth.map((health: any) => ({
+      code: health.code,
+      name: health.name,
+      percentage: health.plan_percentage
+    }));
+  }
+  
+  // Fallback a configuración centralizada
+  return Object.entries(HEALTH_INSTITUTIONS).map(([code, config]) => ({
+    code,
+    name: config.name,
+    percentage: config.base_percentage
+  }));
+}

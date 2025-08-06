@@ -7,6 +7,7 @@ import { Header } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { ArrowLeft, Save, User, Phone, Mail, Home, Calendar, AlertCircle, Calculator, Settings, DollarSign } from 'lucide-react';
 import RutInputFixed from '@/components/payroll/RutInputFixed';
+import { usePayrollOptions } from '@/hooks/usePayrollOptions';
 
 interface EmployeeFormData {
   // Información Personal
@@ -53,6 +54,10 @@ export default function NewEmployeePage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isRutValid, setIsRutValid] = useState(false);
   const [showPayrollConfig, setShowPayrollConfig] = useState(false);
+  
+  // 🔗 NUEVA FUNCIONALIDAD: Opciones dinámicas de AFP e ISAPRE
+  const COMPANY_ID = '8033ee69-b420-4d91-ba0e-482f46cd6fce';
+  const { options: payrollOptions, loading: optionsLoading, error: optionsError } = usePayrollOptions(COMPANY_ID);
   
   const [formData, setFormData] = useState<EmployeeFormData>({
     // Información Personal
@@ -146,7 +151,11 @@ export default function NewEmployeePage() {
     setLoading(true);
     
     try {
-      // Mapear valores de AFP a códigos de base de datos
+      // ✅ MAPEO DINÁMICO: Buscar códigos desde configuración
+      const selectedAfp = payrollOptions?.afp_options?.find(afp => afp.name === formData.pensionFund);
+      const selectedHealth = payrollOptions?.health_options?.find(health => health.name === formData.healthInsurance);
+      
+      // Fallback a mapeo estático si no hay configuración dinámica
       const afpMapping: Record<string, string> = {
         'Capital': 'CAPITAL',
         'Cuprum': 'CUPRUM', 
@@ -157,7 +166,6 @@ export default function NewEmployeePage() {
         'Uno': 'UNO'
       };
 
-      // Mapear valores de salud a códigos de base de datos
       const healthMapping: Record<string, string> = {
         'FONASA': 'FONASA',
         'Banmédica': 'BANMEDICA',
@@ -167,6 +175,10 @@ export default function NewEmployeePage() {
         'Vida Tres': 'VIDA_TRES',
         'Más Vida': 'MAS_VIDA'
       };
+
+      // Usar código dinámico o fallback
+      const afpCode = selectedAfp?.code || afpMapping[formData.pensionFund] || 'HABITAT';
+      const healthCode = selectedHealth?.code || healthMapping[formData.healthInsurance] || 'FONASA';
       
       // Preparar datos para la API
       const apiData = {
@@ -208,10 +220,10 @@ export default function NewEmployeePage() {
         salary_type: formData.salaryType,
         weekly_hours: parseFloat(formData.weeklyHours) || 45,
         
-        // Payroll config - Estructura correcta para la API
+        // ✅ PAYROLL CONFIG DINÁMICO: Usa códigos de configuración conectada
         payroll_config: {
-          afp_code: afpMapping[formData.pensionFund] || 'HABITAT',
-          health_institution_code: healthMapping[formData.healthInsurance] || 'FONASA',
+          afp_code: afpCode,
+          health_institution_code: healthCode,
           family_allowances: 0,
           legal_gratification_type: 'none',
           has_unemployment_insurance: true
@@ -802,7 +814,19 @@ export default function NewEmployeePage() {
               <div className="space-y-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Configuración AFP</CardTitle>
+                    <CardTitle className="flex items-center justify-between">
+                      Configuración AFP
+                      {payrollOptions?.has_custom_config && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          ✅ Conectado con configuración empresa
+                        </span>
+                      )}
+                      {optionsError && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          ⚠️ Usando valores por defecto
+                        </span>
+                      )}
+                    </CardTitle>
                     <CardDescription>Administradora de Fondos de Pensiones</CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -818,15 +842,28 @@ export default function NewEmployeePage() {
                           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                             errors.pensionFund ? 'border-red-500' : 'border-gray-300'
                           }`}
+                          disabled={optionsLoading}
                         >
-                          <option value="">Seleccionar AFP</option>
-                          <option value="Capital">Capital (1.44%)</option>
-                          <option value="Cuprum">Cuprum (1.44%)</option>
-                          <option value="Habitat">Habitat (1.27%)</option>
-                          <option value="Modelo">Modelo (0.77%)</option>
-                          <option value="PlanVital">PlanVital (1.16%)</option>
-                          <option value="ProVida">ProVida (1.45%)</option>
-                          <option value="Uno">Uno (0.69%)</option>
+                          <option value="">
+                            {optionsLoading ? 'Cargando AFP...' : 'Seleccionar AFP'}
+                          </option>
+                          {/* ✅ OPCIONES DINÁMICAS: Conectadas con configuración de empresa */}
+                          {payrollOptions?.afp_options?.map((afp) => (
+                            <option key={afp.code} value={afp.name}>
+                              {afp.display_name}
+                            </option>
+                          )) || (
+                            // Fallback a opciones estáticas si no hay conexión
+                            <>
+                              <option value="Capital">Capital (1.44%)</option>
+                              <option value="Cuprum">Cuprum (1.44%)</option>
+                              <option value="Habitat">Habitat (1.27%)</option>
+                              <option value="Modelo">Modelo (0.77%)</option>
+                              <option value="PlanVital">PlanVital (1.16%)</option>
+                              <option value="ProVida">ProVida (1.45%)</option>
+                              <option value="Uno">Uno (0.69%)</option>
+                            </>
+                          )}
                         </select>
                         {errors.pensionFund && (
                           <p className="mt-1 text-sm text-red-600">{errors.pensionFund}</p>
@@ -865,17 +902,30 @@ export default function NewEmployeePage() {
                           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                             errors.healthInsurance ? 'border-red-500' : 'border-gray-300'
                           }`}
+                          disabled={optionsLoading}
                         >
-                          <option value="">Seleccionar</option>
-                          <option value="FONASA">FONASA (7%)</option>
-                          <optgroup label="Isapres">
-                            <option value="Banmédica">Banmédica</option>
-                            <option value="Consalud">Consalud</option>
-                            <option value="Colmena">Colmena</option>
-                            <option value="Cruz Blanca">Cruz Blanca</option>
-                            <option value="Vida Tres">Vida Tres</option>
-                            <option value="Más Vida">Más Vida</option>
-                          </optgroup>
+                          <option value="">
+                            {optionsLoading ? 'Cargando instituciones...' : 'Seleccionar'}
+                          </option>
+                          {/* ✅ OPCIONES DINÁMICAS: Conectadas con configuración de empresa */}
+                          {payrollOptions?.health_options?.map((health) => (
+                            <option key={health.code} value={health.name}>
+                              {health.display_name}
+                            </option>
+                          )) || (
+                            // Fallback a opciones estáticas si no hay conexión
+                            <>
+                              <option value="FONASA">FONASA (7%)</option>
+                              <optgroup label="Isapres">
+                                <option value="Banmédica">Banmédica</option>
+                                <option value="Consalud">Consalud</option>
+                                <option value="Colmena">Colmena</option>
+                                <option value="Cruz Blanca">Cruz Blanca</option>
+                                <option value="Vida Tres">Vida Tres</option>
+                                <option value="Más Vida">Más Vida</option>
+                              </optgroup>
+                            </>
+                          )}
                         </select>
                         {errors.healthInsurance && (
                           <p className="mt-1 text-sm text-red-600">{errors.healthInsurance}</p>

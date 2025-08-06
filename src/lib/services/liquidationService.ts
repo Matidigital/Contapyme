@@ -5,7 +5,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { PayrollCalculator } from './payrollCalculator';
-import { CHILEAN_PAYROLL_CONFIG } from './chileanPayrollConfig';
+import { CHILEAN_PAYROLL_CONFIG, mergeWithDynamicConfig } from './chileanPayrollConfig';
 
 // Configuración Supabase 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -212,11 +212,19 @@ export class LiquidationService {
         console.log('✅ Settings encontrados');
       } else {
         console.warn('⚠️ Settings no encontrados, usando configuración centralizada chilena:', settingsResult.error?.message);
-        // ✅ Usar configuración centralizada chilena oficial 2025
-        settingsData = {
-          settings: CHILEAN_PAYROLL_CONFIG
-        };
+        settingsData = null; // Will be handled below
       }
+
+      // ✅ NUEVA LÓGICA: Combinar configuración dinámica con centralizada
+      const dynamicConfig = settingsData?.settings;
+      const mergedConfig = mergeWithDynamicConfig(dynamicConfig);
+      
+      console.log(`🔗 Configuración combinada: ${dynamicConfig ? 'Dinámica + Centralizada' : 'Solo Centralizada'}`);
+      
+      // Usar configuración combinada
+      settingsData = {
+        settings: mergedConfig
+      };
 
       // 3. Preparar datos para el calculador
       const employeeData = {
