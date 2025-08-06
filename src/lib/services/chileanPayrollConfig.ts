@@ -23,7 +23,7 @@ export const CHILEAN_OFFICIAL_VALUES = {
   
   // 🚨 CESANTÍA - PUNTO CRÍTICO CORREGIDO
   UNEMPLOYMENT_INDEFINITE: 0.6, // ✅ CORRECTO: 0.6% para indefinidos
-  UNEMPLOYMENT_FIXED_TERM: 3.0, // 3.0% para plazo fijo
+  UNEMPLOYMENT_FIXED_TERM: 0.0, // ✅ CORRECTO: 0% para plazo fijo (NO tienen seguro de cesantía)
   
   // Límites legales
   TOPE_IMPONIBLE_UF: 84.6, // Tope imponible 2025 (84.6 UF)
@@ -212,7 +212,7 @@ export function calculateUnemploymentInsurance(
       percentage = CHILEAN_OFFICIAL_VALUES.UNEMPLOYMENT_INDEFINITE; // ✅ 0.6%
       break;
     case 'plazo_fijo':
-      percentage = CHILEAN_OFFICIAL_VALUES.UNEMPLOYMENT_FIXED_TERM; // 3.0%
+      percentage = CHILEAN_OFFICIAL_VALUES.UNEMPLOYMENT_FIXED_TERM; // ✅ 0% - SIN seguro de cesantía
       break;
     case 'obra_faena':
       percentage = 0; // Sin seguro de cesantía
