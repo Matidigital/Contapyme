@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { INDICATORS_CONFIG, getCurrentIndicatorValues, getUpdateMetadata } from '@/lib/indicatorsDataService';
+import { INDICATORS_CONFIG, getCurrentIndicatorValues, getUpdateMetadata } from '@/lib/services/indicatorsDataService';
 
 // Sistema híbrido simplificado sin dependencias externas
 interface IndicatorValue {

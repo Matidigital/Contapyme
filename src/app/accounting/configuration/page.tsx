@@ -18,8 +18,8 @@ import {
 } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { Header } from '@/components/layout';
-import { exportToCSV, exportToJSON, parseCSV, downloadFile, generateCSVTemplate } from '@/lib/chartOfAccounts';
-import { planDeCuentasChilenoFinal } from '@/lib/planDeCuentasChilenoFinal';
+import { exportToCSV, exportToJSON, parseCSV, downloadFile, generateCSVTemplate } from '@/lib/data/chartOfAccounts';
+import { planDeCuentasChilenoFinal } from '@/lib/data/planDeCuentasChilenoFinal';
 import { Account } from '@/types';
 
 

@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import { Header } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { Calculator, Users, FileText, AlertCircle, CheckCircle, Download, Eye } from 'lucide-react';
-import { PayrollCalculator } from '@/lib/payrollCalculator';
-import { SimpleLiquidationService } from '@/lib/simpleLiquidationService';
+import { PayrollCalculator } from '@/lib/services/payrollCalculator';
+import { SimpleLiquidationService } from '@/lib/services/simpleLiquidationService';
 import { LiquidationPDFTemplate } from '@/components/payroll/LiquidationPDFTemplate';
-import { exportToPDF, generatePDFFilename } from '@/lib/pdfExport';
+import { exportToPDF, generatePDFFilename } from '@/lib/services/pdfExport';
 
 interface Employee {
   id: string;
