@@ -195,7 +195,7 @@ export default function AccountingPage() {
                     </div>
                   </div>
                   <div className="space-y-3">
-                    <Link href="/accounting/journal" className="w-full bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg font-medium inline-flex items-center justify-center space-x-2 transition-all text-sm">
+                    <Link href="/accounting/journal-book" className="w-full bg-white bg-opacity-20 hover:bg-opacity-30 text-white px-4 py-2 rounded-lg font-medium inline-flex items-center justify-center space-x-2 transition-all text-sm">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                       </svg>
@@ -360,6 +360,77 @@ export default function AccountingPage() {
                   >
                     📚 Guía F29
                   </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Sistema Contable Completo - NUEVOS MÓDULOS */}
+          <div className="mb-8">
+            <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 mr-3">
+                ✨ Nuevo Sistema Contable
+              </span>
+              Libros Contables Integrados
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <Link href="/accounting/journal-book" className="bg-gradient-to-r from-blue-500 to-blue-600 p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow text-white">
+                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-lg mb-4 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                </div>
+                <h3 className="font-bold text-lg mb-2">Libro Diario</h3>
+                <p className="text-blue-100 text-sm mb-3">Registro centralizado de todos los asientos contables</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded">Automático</span>
+                  <span className="text-xs">Debe = Haber</span>
+                </div>
+              </Link>
+
+              <Link href="/accounting/purchase-book" className="bg-gradient-to-r from-green-500 to-green-600 p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow text-white">
+                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-lg mb-4 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                </div>
+                <h3 className="font-bold text-lg mb-2">Libro de Compras</h3>
+                <p className="text-green-100 text-sm mb-3">Gestión de documentos de compra e IVA crédito fiscal</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded">IVA 19%</span>
+                  <span className="text-xs">Auto-cálculo</span>
+                </div>
+              </Link>
+
+              <Link href="/accounting/sales-book" className="bg-gradient-to-r from-purple-500 to-purple-600 p-6 rounded-lg shadow-lg hover:shadow-xl transition-shadow text-white">
+                <div className="w-12 h-12 bg-white bg-opacity-20 rounded-lg mb-4 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
+                </div>
+                <h3 className="font-bold text-lg mb-2">Libro de Ventas</h3>
+                <p className="text-purple-100 text-sm mb-3">Gestión de documentos de venta e IVA débito fiscal</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded">Facturas/Boletas</span>
+                  <span className="text-xs">Totales automáticos</span>
+                </div>
+              </Link>
+            </div>
+
+            {/* Característica destacada del sistema */}
+            <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-lg p-4">
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0">
+                  <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-indigo-900">
+                    <strong>Sistema Integrado:</strong> Los libros de compra y venta crean automáticamente asientos en el libro diario. 
+                    Las remuneraciones también se integran automáticamente. Todo centralizado según normativa chilena.
+                  </p>
                 </div>
               </div>
             </div>
