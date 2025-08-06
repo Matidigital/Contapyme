@@ -118,11 +118,15 @@ export async function POST(request: NextRequest) {
       .eq('company_id', companyId)
       .single();
 
+    // Usar configuración por defecto si no existe la de la empresa
+    let payrollSettings;
     if (settingsError || !settingsData) {
-      return NextResponse.json(
-        { success: false, error: 'Configuración previsional no encontrada' },
-        { status: 404 }
-      );
+      console.log('⚠️ No se encontró configuración específica, usando configuración por defecto');
+      // Importar configuración por defecto
+      const { CHILEAN_PAYROLL_CONFIG } = await import('@/lib/services/chileanPayrollConfig');
+      payrollSettings = CHILEAN_PAYROLL_CONFIG;
+    } else {
+      payrollSettings = settingsData.settings;
     }
 
     // 3. Preparar datos para el calculador
@@ -149,7 +153,7 @@ export async function POST(request: NextRequest) {
     };
 
     // 4. Inicializar calculador con configuración de la empresa
-    const calculator = new PayrollCalculator(settingsData.settings);
+    const calculator = new PayrollCalculator(payrollSettings);
 
     // 5. Calcular liquidación
     const liquidationResult = calculator.calculateLiquidation(
