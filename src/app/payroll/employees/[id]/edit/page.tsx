@@ -67,9 +67,7 @@ export default function EditEmployeePage() {
     payroll_config: {
       afp_code: 'HABITAT',
       health_institution_code: 'FONASA',
-      family_allowances: 0,
-      legal_gratification_type: 'none',
-      has_unemployment_insurance: true
+      family_allowances: 0
     }
   });
 
@@ -111,9 +109,7 @@ export default function EditEmployeePage() {
           payroll_config: {
             afp_code: emp.payroll_config?.afp_code || 'HABITAT',
             health_institution_code: emp.payroll_config?.health_institution_code || 'FONASA',
-            family_allowances: emp.payroll_config?.family_allowances || 0,
-            legal_gratification_type: 'none', // Valor fijo por ahora
-            has_unemployment_insurance: true // Valor fijo por ahora
+            family_allowances: emp.payroll_config?.family_allowances || 0
           }
         });
       } else {
@@ -145,8 +141,7 @@ export default function EditEmployeePage() {
         ...prev,
         payroll_config: {
           ...prev.payroll_config,
-          [payrollField]: payrollField === 'family_allowances' ? parseInt(value) || 0 : 
-                         payrollField === 'has_unemployment_insurance' ? value === 'true' : value
+          [payrollField]: payrollField === 'family_allowances' ? parseInt(value) || 0 : value
         }
       }));
     } else {
@@ -204,7 +199,8 @@ export default function EditEmployeePage() {
     }
   };
 
-  if (loading) {
+  // Verificación de seguridad para evitar undefined
+  if (loading || !formData) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header 
@@ -254,10 +250,31 @@ export default function EditEmployeePage() {
     );
   }
 
+  // Verificación final de seguridad
+  if (!formData || !formData.first_name) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header 
+          title="Cargando..."
+          subtitle="Obteniendo información del empleado"
+          showBackButton
+        />
+        <div className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Preparando formulario...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header 
-        title={`Editar: ${formData.first_name} ${formData.last_name}`}
+        title={`Editar: ${formData.first_name || 'Empleado'} ${formData.last_name || ''}`}
         subtitle="Actualizar información del empleado"
         showBackButton
         actions={
