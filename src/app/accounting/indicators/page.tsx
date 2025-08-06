@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { Header } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { IndicatorValue, IndicatorsDashboard } from '@/types';
-import { usePageIndicators } from '@/hooks/useIndicators';
+import { useOptimizedPageIndicators } from '@/hooks/useOptimizedIndicators';
 import { RefreshCw, TrendingUp, DollarSign, Zap, Users, Info, Calendar } from 'lucide-react';
+import CacheStatus from '@/components/indicators/CacheStatus';
 
 export default function EconomicIndicatorsPage() {
   const { 
@@ -14,9 +15,10 @@ export default function EconomicIndicatorsPage() {
     error, 
     lastUpdated, 
     dataSource, 
+    cacheStatus,
     fetchIndicators, 
-    updateIndicators: updateIndicatorsHook 
-  } = usePageIndicators();
+    forceRefresh 
+  } = useOptimizedPageIndicators();
 
   const [updating, setUpdating] = useState(false);
   const [selectedIndicator, setSelectedIndicator] = useState<string | null>(null);
@@ -38,7 +40,7 @@ export default function EconomicIndicatorsPage() {
   const updateIndicators = async () => {
     try {
       setUpdating(true);
-      await updateIndicatorsHook();
+      await forceRefresh();
     } catch (err) {
       console.error('Error updating indicators:', err);
     } finally {
@@ -305,6 +307,15 @@ export default function EconomicIndicatorsPage() {
       />
 
       <div className="relative z-10 max-w-7xl mx-auto py-8 px-4 space-y-8">
+        {/* Cache Status Component */}
+        <CacheStatus 
+          cacheStatus={cacheStatus}
+          dataSource={dataSource}
+          lastUpdated={lastUpdated}
+          loading={loading}
+          onForceRefresh={forceRefresh}
+        />
+
         {/* Hero Section */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-100 to-blue-100 text-green-800 rounded-full text-sm font-medium mb-6">

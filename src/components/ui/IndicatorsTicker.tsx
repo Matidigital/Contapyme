@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { TrendingUp, TrendingDown } from 'lucide-react'
-import { useTickerIndicators } from '@/hooks/useIndicators'
+import { useOptimizedTickerIndicators } from '@/hooks/useOptimizedIndicators'
 import { IndicatorValue } from '@/types'
 
 interface Indicator {
@@ -88,7 +88,13 @@ function getDisplayUnit(unit: string, formatType: string): string {
 }
 
 export default function IndicatorsTicker() {
-  const { indicators: rawIndicators, loading, error, dataSource } = useTickerIndicators()
+  const { 
+    indicators: rawIndicators, 
+    loading, 
+    error, 
+    dataSource, 
+    cacheStatus 
+  } = useOptimizedTickerIndicators()
   const [indicators, setIndicators] = useState<Indicator[]>([])
 
   // Convertir indicadores del sistema centralizado al formato del ticker
@@ -109,9 +115,9 @@ export default function IndicatorsTicker() {
       const tickerIndicators = relevantIndicators.map(convertToTickerFormat)
       setIndicators(tickerIndicators)
       
-      console.log(`📊 Ticker actualizado con ${tickerIndicators.length} indicadores desde: ${dataSource}`)
+      console.log(`📊 Ticker optimizado: ${tickerIndicators.length} indicadores desde: ${dataSource} (cache: ${cacheStatus})`)
     }
-  }, [rawIndicators, loading, dataSource])
+  }, [rawIndicators, loading, dataSource, cacheStatus])
 
   if (loading || indicators.length === 0) {
     return (
@@ -167,12 +173,16 @@ export default function IndicatorsTicker() {
         <div className="flex items-center justify-between max-w-7xl mx-auto">
           {/* Label */}
           <div className="flex items-center space-x-2 text-blue-200">
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50" />
+            <div className={`w-2 h-2 rounded-full animate-pulse shadow-lg ${
+              cacheStatus === 'hit' ? 'bg-green-400 shadow-green-400/50' :
+              cacheStatus === 'expired' ? 'bg-yellow-400 shadow-yellow-400/50' :
+              'bg-blue-400 shadow-blue-400/50'
+            }`} />
             <span className="text-sm font-medium hidden sm:block glow-text">
-              Indicadores en Tiempo Real
+              Indicadores Optimizados
             </span>
             <span className="text-xs font-medium sm:hidden glow-text">
-              Live
+              {cacheStatus === 'hit' ? '⚡ Cache' : 'Live'}
             </span>
           </div>
 
