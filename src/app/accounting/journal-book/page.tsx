@@ -59,10 +59,12 @@ interface NewJournalEntry {
 // Componente selector de cuentas contables
 function AccountSelector({ 
   value, 
-  onChange 
+  onChange,
+  compact = false
 }: {
   value: string;
   onChange: (code: string, name: string) => void;
+  compact?: boolean;
 }) {
   const { accounts, loading } = useChartOfAccountsCache();
   const [isOpen, setIsOpen] = useState(false);
@@ -97,10 +99,12 @@ function AccountSelector({
   };
   
   return (
-    <div className="relative mb-3">
-      <label className="block text-xs font-medium text-gray-600 mb-1">
-        Cuenta Contable *
-      </label>
+    <div className="relative">
+      {!compact && (
+        <label className="block text-xs font-medium text-gray-600 mb-1">
+          Cuenta Contable *
+        </label>
+      )}
       
       {/* Campo de selección */}
       <button
@@ -779,126 +783,162 @@ export default function JournalBookPage() {
                     </Button>
                   </div>
                   
-                  <div className="space-y-4 max-h-60 overflow-y-auto border border-gray-200 rounded-lg p-4">
-                    {newEntry.entry_lines.map((line, index) => (
-                      <div key={index} className="bg-gray-50 p-3 rounded-lg relative">
-                        {newEntry.entry_lines.length > 2 && (
-                          <button
-                            type="button"
-                            onClick={() => removeEntryLine(index)}
-                            className="absolute top-2 right-2 text-red-500 hover:text-red-700"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        )}
+                  <div className="space-y-3">
+                    {/* Encabezados de tabla */}
+                    <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-gray-100 rounded-lg text-xs font-semibold text-gray-700">
+                      <div className="col-span-1">#</div>
+                      <div className="col-span-4">Cuenta</div>
+                      <div className="col-span-2 text-center">Débito</div>
+                      <div className="col-span-2 text-center">Crédito</div>
+                      <div className="col-span-2">Descripción</div>
+                      <div className="col-span-1"></div>
+                    </div>
+                    
+                    {/* Líneas de asiento */}
+                    <div className="max-h-80 overflow-y-auto space-y-2">
+                      {newEntry.entry_lines.map((line, index) => {
+                        const isDebit = line.debit_amount > 0;
+                        const isCredit = line.credit_amount > 0;
                         
-                        <AccountSelector 
-                          value={line.account_code}
-                          onChange={(code: string, name: string) => {
-                            updateEntryLine(index, 'account_code', code);
-                            updateEntryLine(index, 'account_name', name);
-                          }}
-                        />
-                        
-                        <div className="grid grid-cols-2 gap-3 mb-3">
-                          <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">
-                              Débito
-                            </label>
-                            <input
-                              type="number"
-                              value={line.debit_amount || ''}
-                              onChange={(e) => {
-                                const value = parseFloat(e.target.value) || 0;
-                                updateEntryLine(index, 'debit_amount', value);
-                                if (value > 0) {
-                                  updateEntryLine(index, 'credit_amount', 0);
-                                }
-                              }}
-                              min="0"
-                              step="1"
-                              placeholder="0"
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            />
+                        return (
+                          <div key={index} className={`grid grid-cols-12 gap-2 p-3 border rounded-lg ${
+                            isDebit ? 'bg-blue-50 border-blue-200' : 
+                            isCredit ? 'bg-green-50 border-green-200' : 
+                            'bg-white border-gray-200'
+                          }`}>
+                            {/* Número de línea */}
+                            <div className="col-span-1 flex items-center">
+                              <span className={`text-sm font-semibold px-2 py-1 rounded-full text-white ${
+                                isDebit ? 'bg-blue-500' : 
+                                isCredit ? 'bg-green-500' : 
+                                'bg-gray-400'
+                              }`}>
+                                {index + 1}
+                              </span>
+                            </div>
+                            
+                            {/* Selector de cuenta */}
+                            <div className="col-span-4">
+                              <AccountSelector 
+                                value={line.account_code}
+                                onChange={(code: string, name: string) => {
+                                  updateEntryLine(index, 'account_code', code);
+                                  updateEntryLine(index, 'account_name', name);
+                                }}
+                                compact={true}
+                              />
+                            </div>
+                            
+                            {/* Débito */}
+                            <div className="col-span-2">
+                              <input
+                                type="number"
+                                value={line.debit_amount || ''}
+                                onChange={(e) => {
+                                  const value = parseFloat(e.target.value) || 0;
+                                  updateEntryLine(index, 'debit_amount', value);
+                                  if (value > 0) {
+                                    updateEntryLine(index, 'credit_amount', 0);
+                                  }
+                                }}
+                                min="0"
+                                step="1"
+                                placeholder="0"
+                                className={`w-full px-2 py-1 text-sm border rounded text-center focus:outline-none focus:ring-1 ${
+                                  isDebit ? 'border-blue-300 focus:ring-blue-500 bg-blue-50' : 'border-gray-300 focus:ring-blue-500'
+                                }`}
+                              />
+                            </div>
+                            
+                            {/* Crédito */}
+                            <div className="col-span-2">
+                              <input
+                                type="number"
+                                value={line.credit_amount || ''}
+                                onChange={(e) => {
+                                  const value = parseFloat(e.target.value) || 0;
+                                  updateEntryLine(index, 'credit_amount', value);
+                                  if (value > 0) {
+                                    updateEntryLine(index, 'debit_amount', 0);
+                                  }
+                                }}
+                                min="0"
+                                step="1"
+                                placeholder="0"
+                                className={`w-full px-2 py-1 text-sm border rounded text-center focus:outline-none focus:ring-1 ${
+                                  isCredit ? 'border-green-300 focus:ring-green-500 bg-green-50' : 'border-gray-300 focus:ring-blue-500'
+                                }`}
+                              />
+                            </div>
+                            
+                            {/* Descripción */}
+                            <div className="col-span-2">
+                              <input
+                                type="text"
+                                value={line.description}
+                                onChange={(e) => updateEntryLine(index, 'description', e.target.value)}
+                                placeholder="Descripción..."
+                                className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              />
+                            </div>
+                            
+                            {/* Botón eliminar */}
+                            <div className="col-span-1 flex items-center justify-center">
+                              {newEntry.entry_lines.length > 2 && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeEntryLine(index)}
+                                  className="text-red-500 hover:text-red-700 hover:bg-red-100 p-1 rounded"
+                                  title="Eliminar línea"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
                           </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">
-                              Crédito
-                            </label>
-                            <input
-                              type="number"
-                              value={line.credit_amount || ''}
-                              onChange={(e) => {
-                                const value = parseFloat(e.target.value) || 0;
-                                updateEntryLine(index, 'credit_amount', value);
-                                if (value > 0) {
-                                  updateEntryLine(index, 'debit_amount', 0);
-                                }
-                              }}
-                              min="0"
-                              step="1"
-                              placeholder="0"
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            />
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Resumen de totales */}
+                    {(() => {
+                      const totalDebit = newEntry.entry_lines.reduce((sum, line) => sum + line.debit_amount, 0);
+                      const totalCredit = newEntry.entry_lines.reduce((sum, line) => sum + line.credit_amount, 0);
+                      const difference = Math.abs(totalDebit - totalCredit);
+                      const isBalanced = difference < 0.01;
+                      
+                      if (totalDebit === 0 && totalCredit === 0) return null;
+                      
+                      return (
+                        <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-gray-50 border-t border-gray-200 font-semibold">
+                          <div className="col-span-5 text-right text-sm text-gray-600">TOTALES:</div>
+                          <div className={`col-span-2 text-center text-sm ${
+                            isBalanced ? 'text-blue-600' : 'text-red-600'
+                          }`}>
+                            {formatCurrency(totalDebit)}
                           </div>
+                          <div className={`col-span-2 text-center text-sm ${
+                            isBalanced ? 'text-green-600' : 'text-red-600'
+                          }`}>
+                            {formatCurrency(totalCredit)}
+                          </div>
+                          <div className="col-span-2 text-xs text-center">
+                            {isBalanced ? (
+                              <span className="text-green-600 font-medium">✓ Balanceado</span>
+                            ) : (
+                              <span className="text-red-600 font-medium">Dif: {formatCurrency(difference)}</span>
+                            )}
+                          </div>
+                          <div className="col-span-1"></div>
                         </div>
-                        
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
-                            Descripción Línea
-                          </label>
-                          <input
-                            type="text"
-                            value={line.description}
-                            onChange={(e) => updateEntryLine(index, 'description', e.target.value)}
-                            placeholder="Descripción específica de esta línea"
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          />
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })()}
                   </div>
                 </div>
 
-                {/* Validación de balance multi-línea */}
-                {(() => {
-                  const totalDebit = newEntry.entry_lines.reduce((sum, line) => sum + line.debit_amount, 0);
-                  const totalCredit = newEntry.entry_lines.reduce((sum, line) => sum + line.credit_amount, 0);
-                  const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
-                  const hasAmounts = totalDebit > 0 || totalCredit > 0;
-                  
-                  if (!hasAmounts) return null;
-                  
-                  if (!isBalanced) {
-                    return (
-                      <div className="bg-red-50 border border-red-200 rounded-md p-3">
-                        <div className="text-red-600 text-sm">
-                          <strong>⚠️ Asiento desbalanceado:</strong>
-                          <br />
-                          Total Débito: {formatCurrency(totalDebit)}
-                          <br />
-                          Total Crédito: {formatCurrency(totalCredit)}
-                          <br />
-                          Diferencia: {formatCurrency(Math.abs(totalDebit - totalCredit))}
-                          <br />
-                          <em>Los totales deben ser iguales</em>
-                        </div>
-                      </div>
-                    );
-                  }
-                  
-                  return (
-                    <div className="bg-green-50 border border-green-200 rounded-md p-3">
-                      <div className="text-green-600 text-sm">
-                        <strong>✓ Asiento balanceado:</strong> {formatCurrency(totalDebit)}
-                        <br />
-                        <em>{newEntry.entry_lines.length} líneas correctamente balanceadas</em>
-                      </div>
-                    </div>
-                  );
-                })()}
+
 
                 <div className="flex gap-3 pt-4">
                   <Button 
