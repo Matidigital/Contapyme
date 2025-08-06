@@ -1213,22 +1213,15 @@ function CreateJournalEntryModal({
                     <div key={index} className="grid grid-cols-12 gap-3 items-start p-4 bg-gray-50 rounded-lg">
                       <div className="col-span-4">
                         <label className="block text-xs text-gray-600 mb-1">Cuenta Contable</label>
-                        <div className="space-y-1">
-                          <input
-                            type="text"
-                            value={line.account_code}
-                            onChange={(e) => updateLine(index, 'account_code', e.target.value)}
-                            placeholder="Código (ej: 11010001)"
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                          />
-                          <input
-                            type="text"
-                            value={line.account_name}
-                            onChange={(e) => updateLine(index, 'account_name', e.target.value)}
-                            placeholder="Nombre cuenta (ej: Caja)"
-                            className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                          />
-                        </div>
+                        <AccountSelect
+                          value={line.account_code}
+                          onChange={(code, name) => {
+                            updateLine(index, 'account_code', code);
+                            updateLine(index, 'account_name', name);
+                          }}
+                          accounts={accounts}
+                          loading={accountsLoading}
+                        />
                       </div>
                       <div className="col-span-2">
                         <label className="block text-xs text-gray-600 mb-1">Tipo</label>
@@ -1349,5 +1342,78 @@ function CreateJournalEntryModal({
         </div>
       </div>
     );
+}
+
+// Componente Selector de Cuentas Contables
+function AccountSelect({ 
+  value, 
+  onChange, 
+  accounts, 
+  loading 
+}: {
+  value: string;
+  onChange: (code: string, name: string) => void;
+  accounts: any[];
+  loading: boolean;
+}) {
+  // Filtrar solo cuentas imputables (nivel 4) y activas
+  const availableAccounts = accounts.filter(acc => 
+    (acc.is_detail || acc.isDetail || acc.level === 4) && 
+    (acc.is_active !== false && acc.isActive !== false)
+  );
+
+  // Encontrar la cuenta seleccionada
+  const selectedAccount = availableAccounts.find(acc => acc.code === value);
+
+  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedCode = e.target.value;
+    if (selectedCode) {
+      const account = availableAccounts.find(acc => acc.code === selectedCode);
+      if (account) {
+        onChange(account.code, account.name);
+      }
+    } else {
+      onChange('', '');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-500">
+        <RefreshCw className="w-4 h-4 animate-spin inline mr-2" />
+        Cargando cuentas...
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      <select
+        value={value}
+        onChange={handleSelectChange}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+      >
+        <option value="">Seleccionar cuenta contable...</option>
+        {availableAccounts.map((account) => (
+          <option key={account.code} value={account.code}>
+            {account.code} - {account.name}
+          </option>
+        ))}
+      </select>
+      
+      {selectedAccount && (
+        <div className="text-xs text-gray-600">
+          <span className="font-medium">{selectedAccount.code}</span> - {selectedAccount.name}
+          <span className="ml-2 text-blue-600 capitalize">({selectedAccount.account_type || selectedAccount.type})</span>
+        </div>
+      )}
+      
+      {availableAccounts.length === 0 && !loading && (
+        <div className="text-xs text-red-600">
+          ⚠️ No hay cuentas disponibles. Verifica el plan de cuentas.
+        </div>
+      )}
+    </div>
+  );
 }
 
