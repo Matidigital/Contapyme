@@ -541,6 +541,7 @@ export default function JournalPage() {
 
                 <Button
                   variant="primary"
+                  onClick={() => setShowCreateModal(true)}
                   className="flex items-center space-x-2"
                 >
                   <Plus className="w-4 h-4" />
