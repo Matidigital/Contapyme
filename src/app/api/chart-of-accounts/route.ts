@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { databaseSimple } from '@/lib/databaseSimple';
+import { databaseSimple } from '@/lib/database/databaseSimple';
 
 export const dynamic = 'force-dynamic';
 

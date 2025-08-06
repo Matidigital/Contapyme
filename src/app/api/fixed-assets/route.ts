@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { databaseSimple } from '@/lib/databaseSimple';
+import { databaseSimple } from '@/lib/database/databaseSimple';
 import { CreateFixedAssetData, FixedAsset } from '@/types';
 import { DEMO_USER_ID } from '@/lib/constants';
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateIndicatorValue, ensureIndicatorConfig } from '@/lib/databaseSimple';
+import { updateIndicatorValue, ensureIndicatorConfig } from '@/lib/database/databaseSimple';
 
 export const dynamic = 'force-dynamic';
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/database/supabase';
 // import fileEmployeeStore from '@/lib/fileEmployeeStore'; // COMENTADO - Ya no usar file store
 
 // GET - Obtener todos los empleados de una empresa

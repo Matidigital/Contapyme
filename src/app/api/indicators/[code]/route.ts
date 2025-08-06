@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getIndicatorHistory } from '@/lib/databaseSimple';
+import { getIndicatorHistory } from '@/lib/database/databaseSimple';
 
 // Hacer la ruta dinámica explícitamente
 export const dynamic = 'force-dynamic';

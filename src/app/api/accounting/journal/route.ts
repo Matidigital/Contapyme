@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabaseConnection } from '@/lib/databaseSimple';
+import { getDatabaseConnection } from '@/lib/database/databaseSimple';
 
 // Tipos TypeScript para el libro diario
 interface JournalEntry {

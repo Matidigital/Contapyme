@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { parseF29 } from '@/lib/f29Parser';
+import { parseF29 } from '@/lib/parsers/f29Parser';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60; // 1 minuto para procesar múltiples archivos

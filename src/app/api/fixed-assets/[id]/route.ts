@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFixedAssetById, updateFixedAsset, deleteFixedAsset } from '@/lib/databaseSimple';
+import { getFixedAssetById, updateFixedAsset, deleteFixedAsset } from '@/lib/database/databaseSimple';
 import { UpdateFixedAssetData } from '@/types';
 
 // GET /api/fixed-assets/[id] - Obtener activo fijo específico

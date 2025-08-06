@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabaseConnection } from '@/lib/databaseSimple';
+import { getDatabaseConnection } from '@/lib/database/databaseSimple';
 
 // POST - Generar asientos de depreciación desde activos fijos
 export async function POST(request: NextRequest) {

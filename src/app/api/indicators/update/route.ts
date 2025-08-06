@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateIndicatorValue } from '@/lib/databaseSimple';
+import { updateIndicatorValue } from '@/lib/database/databaseSimple';
 
 // Función para obtener datos de mindicador.cl
 async function fetchFromMindicador(indicator: string) {

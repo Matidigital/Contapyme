@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFixedAssets, getFixedAssetsReport } from '@/lib/databaseSimple';
+import { getFixedAssets, getFixedAssetsReport } from '@/lib/database/databaseSimple';
 
 export const dynamic = 'force-dynamic';
 

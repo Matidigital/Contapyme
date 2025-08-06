@@ -4,7 +4,7 @@
 // ==========================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { generateDemoData } from '@/lib/databaseSimple';
+import { generateDemoData } from '@/lib/database/databaseSimple';
 
 export async function POST(request: NextRequest) {
   try {

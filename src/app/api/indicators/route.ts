@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getIndicatorsDashboard, updateIndicatorValue } from '@/lib/databaseSimple';
+import { getIndicatorsDashboard, updateIndicatorValue } from '@/lib/database/databaseSimple';
 
 // GET /api/indicators - Obtener dashboard de indicadores económicos
 export async function GET(request: NextRequest) {

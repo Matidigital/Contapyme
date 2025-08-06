@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createBasicChartOfAccounts } from '@/lib/databaseSimple';
+import { createBasicChartOfAccounts } from '@/lib/database/databaseSimple';
 
 export const dynamic = 'force-dynamic';
 

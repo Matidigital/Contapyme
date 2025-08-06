@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFixedAssetCategories } from '@/lib/databaseSimple';
+import { getFixedAssetCategories } from '@/lib/database/databaseSimple';
 
 // GET /api/fixed-assets/categories - Obtener categorías de activos fijos
 export async function GET(request: NextRequest) {

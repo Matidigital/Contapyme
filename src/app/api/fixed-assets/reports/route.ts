@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFixedAssetsReport, databaseSimple } from '@/lib/databaseSimple';
+import { getFixedAssetsReport, databaseSimple } from '@/lib/database/databaseSimple';
 import { DEMO_USER_ID } from '@/lib/constants';
 
 // Hacer la ruta dinámica explícitamente

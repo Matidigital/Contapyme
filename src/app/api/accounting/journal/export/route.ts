@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDatabaseConnection } from '@/lib/databaseSimple';
+import { getDatabaseConnection } from '@/lib/database/databaseSimple';
 
 // GET - Exportar libro diario a CSV/Excel
 export async function GET(request: NextRequest) {

@@ -4,8 +4,8 @@
 // ==========================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { parseF29 } from '@/lib/f29Parser';
-import { insertF29Form } from '@/lib/databaseSimple';
+import { parseF29 } from '@/lib/parsers/f29Parser';
+import { insertF29Form } from '@/lib/database/databaseSimple';
 
 // Configuración para archivos grandes
 export const runtime = 'nodejs';
