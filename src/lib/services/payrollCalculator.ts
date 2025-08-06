@@ -1,21 +1,20 @@
 /**
  * Motor de Cálculo de Liquidaciones de Sueldo Chile
  * Implementa toda la lógica previsional chilena oficial
+ * 
+ * ✅ ACTUALIZADO: Usa configuración chilena centralizada
+ * ✅ VERIFICADO: Cesantía 0.6% contratos indefinidos
  */
 
-// Valores actuales Chile 2025 (actualizables desde configuración)
-export const CHILE_TAX_VALUES = {
-  UF: 39179, // Julio 2025
-  UTM: 68923,
-  MINIMUM_WAGE: 529000,
-  AFP_BASE_PERCENTAGE: 10.0,
-  HEALTH_BASE_PERCENTAGE: 7.0,
-  SIS_PERCENTAGE: 1.88, // Julio 2025
-  UNEMPLOYMENT_INDEFINITE: 0.6,
-  UNEMPLOYMENT_FIXED: 3.0,
-  MAX_DEDUCTIONS_PERCENTAGE: 45.0, // Máximo 45% según Código del Trabajo
-  INCOME_TAX_EXEMPT_UTM: 13.5 // Exento hasta 13.5 UTM
-};
+import { 
+  CHILEAN_OFFICIAL_VALUES,
+  calculateUnemploymentInsurance,
+  calculateFamilyAllowance,
+  calculateIncomeTax
+} from './chileanPayrollConfig';
+
+// Re-exportar valores para compatibilidad
+export const CHILE_TAX_VALUES = CHILEAN_OFFICIAL_VALUES;
 
 // Interfaces para tipado
 export interface EmployeeData {
@@ -285,24 +284,17 @@ export class PayrollCalculator {
 
   /**
    * Calcula asignación familiar según tramos
+   * ✅ MEJORADO: Usa función centralizada con mejor lógica
    */
   private calculateFamilyAllowance(familyCharges: number, baseSalary: number): number {
-    if (familyCharges === 0) return 0;
+    const familyAllowanceData = calculateFamilyAllowance(familyCharges, baseSalary);
     
-    const { family_allowances } = this.settings;
-    let amountPerCharge = 0;
-    
-    if (baseSalary <= 500000) {
-      amountPerCharge = family_allowances.tramo_a;
-    } else if (baseSalary <= 750000) {
-      amountPerCharge = family_allowances.tramo_b;
-    } else if (baseSalary <= this.settings.income_limits.family_allowance_limit) {
-      amountPerCharge = family_allowances.tramo_c;
-    } else {
-      return 0; // Sin asignación si excede límite
+    // Agregar información del tramo a warnings para transparencia
+    if (familyCharges > 0 && familyAllowanceData.amount > 0) {
+      this.warnings.push(`ℹ️ Asignación familiar: ${familyAllowanceData.bracket}`);
     }
     
-    return amountPerCharge * familyCharges;
+    return familyAllowanceData.amount;
   }
 
   /**
@@ -319,6 +311,7 @@ export class PayrollCalculator {
 
   /**
    * Calcula todos los descuentos previsionales
+   * ✅ MEJORADO: Usa función centralizada de cesantía
    */
   private calculatePrevisionalDeductions(
     taxableIncome: number,
@@ -327,27 +320,24 @@ export class PayrollCalculator {
     contractType: string
   ) {
     // AFP - 10% obligatorio
-    const afpAmount = Math.round(taxableIncome * (CHILE_TAX_VALUES.AFP_BASE_PERCENTAGE / 100));
+    const afpAmount = Math.round(taxableIncome * (CHILE_TAX_VALUES.AFP_PERCENTAGE / 100));
     
     // Comisión AFP variable según administradora
     const afpConfig = this.settings.afp_configs.find(afp => afp.code === afpCode);
-    const afpCommissionPercentage = afpConfig?.commission_percentage || 0.58; // Default Modelo
+    const afpCommissionPercentage = afpConfig?.commission_percentage || 0.77; // Default Modelo 2025
     const afpCommissionAmount = Math.round(taxableIncome * (afpCommissionPercentage / 100));
     
     // SIS - Seguro de Invalidez y Sobrevivencia
     const sisAmount = Math.round(taxableIncome * (CHILE_TAX_VALUES.SIS_PERCENTAGE / 100));
     
     // Salud - 7% mínimo (puede ser más en ISAPRE)
-    const healthAmount = Math.round(taxableIncome * (CHILE_TAX_VALUES.HEALTH_BASE_PERCENTAGE / 100));
+    const healthAmount = Math.round(taxableIncome * (CHILE_TAX_VALUES.HEALTH_PERCENTAGE / 100));
     
-    // Seguro de Cesantía - según tipo contrato
-    let unemploymentPercentage = 0;
-    if (contractType === 'indefinido') {
-      unemploymentPercentage = CHILE_TAX_VALUES.UNEMPLOYMENT_INDEFINITE;
-    } else if (contractType === 'plazo_fijo') {
-      unemploymentPercentage = CHILE_TAX_VALUES.UNEMPLOYMENT_FIXED;
-    }
-    const unemploymentAmount = Math.round(taxableIncome * (unemploymentPercentage / 100));
+    // ✅ CESANTÍA - Usa función centralizada corregida
+    const unemploymentData = calculateUnemploymentInsurance(
+      taxableIncome, 
+      contractType as 'indefinido' | 'plazo_fijo' | 'obra_faena'
+    );
     
     return {
       afp_amount: afpAmount,
@@ -355,33 +345,25 @@ export class PayrollCalculator {
       afp_commission_amount: afpCommissionAmount,
       sis_amount: sisAmount,
       health_amount: healthAmount,
-      unemployment_percentage: unemploymentPercentage,
-      unemployment_amount: unemploymentAmount,
-      total: afpAmount + afpCommissionAmount + sisAmount + healthAmount + unemploymentAmount
+      unemployment_percentage: unemploymentData.percentage,
+      unemployment_amount: unemploymentData.amount,
+      total: afpAmount + afpCommissionAmount + sisAmount + healthAmount + unemploymentData.amount
     };
   }
 
   /**
    * Calcula impuesto único segunda categoría
+   * ✅ MEJORADO: Usa función centralizada con tabla oficial completa
    */
   private calculateIncomeTax(taxableIncome: number): number {
-    const exemptLimit = CHILE_TAX_VALUES.INCOME_TAX_EXEMPT_UTM * CHILE_TAX_VALUES.UTM;
+    const incomeTaxData = calculateIncomeTax(taxableIncome);
     
-    if (taxableIncome <= exemptLimit) {
-      return 0;
+    // Agregar información del tramo a warnings para transparencia
+    if (incomeTaxData.amount > 0) {
+      this.warnings.push(`ℹ️ Impuesto segunda categoría: Tramo ${incomeTaxData.bracket}`);
     }
     
-    // Tabla progresiva impuesto único (simplificada)
-    // TODO: Implementar tabla completa según SII
-    const taxableAmount = taxableIncome - exemptLimit;
-    
-    if (taxableAmount <= 150000) {
-      return Math.round(taxableAmount * 0.04);
-    } else if (taxableAmount <= 300000) {
-      return Math.round(6000 + (taxableAmount - 150000) * 0.08);
-    } else {
-      return Math.round(18000 + (taxableAmount - 300000) * 0.135);
-    }
+    return incomeTaxData.amount;
   }
 
   /**

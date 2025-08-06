@@ -5,6 +5,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { PayrollCalculator } from './payrollCalculator';
+import { CHILEAN_PAYROLL_CONFIG } from './chileanPayrollConfig';
 
 // Configuración Supabase 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -210,21 +211,10 @@ export class LiquidationService {
         settingsData = settingsResult.data;
         console.log('✅ Settings encontrados');
       } else {
-        console.warn('⚠️ Settings no encontrados, usando defaults:', settingsResult.error?.message);
-        // Usar configuración por defecto chilena
+        console.warn('⚠️ Settings no encontrados, usando configuración centralizada chilena:', settingsResult.error?.message);
+        // ✅ Usar configuración centralizada chilena oficial 2025
         settingsData = {
-          settings: {
-            afp_configs: [
-              { name: 'HABITAT', commission_percentage: 1.27 },
-              { name: 'CUPRUM', commission_percentage: 1.44 },
-              { name: 'PROVIDA', commission_percentage: 1.45 }
-            ],
-            health_plans: [
-              { code: 'FONASA', name: 'FONASA', percentage: 7.0 }
-            ],
-            tax_brackets: [], // Usar defaults del calculador
-            family_allowance_amount: 15000
-          }
+          settings: CHILEAN_PAYROLL_CONFIG
         };
       }
 

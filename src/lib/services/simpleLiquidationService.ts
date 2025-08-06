@@ -4,6 +4,7 @@
  */
 
 import { PayrollCalculator } from './payrollCalculator';
+import { CHILEAN_PAYROLL_CONFIG } from './chileanPayrollConfig';
 
 export interface SimpleLiquidationRequest {
   employee: {
@@ -47,27 +48,8 @@ export interface SimpleLiquidationResponse {
   error?: string;
 }
 
-// Configuración estándar chilena 2025 (hardcodeada)
-const CHILE_STANDARD_CONFIG = {
-  afp_configs: [
-    { name: 'HABITAT', commission_percentage: 1.27 },
-    { name: 'CUPRUM', commission_percentage: 1.44 },
-    { name: 'PROVIDA', commission_percentage: 1.45 },
-    { name: 'PLANVITAL', commission_percentage: 1.16 },
-    { name: 'CAPITAL', commission_percentage: 1.44 },
-    { name: 'MODELO', commission_percentage: 0.77 },
-    { name: 'UNO', commission_percentage: 0.69 }
-  ],
-  health_plans: [
-    { code: 'FONASA', name: 'FONASA', percentage: 7.0 }
-  ],
-  income_limits: {
-    uf_limit: 84.6, // Tope imponible AFP/Salud 2025 (84.6 UF)
-    tax_exempt_utms: 13.5 // Exento impuesto hasta 13.5 UTM
-  },
-  family_allowance_amount: 15000,
-  tax_brackets: [] // Usar defaults del PayrollCalculator
-};
+// ✅ ACTUALIZADO: Usar configuración centralizada chilena oficial
+// Ya no necesitamos constante duplicada, usamos CHILEAN_PAYROLL_CONFIG
 
 export class SimpleLiquidationService {
   
@@ -117,8 +99,8 @@ export class SimpleLiquidationService {
         overtime_hours: 0
       };
 
-      // Usar configuración estándar chilena
-      const calculator = new PayrollCalculator(CHILE_STANDARD_CONFIG);
+      // ✅ Usar configuración centralizada chilena oficial 2025
+      const calculator = new PayrollCalculator(CHILEAN_PAYROLL_CONFIG);
 
       // Calcular liquidación
       const liquidationResult = calculator.calculateLiquidation(
