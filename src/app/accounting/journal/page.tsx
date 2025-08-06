@@ -1360,7 +1360,7 @@ function AccountSelector({
   const [showDropdown, setShowDropdown] = useState(false);
   
   // Filtrar cuentas imputables (nivel 4)
-  const detailAccounts = accounts.filter(acc => acc.is_detail && acc.is_active);
+  const detailAccounts = accounts.filter(acc => (acc.is_detail || acc.isDetail) && (acc.is_active !== false && acc.isActive !== false));
   
   // Filtrar por búsqueda
   const filteredAccounts = detailAccounts.filter(acc => 
