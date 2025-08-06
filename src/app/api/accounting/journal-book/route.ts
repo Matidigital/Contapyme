@@ -232,21 +232,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Obtener el siguiente número de asiento
-    const { data: lastEntry } = await supabase
-      .from('journal_book')
-      .select('entry_number')
-      .order('entry_number', { ascending: false })
-      .limit(1)
-      .maybeSingle(); // Usar maybeSingle para manejar caso sin datos
-
-    const nextEntryNumber = (lastEntry?.entry_number || 0) + 1;
+    // Generar IDs únicos
+    const timestamp = Date.now();
+    const jbid = `JB${timestamp}`;
+    const entryNumber = Date.now(); // Usar timestamp como número de asiento
 
     // Crear el asiento principal
     const { data: journalEntry, error: entryError } = await supabase
       .from('journal_book')
       .insert({
-        entry_number: nextEntryNumber,
+        jbid: jbid,
+        entry_number: entryNumber,
         date: date,
         description: description,
         document_number: document_number,
@@ -270,7 +266,7 @@ export async function POST(request: NextRequest) {
 
     // Crear las líneas de detalle
     const detailLines = entry_lines.map((line, index) => ({
-      jbid: journalEntry.jbid,
+      jbid: jbid,
       line_number: index + 1,
       account_code: line.account_code,
       account_name: line.account_name,
@@ -290,7 +286,7 @@ export async function POST(request: NextRequest) {
       await supabase
         .from('journal_book')
         .delete()
-        .eq('jbid', journalEntry.jbid);
+        .eq('jbid', jbid);
 
       return NextResponse.json(
         { success: false, error: 'Error al crear las líneas del asiento' },
@@ -298,18 +294,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`✅ Asiento creado: ${journalEntry.jbid} con ${entry_lines.length} líneas`);
+    console.log(`✅ Asiento creado: ${jbid} con ${entry_lines.length} líneas`);
 
     return NextResponse.json({
       success: true,
       data: {
-        jbid: journalEntry.jbid,
-        entry_number: nextEntryNumber,
+        jbid: jbid,
+        entry_number: entryNumber,
         entry_lines_count: entry_lines.length,
         total_debit: totalDebit,
         total_credit: totalCredit
       },
-      message: `Asiento ${journalEntry.jbid} creado exitosamente con ${entry_lines.length} líneas`
+      message: `Asiento ${jbid} creado exitosamente con ${entry_lines.length} líneas`
     });
 
   } catch (error) {
