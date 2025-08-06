@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
 
     let query = `
       SELECT 
+        id_fixed_assets as id,
         *
       FROM fixed_assets fa
       WHERE fa.user_id = $1
@@ -121,7 +122,7 @@ export async function POST(request: NextRequest) {
         $1,
         $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 'active'
       )
-      RETURNING *
+      RETURNING id_fixed_assets as id, *
     `;
 
     const { data, error } = await databaseSimple.query(insertQuery, [

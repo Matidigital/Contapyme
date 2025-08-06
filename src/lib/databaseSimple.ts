@@ -310,8 +310,8 @@ export async function getFixedAssetById(id: string, userId: string = 'demo-user'
   try {
     const { data, error } = await supabase
       .from('fixed_assets')
-      .select('*')  // Solo seleccionar de fixed_assets, sin JOIN
-      .eq('id', id)
+      .select('*, id_fixed_assets as id')  // Mapear id_fixed_assets como id para compatibilidad
+      .eq('id_fixed_assets', id)
       .eq('user_id', userId)
       .single();
 
@@ -331,9 +331,9 @@ export async function updateFixedAsset(id: string, updateData: any, userId: stri
         ...updateData,
         updated_at: new Date().toISOString()
       })
-      .eq('id', id)
+      .eq('id_fixed_assets', id)
       .eq('user_id', userId)
-      .select()
+      .select('*, id_fixed_assets as id')
       .single();
 
     return { data, error };
@@ -349,9 +349,9 @@ export async function deleteFixedAsset(id: string, userId: string = 'demo-user')
     const { data, error } = await supabase
       .from('fixed_assets')
       .delete()
-      .eq('id', id)
+      .eq('id_fixed_assets', id)
       .eq('user_id', userId)
-      .select('id, name')
+      .select('id_fixed_assets as id, name')
       .single();
 
     return { data, error };

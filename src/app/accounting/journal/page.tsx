@@ -907,6 +907,7 @@ function CreateJournalEntryModal({
             description: `Ingreso de activo fijo: ${newAsset.name}`,
             reference: `AF-${Date.now()}`,
             entry_type: 'fixed_asset' as const,
+            id_fixed_assets: result.data?.id || result.asset?.id, // Relacionar con el activo creado
             lines: [
               {
                 account_code: newAsset.account_code,
@@ -947,6 +948,7 @@ function CreateJournalEntryModal({
         description: `Depreciación mensual: ${asset.name}`,
         reference: `DEP-${asset.id.slice(0, 8)}`,
         entry_type: 'fixed_asset' as const,
+        id_fixed_assets: asset.id, // Relacionar con el activo seleccionado
         lines: [
           {
             account_code: '61010001',
