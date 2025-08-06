@@ -11,6 +11,7 @@ import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } fro
 import { FileText, Upload, TrendingUp, AlertCircle, CheckCircle, X, BarChart3, Zap, Brain, Activity, Target, Shield } from 'lucide-react';
 // Comentado para optimización - Web Worker puede causar overhead en móvil
 // import { useF29AnalyticsWorker } from '@/hooks/useF29AnalyticsWorker';
+import F29History from '@/components/f29/F29History';
 
 interface UploadResult {
   file_name: string;
@@ -825,6 +826,75 @@ export default function F29ComparativePage() {
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* F29 Historical Records */}
+        <F29History 
+          companyId={demoCompanyId}
+          userId={demoUserId}
+          onF29Select={(selectedF29s) => {
+            console.log('F29 seleccionados para análisis:', selectedF29s);
+            // TODO: Usar F29 históricos para generar análisis comparativo
+          }}
+          maxRecords={24}
+        />
+
+        {/* Demo Data Generator */}
+        <Card className="bg-gradient-to-r from-orange-50 to-yellow-50 border-2 border-orange-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-orange-900 mb-2">
+                  🎭 ¿No tienes F29 históricos?
+                </h3>
+                <p className="text-orange-800">
+                  Genera 18 meses de datos demo realistas para probar el análisis comparativo
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  setUploading(true);
+                  try {
+                    const response = await fetch('/api/f29/demo-historical', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        companyId: demoCompanyId,
+                        userId: demoUserId
+                      })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                      alert(`✅ ${data.summary.total_records} F29 demo generados con éxito!`);
+                      // Refrescar la página para mostrar los nuevos datos
+                      window.location.reload();
+                    } else {
+                      alert(`❌ Error: ${data.error}`);
+                    }
+                  } catch (error) {
+                    alert('❌ Error generando datos demo');
+                  } finally {
+                    setUploading(false);
+                  }
+                }}
+                disabled={uploading}
+                className="border-orange-300 hover:bg-orange-100"
+              >
+                {uploading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600 mr-2"></div>
+                    Generando...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-4 h-4 mr-2" />
+                    Generar F29 Demo
+                  </>
+                )}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

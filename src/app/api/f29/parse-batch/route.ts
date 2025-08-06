@@ -51,6 +51,34 @@ export async function POST(request: NextRequest) {
           
           console.log(`✅ ${file.name}: ${result.confidence}% confidence (${result.method})`);
           
+          // 💾 NUEVO: Guardar automáticamente en base de datos
+          try {
+            const saveResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/f29/save`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                parsedData: result,
+                fileName: file.name,
+                userId: '550e8400-e29b-41d4-a716-446655440000', // Demo user
+                companyId: '550e8400-e29b-41d4-a716-446655440001' // Demo company
+              })
+            });
+            
+            const saveData = await saveResponse.json();
+            
+            if (saveData.success) {
+              console.log(`💾 ${file.name}: Guardado en BD - ID: ${saveData.data?.id}`);
+            } else {
+              console.warn(`⚠️ ${file.name}: No se pudo guardar en BD: ${saveData.error}`);
+            }
+            
+          } catch (saveError) {
+            console.warn(`⚠️ ${file.name}: Error guardando en BD:`, saveError);
+            // No fallar el procesamiento por error de guardado
+          }
+          
           return {
             file_name: file.name,
             success: true,
@@ -58,7 +86,8 @@ export async function POST(request: NextRequest) {
             confidence_score: result.confidence,
             method: result.method,
             period: result.periodo,
-            processing_time: new Date().getTime()
+            processing_time: new Date().getTime(),
+            saved_to_db: true // Indicar que se intentó guardar
           };
           
         } catch (error) {
