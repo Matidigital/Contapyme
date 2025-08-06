@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Header } from '@/components/layout/Header';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { useChartOfAccountsCache } from '@/hooks/useChartOfAccountsCache';
+import { Account } from '@/types';
 
 interface JournalEntryLine {
   id: string;
@@ -52,6 +54,122 @@ interface NewJournalEntry {
   description: string;
   document_number: string;
   entry_lines: NewJournalEntryLine[];
+}
+
+// Componente selector de cuentas contables
+function AccountSelector({ 
+  value, 
+  onChange 
+}: {
+  value: string;
+  onChange: (code: string, name: string) => void;
+}) {
+  const { accounts, loading } = useChartOfAccountsCache();
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  // Filtrar solo cuentas imputables (nivel 4) y activas
+  const availableAccounts = useMemo(() => {
+    return accounts.filter(acc => 
+      (acc.is_detail || acc.isDetail || acc.level === 4) && 
+      (acc.is_active !== false && acc.isActive !== false)
+    );
+  }, [accounts]);
+  
+  // Filtrar cuentas por término de búsqueda
+  const filteredAccounts = useMemo(() => {
+    if (!searchTerm) return availableAccounts;
+    
+    const term = searchTerm.toLowerCase();
+    return availableAccounts.filter(acc => 
+      acc.code.toLowerCase().includes(term) || 
+      acc.name.toLowerCase().includes(term)
+    );
+  }, [availableAccounts, searchTerm]);
+  
+  // Encontrar la cuenta seleccionada
+  const selectedAccount = availableAccounts.find(acc => acc.code === value);
+  
+  const handleSelect = (account: Account) => {
+    onChange(account.code, account.name);
+    setIsOpen(false);
+    setSearchTerm('');
+  };
+  
+  return (
+    <div className="relative mb-3">
+      <label className="block text-xs font-medium text-gray-600 mb-1">
+        Cuenta Contable *
+      </label>
+      
+      {/* Campo de selección */}
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-left bg-white flex justify-between items-center"
+      >
+        <span className={selectedAccount ? 'text-gray-900' : 'text-gray-500'}>
+          {selectedAccount ? `${selectedAccount.code} - ${selectedAccount.name}` : 'Seleccionar cuenta...'}
+        </span>
+        <svg className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      
+      {/* Dropdown */}
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-hidden">
+          {/* Campo de búsqueda */}
+          <div className="p-2 border-b">
+            <input
+              type="text"
+              placeholder="Buscar por código o nombre..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-2 py-1 text-sm border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+              autoFocus
+            />
+          </div>
+          
+          {/* Lista de cuentas */}
+          <div className="max-h-48 overflow-y-auto">
+            {loading ? (
+              <div className="p-3 text-sm text-gray-500 text-center">
+                <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                Cargando cuentas...
+              </div>
+            ) : filteredAccounts.length === 0 ? (
+              <div className="p-3 text-sm text-gray-500 text-center">
+                {searchTerm ? 'No se encontraron cuentas' : 'No hay cuentas disponibles'}
+              </div>
+            ) : (
+              filteredAccounts.map((account) => (
+                <button
+                  key={account.code}
+                  type="button"
+                  onClick={() => handleSelect(account)}
+                  className={`w-full px-3 py-2 text-left text-sm hover:bg-blue-50 focus:bg-blue-50 focus:outline-none ${
+                    account.code === value ? 'bg-blue-100 text-blue-900' : 'text-gray-900'
+                  }`}
+                >
+                  <div className="font-medium">{account.code}</div>
+                  <div className="text-xs text-gray-600 truncate">{account.name}</div>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+      
+      {/* Overlay para cerrar dropdown */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 z-40" 
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+    </div>
+  );
 }
 
 // Hook optimizado para el libro diario
@@ -676,32 +794,13 @@ export default function JournalBookPage() {
                           </button>
                         )}
                         
-                        <div className="grid grid-cols-2 gap-3 mb-3">
-                          <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">
-                              Código Cuenta *
-                            </label>
-                            <input
-                              type="text"
-                              value={line.account_code}
-                              onChange={(e) => updateEntryLine(index, 'account_code', e.target.value)}
-                              placeholder="ej: 1.1.1.001"
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">
-                              Nombre Cuenta *
-                            </label>
-                            <input
-                              type="text"
-                              value={line.account_name}
-                              onChange={(e) => updateEntryLine(index, 'account_name', e.target.value)}
-                              placeholder="ej: Caja"
-                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            />
-                          </div>
-                        </div>
+                        <AccountSelector 
+                          value={line.account_code}
+                          onChange={(code: string, name: string) => {
+                            updateEntryLine(index, 'account_code', code);
+                            updateEntryLine(index, 'account_name', name);
+                          }}
+                        />
                         
                         <div className="grid grid-cols-2 gap-3 mb-3">
                           <div>
