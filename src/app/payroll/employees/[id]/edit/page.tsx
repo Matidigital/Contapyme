@@ -33,8 +33,6 @@ interface Employee {
     afp_code: string;
     health_institution_code: string;
     family_allowances: number;
-    legal_gratification_type: string;
-    has_unemployment_insurance: boolean;
   };
 }
 
@@ -114,8 +112,8 @@ export default function EditEmployeePage() {
             afp_code: emp.payroll_config?.afp_code || 'HABITAT',
             health_institution_code: emp.payroll_config?.health_institution_code || 'FONASA',
             family_allowances: emp.payroll_config?.family_allowances || 0,
-            legal_gratification_type: emp.payroll_config?.legal_gratification_type || 'none',
-            has_unemployment_insurance: emp.payroll_config?.has_unemployment_insurance || true
+            legal_gratification_type: 'none', // Valor fijo por ahora
+            has_unemployment_insurance: true // Valor fijo por ahora
           }
         });
       } else {
@@ -616,6 +614,8 @@ export default function EditEmployeePage() {
                   </div>
                 </div>
 
+                {/* TEMPORALMENTE COMENTADO - Campos no implementados en BD */}
+                {/*
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -654,6 +654,7 @@ export default function EditEmployeePage() {
                     </p>
                   </div>
                 </div>
+                */}
               </CardContent>
             </Card>
           )}
