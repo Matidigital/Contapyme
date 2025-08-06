@@ -205,19 +205,49 @@ function useOptimizedJournalBook() {
       setLoading(true);
       const params = new URLSearchParams();
       if (period) {
-        params.append('period', period);
+        const [year, month] = period.split('-');
+        params.append('date_from', `${year}-${month}-01`);
+        params.append('date_to', `${year}-${month}-31`);
       }
       if (type) {
-        params.append('reference_type', type);
+        params.append('entry_type', type.toLowerCase());
       }
       params.append('limit', '100');
 
-      const response = await fetch(`/api/accounting/journal-book?${params}`);
+      const response = await fetch(`/api/accounting/journal?${params}&include_lines=false`);
       const data = await response.json();
 
       if (data.success) {
-        setEntries(data.data.entries);
-        setStats(data.data.stats);
+        // Adaptar formato de journal a journal-book
+        const adaptedEntries = data.data.entries.map(entry => ({
+          jbid: entry.id,
+          entry_number: entry.entry_number,
+          date: entry.entry_date,
+          description: entry.description,
+          document_number: entry.reference,
+          reference_type: entry.entry_type.toUpperCase(),
+          reference_id: entry.source_id,
+          status: entry.status === 'draft' ? 'active' : entry.status,
+          total_debit: entry.total_debit,
+          total_credit: entry.total_credit,
+          is_balanced: Math.abs(entry.total_debit - entry.total_credit) < 0.01,
+          created_at: entry.created_at
+        }));
+        
+        setEntries(adaptedEntries);
+        
+        // Adaptar estadísticas
+        const adaptedStats = {
+          total_debit: data.data.statistics.total_debit,
+          total_credit: data.data.statistics.total_credit,
+          total_entries: data.data.statistics.total_entries,
+          by_type: Object.entries(data.data.statistics.entries_by_type || {}).reduce((acc, [key, value]) => {
+            acc[key.toUpperCase()] = { count: value as number, debit: 0, credit: 0 };
+            return acc;
+          }, {} as Record<string, { count: number; debit: number; credit: number }>)
+        };
+        
+        setStats(adaptedStats);
       } else {
         console.error('Error fetching entries:', data.error);
       }
@@ -314,12 +344,28 @@ export default function JournalBookPage() {
     setMessage('');
 
     try {
-      const response = await fetch('/api/accounting/journal-book', {
+      // Convertir formato de journal-book a formato journal
+      const journalData = {
+        entry_date: newEntry.date,
+        description: newEntry.description,
+        reference: newEntry.document_number,
+        entry_type: 'manual',
+        lines: newEntry.entry_lines.map((line, index) => ({
+          account_code: line.account_code,
+          account_name: line.account_name,
+          line_number: index + 1,
+          debit_amount: line.debit_amount,
+          credit_amount: line.credit_amount,
+          line_description: line.description
+        }))
+      };
+
+      const response = await fetch('/api/accounting/journal', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(newEntry),
+        body: JSON.stringify(journalData),
       });
 
       const data = await response.json();
