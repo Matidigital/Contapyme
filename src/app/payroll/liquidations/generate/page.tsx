@@ -153,15 +153,14 @@ export default function GenerateLiquidationPage() {
 
     setSaving(true);
     try {
-      // Guardar en la base de datos
-      const response = await fetch('/api/payroll/liquidations/calculate', {
+      // Guardar en la base de datos - company_id como query parameter
+      const response = await fetch(`/api/payroll/liquidations/calculate?company_id=${COMPANY_ID}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           employee_id: selectedEmployeeId,
-          company_id: COMPANY_ID,
           ...formData,
           save_liquidation: true
         })
