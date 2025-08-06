@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 API empleados llamada para company_id:', companyId);
 
-    // Consulta ORIGINAL con Supabase - RESTAURADA
+    // Consulta SIMPLIFICADA para diagnosticar problema
     const { data: employees, error } = await supabase
       .from('employees')
       .select(`
@@ -36,9 +36,7 @@ export async function GET(request: NextRequest) {
         payroll_config (
           afp_code,
           health_institution_code,
-          family_allowances,
-          legal_gratification_type,
-          has_unemployment_insurance
+          family_allowances
         )
       `)
       .eq('company_id', companyId)
