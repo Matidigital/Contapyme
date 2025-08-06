@@ -57,57 +57,67 @@ CREATE TABLE IF NOT EXISTS fixed_assets_new (
 );
 
 -- Migrar datos existentes de fixed_assets a fixed_assets_new
-INSERT INTO fixed_assets_new (
-    id_fixed_assets,
-    user_id,
-    name,
-    description,
-    category,
-    brand,
-    model,
-    serial_number,
-    purchase_value,
-    residual_value,
-    purchase_date,
-    start_depreciation_date,
-    useful_life_years,
-    depreciation_method,
-    status,
-    account_code,
-    depreciation_account_code,
-    expense_account_code,
-    location,
-    responsible_person,
-    created_at,
-    updated_at,
-    created_by
-)
-SELECT 
-    id as id_fixed_assets,  -- Mapear id → id_fixed_assets
-    user_id,
-    name,
-    description,
-    category,
-    brand,
-    model,
-    serial_number,
-    purchase_value,
-    residual_value,
-    purchase_date,
-    start_depreciation_date,
-    useful_life_years,
-    depreciation_method,
-    status,
-    account_code,
-    depreciation_account_code,
-    expense_account_code,
-    location,
-    responsible_person,
-    created_at,
-    updated_at,
-    created_by
-FROM fixed_assets
-WHERE EXISTS (SELECT 1 FROM fixed_assets LIMIT 1);
+-- Usando COALESCE para manejar columnas que podrían no existir
+DO $$
+BEGIN
+    -- Verificar si la tabla fixed_assets existe y tiene datos
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'fixed_assets') THEN
+        INSERT INTO fixed_assets_new (
+            id_fixed_assets,
+            user_id,
+            name,
+            description,
+            category,
+            brand,
+            model,
+            serial_number,
+            purchase_value,
+            residual_value,
+            purchase_date,
+            start_depreciation_date,
+            useful_life_years,
+            depreciation_method,
+            status,
+            account_code,
+            depreciation_account_code,
+            expense_account_code,
+            location,
+            responsible_person,
+            created_at,
+            updated_at,
+            created_by
+        )
+        SELECT 
+            id as id_fixed_assets,
+            user_id,
+            name,
+            description,
+            category,
+            brand,
+            model,
+            serial_number,
+            purchase_value,
+            COALESCE(residual_value, 0),
+            purchase_date,
+            COALESCE(start_depreciation_date, purchase_date),
+            useful_life_years,
+            COALESCE(depreciation_method, 'linear'),
+            COALESCE(status, 'active'),
+            '13010001',  -- account_code por defecto
+            '13020001',  -- depreciation_account_code por defecto
+            '61010001',  -- expense_account_code por defecto
+            location,
+            responsible_person,
+            COALESCE(created_at, NOW()),
+            COALESCE(updated_at, NOW()),
+            'system'     -- created_by por defecto
+        FROM fixed_assets;
+        
+        RAISE NOTICE 'Datos migrados desde fixed_assets a fixed_assets_new';
+    ELSE
+        RAISE NOTICE 'Tabla fixed_assets no existe o está vacía - creando tabla nueva vacía';
+    END IF;
+END $$;
 
 -- PASO 2: Agregar columna id_fixed_assets a journal_entries
 ALTER TABLE journal_entries 
@@ -125,25 +135,33 @@ ON DELETE SET NULL;
 -- Verificar que la migración fue exitosa
 DO $$
 DECLARE
-    old_count INTEGER;
-    new_count INTEGER;
+    old_count INTEGER := 0;
+    new_count INTEGER := 0;
 BEGIN
-    -- Contar registros en tabla original
-    SELECT COUNT(*) INTO old_count FROM fixed_assets;
+    -- Contar registros en tabla original (si existe)
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'fixed_assets') THEN
+        SELECT COUNT(*) INTO old_count FROM fixed_assets;
+    END IF;
     
     -- Contar registros en tabla nueva
     SELECT COUNT(*) INTO new_count FROM fixed_assets_new;
     
-    -- Solo proceder si los conteos coinciden
-    IF old_count = new_count THEN
-        -- Eliminar tabla antigua
+    -- Proceder si:
+    -- 1. Los conteos coinciden (migración exitosa)
+    -- 2. O si la tabla original no existe (instalación nueva)
+    IF old_count = new_count OR NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'fixed_assets') THEN
+        -- Eliminar tabla antigua si existe
         DROP TABLE IF EXISTS fixed_assets CASCADE;
         
         -- Renombrar tabla nueva
         ALTER TABLE fixed_assets_new RENAME TO fixed_assets;
         
         -- Mensaje de éxito
-        RAISE NOTICE 'Migración exitosa: % registros migrados', new_count;
+        IF old_count > 0 THEN
+            RAISE NOTICE 'Migración exitosa: % registros migrados', new_count;
+        ELSE
+            RAISE NOTICE 'Tabla fixed_assets creada exitosamente (instalación nueva)';
+        END IF;
     ELSE
         RAISE EXCEPTION 'Error en migración: old_count=%, new_count=%', old_count, new_count;
     END IF;
