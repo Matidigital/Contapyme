@@ -623,7 +623,10 @@ export default function JournalPage() {
                 <p className="text-gray-600 mb-6">
                   Comienza creando tu primer asiento manual o genera automáticamente desde F29
                 </p>
-                <Button variant="primary">
+                <Button 
+                  variant="primary"
+                  onClick={() => setShowCreateModal(true)}
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   Crear Primer Asiento
                 </Button>
