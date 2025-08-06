@@ -74,66 +74,126 @@ export default function Home() {
               </p>
             </div>
 
-            {/* Primary CTAs */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-              {/* Analyze F29 - Primary Action */}
-              <Link href="/accounting/f29-analysis">
-                <Card 
-                  className="group hover:shadow-2xl transition-all duration-300 cursor-pointer border-2 border-blue-200 hover:border-blue-400 bg-gradient-to-br from-blue-50 to-indigo-50"
-                  onClick={() => handleIntentionClick('analyze_f29', { source: 'hero_primary' })}
-                >
-                <CardContent className="p-8 text-center">
-                  <div className="w-16 h-16 bg-blue-500 rounded-2xl mx-auto mb-6 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <span className="text-3xl">📄</span>
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-3">Analizar F29 Ahora</h3>
-                  <p className="text-gray-600 mb-6">Sube tu formulario y obtén análisis automático en segundos</p>
-                  <div className="flex items-center justify-center text-blue-600 font-semibold">
-                    <Play className="w-4 h-4 mr-2" />
-                    Comenzar Análisis
-                    <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </CardContent>
-                </Card>
-              </Link>
-
-              {/* Manage Company */}
+            {/* Módulos Principales - Acceso Directo */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+              {/* Módulo de Contabilidad */}
               <Link href="/accounting">
                 <Card 
-                  className="group hover:shadow-2xl transition-all duration-300 cursor-pointer border-2 border-green-200 hover:border-green-400 bg-gradient-to-br from-green-50 to-emerald-50"
-                  onClick={() => handleIntentionClick('manage_company', { source: 'hero_secondary' })}
+                  className="group hover:shadow-2xl transition-all duration-300 cursor-pointer border-2 border-blue-200 hover:border-blue-400 bg-gradient-to-br from-blue-50 to-indigo-50 h-full"
+                  onClick={() => handleIntentionClick('accounting_module', { source: 'hero_primary' })}
                 >
-                <CardContent className="p-8 text-center">
-                  <div className="w-16 h-16 bg-green-500 rounded-2xl mx-auto mb-6 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <span className="text-3xl">🏢</span>
+                <CardContent className="p-10 text-center h-full flex flex-col justify-between">
+                  <div>
+                    <div className="w-20 h-20 bg-blue-500 rounded-2xl mx-auto mb-6 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                      <span className="text-4xl">📊</span>
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-4">Módulo de Contabilidad</h2>
+                    <p className="text-gray-600 mb-6 text-lg">
+                      Análisis F29, Indicadores Económicos, Activos Fijos, Plan de Cuentas IFRS y más
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 text-sm text-gray-500 mb-6">
+                      <span>• Análisis F29</span>
+                      <span>• Activos Fijos</span>
+                      <span>• Indicadores UF/UTM</span>
+                      <span>• Plan IFRS</span>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-3">Gestionar Empresa</h3>
-                  <p className="text-gray-600 mb-6">Acceso completo a todos los módulos contables</p>
-                  <div className="flex items-center justify-center text-green-600 font-semibold">
-                    <TrendingUp className="w-4 h-4 mr-2" />
-                    Ver Dashboard
-                    <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                  <div className="flex items-center justify-center text-blue-600 font-semibold text-lg">
+                    <TrendingUp className="w-5 h-5 mr-2" />
+                    Acceder a Contabilidad
+                    <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </CardContent>
                 </Card>
               </Link>
 
-              {/* Explore Features */}
-              <Link href="/explore">
+              {/* Módulo de Remuneraciones */}
+              <Link href="/payroll">
                 <Card 
-                  className="group hover:shadow-2xl transition-all duration-300 cursor-pointer border-2 border-purple-200 hover:border-purple-400 bg-gradient-to-br from-purple-50 to-violet-50"
-                  onClick={() => handleIntentionClick('explore_features', { source: 'hero_tertiary' })}
+                  className="group hover:shadow-2xl transition-all duration-300 cursor-pointer border-2 border-green-200 hover:border-green-400 bg-gradient-to-br from-green-50 to-emerald-50 h-full"
+                  onClick={() => handleIntentionClick('payroll_module', { source: 'hero_secondary' })}
                 >
-                <CardContent className="p-8 text-center">
-                  <div className="w-16 h-16 bg-purple-500 rounded-2xl mx-auto mb-6 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <span className="text-3xl">🚀</span>
+                <CardContent className="p-10 text-center h-full flex flex-col justify-between">
+                  <div>
+                    <div className="w-20 h-20 bg-green-500 rounded-2xl mx-auto mb-6 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                      <span className="text-4xl">💰</span>
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-4">Módulo de Remuneraciones</h2>
+                    <p className="text-gray-600 mb-6 text-lg">
+                      Gestión completa de empleados, cálculo de liquidaciones y libro de remuneraciones
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 text-sm text-gray-500 mb-6">
+                      <span>• Empleados</span>
+                      <span>• Liquidaciones</span>
+                      <span>• Libro Remun.</span>
+                      <span>• Previred</span>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-3">Explorar Todo</h3>
-                  <p className="text-gray-600 mb-6">Descubre todas las funcionalidades disponibles</p>
-                  <div className="flex items-center justify-center text-purple-600 font-semibold">
-                    <Globe className="w-4 h-4 mr-2" />
-                    Ver Funciones
-                    <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                  <div className="flex items-center justify-center text-green-600 font-semibold text-lg">
+                    <span className="text-2xl mr-2">👥</span>
+                    Acceder a RRHH
+                    <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </CardContent>
+                </Card>
+              </Link>
+            </div>
+
+            {/* Acciones Rápidas */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+              {/* Analyze F29 - Quick Action */}
+              <Link href="/accounting/f29-analysis">
+                <Card 
+                  className="group hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-200 hover:border-blue-300 bg-white/80"
+                  onClick={() => handleIntentionClick('analyze_f29', { source: 'quick_actions' })}
+                >
+                <CardContent className="p-6 text-center">
+                  <div className="w-12 h-12 bg-blue-100 rounded-xl mx-auto mb-4 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+                    <span className="text-xl">📄</span>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Analizar F29</h3>
+                  <p className="text-gray-600 text-sm mb-4">Análisis rápido de formulario</p>
+                  <div className="flex items-center justify-center text-blue-600 font-medium text-sm">
+                    <Play className="w-4 h-4 mr-1" />
+                    Comenzar
+                  </div>
+                </CardContent>
+                </Card>
+              </Link>
+
+              {/* Fixed Assets - Quick Action */}
+              <Link href="/accounting/fixed-assets">
+                <Card 
+                  className="group hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-200 hover:border-purple-300 bg-white/80"
+                  onClick={() => handleIntentionClick('fixed_assets', { source: 'quick_actions' })}
+                >
+                <CardContent className="p-6 text-center">
+                  <div className="w-12 h-12 bg-purple-100 rounded-xl mx-auto mb-4 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+                    <span className="text-xl">🏭</span>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Activos Fijos</h3>
+                  <p className="text-gray-600 text-sm mb-4">Gestión de inventario</p>
+                  <div className="flex items-center justify-center text-purple-600 font-medium text-sm">
+                    Ver Activos
+                  </div>
+                </CardContent>
+                </Card>
+              </Link>
+
+              {/* Employees - Quick Action */}
+              <Link href="/payroll/employees">
+                <Card 
+                  className="group hover:shadow-xl transition-all duration-300 cursor-pointer border border-gray-200 hover:border-green-300 bg-white/80"
+                  onClick={() => handleIntentionClick('employees', { source: 'quick_actions' })}
+                >
+                <CardContent className="p-6 text-center">
+                  <div className="w-12 h-12 bg-green-100 rounded-xl mx-auto mb-4 flex items-center justify-center group-hover:bg-green-200 transition-colors">
+                    <span className="text-xl">👥</span>
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Empleados</h3>
+                  <p className="text-gray-600 text-sm mb-4">Gestionar personal</p>
+                  <div className="flex items-center justify-center text-green-600 font-medium text-sm">
+                    Ver Lista
                   </div>
                 </CardContent>
                 </Card>
