@@ -8,6 +8,7 @@ import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } fro
 import { ArrowLeft, Save, User, Phone, Mail, Home, Calendar, AlertCircle, Calculator, Settings, DollarSign } from 'lucide-react';
 import RutInputFixed from '@/components/payroll/RutInputFixed';
 import { usePayrollOptions } from '@/hooks/usePayrollOptions';
+import { useCompanyId } from '@/contexts/CompanyContext';
 
 interface EmployeeFormData {
   // Información Personal
@@ -56,8 +57,9 @@ export default function NewEmployeePage() {
   const [showPayrollConfig, setShowPayrollConfig] = useState(false);
   
   // 🔗 NUEVA FUNCIONALIDAD: Opciones dinámicas de AFP e ISAPRE
-  const COMPANY_ID = '8033ee69-b420-4d91-ba0e-482f46cd6fce';
-  const { options: payrollOptions, loading: optionsLoading, error: optionsError } = usePayrollOptions(COMPANY_ID);
+  // ✅ Usar company ID dinámico desde contexto
+  const companyId = useCompanyId();
+  const { options: payrollOptions, loading: optionsLoading, error: optionsError } = usePayrollOptions(companyId);
   
   const [formData, setFormData] = useState<EmployeeFormData>({
     // Información Personal
@@ -151,39 +153,27 @@ export default function NewEmployeePage() {
     setLoading(true);
     
     try {
-      // ✅ MAPEO DINÁMICO: Buscar códigos desde configuración
+      // ✅ MAPEO DINÁMICO SIMPLIFICADO: Usar solo configuración de empresa
       const selectedAfp = payrollOptions?.afp_options?.find(afp => afp.name === formData.pensionFund);
       const selectedHealth = payrollOptions?.health_options?.find(health => health.name === formData.healthInsurance);
       
-      // Fallback a mapeo estático si no hay configuración dinámica
-      const afpMapping: Record<string, string> = {
-        'Capital': 'CAPITAL',
-        'Cuprum': 'CUPRUM', 
-        'Habitat': 'HABITAT',
-        'Modelo': 'MODELO',
-        'PlanVital': 'PLANVITAL',
-        'ProVida': 'PROVIDA',
-        'Uno': 'UNO'
-      };
+      // Validar que se encontraron las opciones seleccionadas
+      if (!selectedAfp) {
+        throw new Error(`AFP "${formData.pensionFund}" no encontrada en la configuración de la empresa`);
+      }
+      
+      if (!selectedHealth) {
+        throw new Error(`Institución de salud "${formData.healthInsurance}" no encontrada en la configuración de la empresa`);
+      }
 
-      const healthMapping: Record<string, string> = {
-        'FONASA': 'FONASA',
-        'Banmédica': 'BANMEDICA',
-        'Consalud': 'CONSALUD',
-        'Colmena': 'COLMENA',
-        'Cruz Blanca': 'CRUZ_BLANCA',
-        'Vida Tres': 'VIDA_TRES',
-        'Más Vida': 'MAS_VIDA'
-      };
-
-      // Usar código dinámico o fallback
-      const afpCode = selectedAfp?.code || afpMapping[formData.pensionFund] || 'HABITAT';
-      const healthCode = selectedHealth?.code || healthMapping[formData.healthInsurance] || 'FONASA';
+      // Usar códigos directamente de la configuración
+      const afpCode = selectedAfp.code;
+      const healthCode = selectedHealth.code;
       
       // Preparar datos para la API
       const apiData = {
         // Company info (valores correctos de la base de datos)
-        company_id: '8033ee69-b420-4d91-ba0e-482f46cd6fce',
+        company_id: companyId,
         created_by: '550e8400-e29b-41d4-a716-446655440000',
         
         // Employee data

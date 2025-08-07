@@ -139,6 +139,12 @@ export function isDemoMode(): boolean {
   return DEMO_MODE;
 }
 
+// Hook simplificado para obtener solo el company ID
+export function useCompanyId(): string {
+  const { company } = useCompany();
+  return company.id;
+}
+
 // Función para obtener configuración de empresa
 export function getCompanyConfig() {
   const company = getCurrentCompany();

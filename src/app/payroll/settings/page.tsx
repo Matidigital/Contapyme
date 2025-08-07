@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Header } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { Settings, Building2, Heart, Users, Calculator, Globe, AlertCircle, CheckCircle, Save } from 'lucide-react';
+import { useCompanyId } from '@/contexts/CompanyContext';
 
 interface AFPConfig {
   id: string;
@@ -54,7 +55,8 @@ export default function PayrollSettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const COMPANY_ID = '8033ee69-b420-4d91-ba0e-482f46cd6fce';
+  // ✅ Usar company ID dinámico desde contexto
+  const companyId = useCompanyId();
 
   useEffect(() => {
     fetchSettings();
@@ -63,7 +65,7 @@ export default function PayrollSettingsPage() {
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/payroll/settings?company_id=${COMPANY_ID}`);
+      const response = await fetch(`/api/payroll/settings?company_id=${companyId}`);
       const data = await response.json();
 
       if (response.ok && data.success) {
@@ -85,7 +87,7 @@ export default function PayrollSettingsPage() {
       setError(null);
       setSuccessMessage(null);
 
-      const response = await fetch(`/api/payroll/settings?company_id=${COMPANY_ID}`, {
+      const response = await fetch(`/api/payroll/settings?company_id=${companyId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -98,6 +100,17 @@ export default function PayrollSettingsPage() {
       if (response.ok && data.success) {
         setSettings(prev => prev ? { ...prev, ...updatedSettings } : null);
         setSuccessMessage('Configuración actualizada exitosamente');
+        
+        // ✅ NUEVO: Invalidar cache de opciones para que se reflejen los cambios
+        try {
+          await fetch(`/api/payroll/config/options?company_id=${companyId}&invalidate=true`, {
+            method: 'POST'
+          });
+        } catch (cacheError) {
+          console.warn('No se pudo invalidar el cache de opciones:', cacheError);
+          // No fallar si el cache no se puede invalidar
+        }
+        
         setTimeout(() => setSuccessMessage(null), 3000);
       } else {
         setError(data.error || 'Error al actualizar configuración');
