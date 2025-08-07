@@ -153,17 +153,47 @@ export default function GenerateLiquidationPage() {
 
     setSaving(true);
     try {
-      // Guardar en la base de datos - company_id como query parameter
-      const response = await fetch(`/api/payroll/liquidations/calculate?company_id=${COMPANY_ID}`, {
+      // Mapear los datos de la liquidación al formato de la base de datos
+      const liquidationData = {
+        employee_id: selectedEmployeeId,
+        period_year: formData.period_year,
+        period_month: formData.period_month,
+        days_worked: formData.days_worked,
+        
+        // Haberes
+        base_salary: result.haberes.sueldo_base || 0,
+        overtime_amount: formData.overtime_amount || 0,
+        bonuses: formData.bonuses || 0,
+        commissions: formData.commissions || 0,
+        gratification: formData.gratification || 0,
+        food_allowance: formData.food_allowance || 0,
+        transport_allowance: formData.transport_allowance || 0,
+        family_allowance: result.haberes.asignacion_familiar || 0,
+        
+        // Descuentos legales
+        afp_discount: result.descuentos.afp || 0,
+        health_discount: result.descuentos.salud || 0,
+        unemployment_discount: result.descuentos.cesantia || 0,
+        
+        // Descuentos adicionales
+        loan_deductions: formData.loan_deductions || 0,
+        advance_payments: formData.advance_payments || 0,
+        apv_amount: formData.apv_amount || 0,
+        other_deductions: formData.other_deductions || 0,
+        
+        // Totales
+        total_haberes: result.totales.total_haberes || 0,
+        total_descuentos: result.totales.total_descuentos || 0,
+        net_salary: result.totales.liquido_a_pagar || 0
+      };
+
+      // Guardar en la base de datos usando la nueva API
+      const response = await fetch(`/api/payroll/liquidations/save?company_id=${COMPANY_ID}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          employee_id: selectedEmployeeId,
-          ...formData,
-          save_liquidation: true
-        })
+        body: JSON.stringify(liquidationData)
       });
 
       const data = await response.json();
@@ -187,11 +217,47 @@ export default function GenerateLiquidationPage() {
 
     setExporting(true);
     try {
-      // Aquí iría la lógica para exportar PDF
-      // Por simplicidad, mostramos un mensaje
-      alert('Función de exportación PDF pendiente de implementación');
+      // Preparar los datos para la exportación
+      const exportData = {
+        employee_id: selectedEmployeeId,
+        employee_name: `${selectedEmployee.first_name} ${selectedEmployee.last_name}`,
+        employee_rut: selectedEmployee.rut,
+        period_year: formData.period_year,
+        period_month: formData.period_month,
+        days_worked: formData.days_worked,
+        calculation_result: result
+      };
+
+      // Llamar a la API de exportación
+      const response = await fetch(`/api/payroll/liquidations/export?company_id=${COMPANY_ID}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(exportData)
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Crear un blob con el contenido HTML y abrir en nueva ventana para imprimir
+        const htmlContent = data.html;
+        const newWindow = window.open('', '_blank');
+        if (newWindow) {
+          newWindow.document.write(htmlContent);
+          newWindow.document.close();
+          
+          // Esperar a que se cargue el contenido y luego mostrar diálogo de impresión
+          setTimeout(() => {
+            newWindow.print();
+          }, 1000);
+        }
+      } else {
+        setError(data.error || 'Error al exportar liquidación');
+      }
     } catch (err) {
-      setError('Error al exportar PDF');
+      setError('Error al exportar liquidación');
+      console.error('Error exporting liquidation:', err);
     } finally {
       setExporting(false);
     }
