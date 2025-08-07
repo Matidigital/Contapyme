@@ -265,13 +265,6 @@ export function LivePayrollPreview({
                 <span className="font-medium">{formatCurrency(result.afp_commission_amount)}</span>
               </div>
 
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <Shield className="w-3 h-3" />
-                  <span className="text-sm">SIS (1.88%)</span>
-                </div>
-                <span className="font-medium">{formatCurrency(result.sis_amount)}</span>
-              </div>
 
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
@@ -326,6 +319,53 @@ export function LivePayrollPreview({
           </div>
         </CardContent>
       </Card>
+
+      {/* Costos Patronales (Informativos) */}
+      {result.employer_costs && (
+        <Card className="border-blue-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-blue-700">
+              <Briefcase className="w-5 h-5" />
+              Costos Patronales (Informativos)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <h4 className="font-medium text-blue-800 mb-2 text-sm">Costos del Empleador</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-3 h-3" />
+                    <span className="text-sm">SIS (1.88%)</span>
+                  </div>
+                  <span className="font-medium">{formatCurrency(result.employer_costs.sis_amount)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-3 h-3" />
+                    <span className="text-sm">Cesantía Empleador</span>
+                  </div>
+                  <span className="font-medium">{formatCurrency(result.employer_costs.unemployment_employer)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <Heart className="w-3 h-3" />
+                    <span className="text-sm">Mutual de Seguridad</span>
+                  </div>
+                  <span className="font-medium">{formatCurrency(result.employer_costs.mutual_insurance)}</span>
+                </div>
+              </div>
+              <div className="border-t mt-2 pt-2 flex justify-between items-center font-medium">
+                <span className="text-sm text-blue-800">Total Costos Patronales</span>
+                <span className="text-blue-800">{formatCurrency(result.employer_costs.total)}</span>
+              </div>
+            </div>
+            <div className="text-xs text-blue-600 italic">
+              ℹ️ Estos costos son del empleador, no se descuentan del trabajador
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Líquido a pagar */}
       <Card className="bg-gradient-to-r from-green-500 to-blue-500 text-white">

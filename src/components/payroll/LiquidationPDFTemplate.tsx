@@ -86,7 +86,7 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
                          (liquidationData.afp_commission_amount || 0) +
                          (liquidationData.health_amount || 0) + 
                          (liquidationData.additional_health_amount || 0) +
-                         (liquidationData.sis_amount || 0) + 
+                         // SIS REMOVIDO - Es costo del empleador, no descuento del trabajador
                          (liquidationData.unemployment_amount || 0) + // ✅ Cesantía correcta
                          (liquidationData.income_tax_amount || 0) +
                          (liquidationData.total_other_deductions || 0);

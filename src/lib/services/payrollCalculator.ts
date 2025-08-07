@@ -91,12 +91,11 @@ export interface LiquidationResult {
   other_allowances: number;
   total_non_taxable_income: number;
   
-  // Descuentos Previsionales
+  // Descuentos Previsionales (SIS REMOVIDO)
   afp_percentage: number;
   afp_commission_percentage: number;
   afp_amount: number;
   afp_commission_amount: number;
-  sis_amount: number;
   
   health_percentage: number;
   health_amount: number;
@@ -109,6 +108,14 @@ export interface LiquidationResult {
   
   // Otros Descuentos
   total_other_deductions: number;
+  
+  // Costos Patronales (NUEVO)
+  employer_costs: {
+    sis_amount: number;
+    unemployment_employer: number;
+    mutual_insurance: number;
+    total: number;
+  };
   
   // Totales
   total_gross_income: number;
@@ -182,10 +189,17 @@ export class PayrollCalculator {
     // 7. Calcular impuesto único segunda categoría
     const incomeTax = this.calculateIncomeTax(adjustedTaxableIncome);
 
-    // 8. Calcular otros descuentos
+    // 8. Calcular costos patronales
+    const employerCosts = this.calculateEmployerCosts(
+      adjustedTaxableIncome,
+      employee.afp_code,
+      employee.contract_type
+    );
+
+    // 9. Calcular otros descuentos
     const otherDeductions = this.calculateOtherDeductions(additionalDeductions);
 
-    // 9. Calcular totales
+    // 10. Calcular totales
     const totalGrossIncome = taxableIncome + nonTaxableIncome;
     const totalDeductions = previsionalDeductions.total + incomeTax + otherDeductions;
     const netSalary = totalGrossIncome - totalDeductions;
@@ -212,14 +226,13 @@ export class PayrollCalculator {
       other_allowances: 0,
       total_non_taxable_income: nonTaxableIncome,
       
-      // Descuentos Previsionales
-      afp_percentage: CHILE_TAX_VALUES.AFP_BASE_PERCENTAGE,
+      // Descuentos Previsionales (SIS REMOVIDO)
+      afp_percentage: CHILE_TAX_VALUES.AFP_PERCENTAGE,
       afp_commission_percentage: previsionalDeductions.afp_commission_percentage,
       afp_amount: previsionalDeductions.afp_amount,
       afp_commission_amount: previsionalDeductions.afp_commission_amount,
-      sis_amount: previsionalDeductions.sis_amount,
       
-      health_percentage: CHILE_TAX_VALUES.HEALTH_BASE_PERCENTAGE,
+      health_percentage: CHILE_TAX_VALUES.HEALTH_PERCENTAGE,
       health_amount: previsionalDeductions.health_amount,
       
       unemployment_percentage: previsionalDeductions.unemployment_percentage,
@@ -230,6 +243,9 @@ export class PayrollCalculator {
       
       // Otros Descuentos
       total_other_deductions: otherDeductions,
+      
+      // Costos Patronales (NUEVO)
+      employer_costs: employerCosts,
       
       // Totales
       total_gross_income: totalGrossIncome,
@@ -343,11 +359,10 @@ export class PayrollCalculator {
       afp_amount: afpAmount,
       afp_commission_percentage: afpCommissionPercentage,
       afp_commission_amount: afpCommissionAmount,
-      sis_amount: sisAmount,
       health_amount: healthAmount,
       unemployment_percentage: unemploymentData.percentage,
       unemployment_amount: unemploymentData.amount,
-      total: afpAmount + afpCommissionAmount + sisAmount + healthAmount + unemploymentData.amount
+      total: afpAmount + afpCommissionAmount + healthAmount + unemploymentData.amount // SIS REMOVIDO
     };
   }
 
@@ -367,6 +382,33 @@ export class PayrollCalculator {
   }
 
   /**
+   * Calcula costos patronales (SIS, cesantía empleador, mutual)
+   * ✅ NUEVO: SIS es costo del empleador, no descuento del trabajador
+   */
+  private calculateEmployerCosts(
+    taxableIncome: number,
+    afpCode: string,
+    contractType: string
+  ) {
+    // SIS - 1.88% sobre renta imponible (costo empleador)
+    const sisAmount = Math.round(taxableIncome * (CHILE_TAX_VALUES.SIS_PERCENTAGE / 100));
+    
+    // Cesantía empleador según tipo contrato
+    const unemploymentEmployerRate = contractType === 'indefinido' ? 2.4 : 3.0; // 2.4% indefinido, 3.0% plazo fijo
+    const unemploymentEmployer = Math.round(taxableIncome * (unemploymentEmployerRate / 100));
+    
+    // Mutual de seguridad (aproximado 0.95% - varía por empresa)
+    const mutualInsurance = Math.round(taxableIncome * 0.0095);
+    
+    return {
+      sis_amount: sisAmount,
+      unemployment_employer: unemploymentEmployer,
+      mutual_insurance: mutualInsurance,
+      total: sisAmount + unemploymentEmployer + mutualInsurance
+    };
+  }
+
+  /**
    * Calcula otros descuentos
    */
   private calculateOtherDeductions(additional: AdditionalDeductions): number {
@@ -382,7 +424,7 @@ export class PayrollCalculator {
   private validateDeductionLimit(grossIncome: number, totalDeductions: number): void {
     const deductionPercentage = (totalDeductions / grossIncome) * 100;
     
-    if (deductionPercentage > CHILE_TAX_VALUES.MAX_DEDUCTIONS_PERCENTAGE) {
+    if (deductionPercentage > CHILE_TAX_VALUES.MAX_DEDUCTION_PERCENTAGE) {
       this.warnings.push(
         `Descuentos (${deductionPercentage.toFixed(1)}%) exceden límite legal del 45%`
       );

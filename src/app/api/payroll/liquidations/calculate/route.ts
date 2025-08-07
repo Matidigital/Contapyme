@@ -122,9 +122,24 @@ export async function POST(request: NextRequest) {
     let payrollSettings;
     if (settingsError || !settingsData) {
       console.log('⚠️ No se encontró configuración específica, usando configuración por defecto');
-      // Importar configuración por defecto
-      const { CHILEAN_PAYROLL_CONFIG } = await import('@/lib/services/chileanPayrollConfig');
-      payrollSettings = CHILEAN_PAYROLL_CONFIG;
+      // Usar configuración por defecto estática
+      payrollSettings = {
+        afp_configs: [
+          { code: 'HABITAT', commission_percentage: 1.27, sis_percentage: 1.88 },
+          { code: 'PROVIDA', commission_percentage: 1.45, sis_percentage: 1.88 },
+          { code: 'MODELO', commission_percentage: 0.77, sis_percentage: 1.88 }
+        ],
+        family_allowances: {
+          tramo_a: 15000,
+          tramo_b: 10000, 
+          tramo_c: 5000
+        },
+        income_limits: {
+          uf_limit: 84.6,
+          minimum_wage: 529000,
+          family_allowance_limit: 470148
+        }
+      };
     } else {
       payrollSettings = settingsData.settings;
     }
@@ -336,13 +351,28 @@ export async function PUT(request: NextRequest) {
     };
 
     // Obtener configuración actual
-    const { data: settingsData } = await supabase
+    const { data: settingsData, error: settingsError } = await supabase
       .from('payroll_settings')
       .select('settings')
       .eq('company_id', companyId)
       .single();
 
-    const calculator = new PayrollCalculator(settingsData?.settings || {});
+    // Usar configuración por defecto si no existe
+    let payrollSettings;
+    if (settingsError || !settingsData) {
+      payrollSettings = {
+        afp_configs: [
+          { code: 'HABITAT', commission_percentage: 1.27, sis_percentage: 1.88 },
+          { code: 'PROVIDA', commission_percentage: 1.45, sis_percentage: 1.88 }
+        ],
+        family_allowances: { tramo_a: 15000, tramo_b: 10000, tramo_c: 5000 },
+        income_limits: { uf_limit: 84.6, minimum_wage: 529000, family_allowance_limit: 470148 }
+      };
+    } else {
+      payrollSettings = settingsData.settings;
+    }
+
+    const calculator = new PayrollCalculator(payrollSettings);
     const liquidationResult = calculator.calculateLiquidation(
       employeeData,
       periodData,

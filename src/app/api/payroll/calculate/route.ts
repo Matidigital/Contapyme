@@ -207,7 +207,7 @@ export async function POST(request: NextRequest) {
     const net_income = gross_income - total_deductions;
 
     // Cálculos para el empleador (informativos)
-    const afp_employer = Math.round(capped_imponible * 0.01); // SIS
+    const sis_employer = Math.round(capped_imponible * 0.0188); // SIS - 1.88% costo patronal
     const afc_employer_rate = config.afc_contract_type === 'indefinido' ? 0.024 : 0.030;
     const afc_employer = Math.round(afc_base * afc_employer_rate);
     const mutual_insurance = Math.round(capped_imponible * 0.0095); // Promedio mutual
@@ -242,8 +242,8 @@ export async function POST(request: NextRequest) {
       total_deductions,
       net_income,
       
-      // Empleador
-      afp_employer,
+      // Empleador (costos patronales)
+      afp_employer: sis_employer, // SIS es el costo patronal AFP
       afc_employer,
       mutual_insurance
     };

@@ -289,7 +289,7 @@ export class LiquidationService {
               // Descuentos
               afp_amount: liquidationResult.afp_amount,
               afp_commission_amount: liquidationResult.afp_commission_amount,
-              sis_amount: liquidationResult.sis_amount,
+              // sis_amount removido - ahora es costo patronal, no descuento del empleado
               health_amount: liquidationResult.health_amount,
               unemployment_amount: liquidationResult.unemployment_amount,
               income_tax_amount: liquidationResult.income_tax_amount,
