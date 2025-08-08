@@ -369,13 +369,10 @@ export default function LiquidationsPage() {
                         
                         <div className="flex space-x-2">
                           <Link href={`/payroll/liquidations/${liquidation.id}`}>
-                            <Button variant="outline" size="sm">
-                              Ver
+                            <Button variant="primary" size="sm">
+                              Ver Liquidación
                             </Button>
                           </Link>
-                          <Button variant="outline" size="sm">
-                            <Download className="h-4 w-4" />
-                          </Button>
                         </div>
                       </div>
                     </div>
