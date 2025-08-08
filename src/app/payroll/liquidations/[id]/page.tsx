@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import jsPDF from 'jspdf';
-import { Header } from '@/components/layout';
+import { PayrollHeader } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { 
   ArrowLeft, 
@@ -589,11 +589,10 @@ export default function LiquidationDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header 
+        <PayrollHeader 
           title="Liquidación de Sueldo"
           subtitle="Cargando detalles..."
           showBackButton
-          backHref="/payroll/liquidations"
         />
         <div className="max-w-4xl mx-auto py-6 px-4">
           <div className="flex items-center justify-center h-64">
@@ -610,11 +609,10 @@ export default function LiquidationDetailPage() {
   if (error || !liquidation) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header 
+        <PayrollHeader 
           title="Liquidación de Sueldo"
           subtitle="Error al cargar"
           showBackButton
-          backHref="/payroll/liquidations"
         />
         <div className="max-w-4xl mx-auto py-6 px-4">
           <Card className="border-red-200 bg-red-50">
@@ -645,11 +643,10 @@ export default function LiquidationDetailPage() {
   return (
     <div className="min-h-screen bg-gray-50 print:bg-white">
       <div className="print:hidden">
-        <Header 
+        <PayrollHeader 
           title="Liquidación de Sueldo"
           subtitle={`${liquidation.employee.first_name} ${liquidation.employee.last_name} - ${formatPeriod(liquidation.period_year, liquidation.period_month)}`}
           showBackButton
-          backHref="/payroll/liquidations"
           actions={
             <div className="flex items-center space-x-2">
               {getStatusBadge(liquidation.status)}

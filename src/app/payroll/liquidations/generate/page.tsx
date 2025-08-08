@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Header } from '@/components/layout';
+import { PayrollHeader } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { LivePayrollPreview } from '@/components/payroll/LivePayrollPreview';
 import { useLivePayrollCalculation } from '@/hooks/useLivePayrollCalculation';
@@ -251,11 +251,10 @@ export default function GenerateLiquidationPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-        <Header 
+        <PayrollHeader 
           title="Generar Liquidación"
           subtitle="Creación de liquidaciones con previsualización en tiempo real"
           showBackButton={true}
-          backHref="/payroll/liquidations"
         />
         <div className="max-w-7xl mx-auto py-8 px-4 flex justify-center">
           <div className="text-center">
@@ -269,11 +268,10 @@ export default function GenerateLiquidationPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <Header 
+      <PayrollHeader 
         title="Generar Liquidación"
         subtitle="Creación de liquidaciones con previsualización en tiempo real"
         showBackButton={true}
-        backHref="/payroll/liquidations"
         actions={
           <div className="flex items-center space-x-3">
             <div className="hidden md:flex items-center space-x-2 px-3 py-1 bg-gradient-to-r from-green-100 to-blue-100 rounded-full text-xs font-medium text-green-800">
