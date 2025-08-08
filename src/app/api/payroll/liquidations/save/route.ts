@@ -11,6 +11,8 @@ export async function POST(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const companyId = searchParams.get('company_id');
 
+    console.log('🔍 LIQUIDATION SAVE - Company ID:', companyId);
+
     if (!companyId) {
       return NextResponse.json(
         { success: false, error: 'company_id es requerido' },
@@ -19,9 +21,28 @@ export async function POST(request: NextRequest) {
     }
 
     const liquidationData = await request.json();
+    console.log('🔍 LIQUIDATION SAVE - Data received:', JSON.stringify(liquidationData, null, 2));
 
     // ✅ BYPASS RLS - Service role key permite bypass automático de RLS
     // No necesitamos configurar el contexto con service role
+
+    // ✅ VERIFICAR TABLA EXISTS PRIMERO
+    const { data: tableCheck, error: tableError } = await supabase
+      .from('payroll_liquidations')
+      .select('id')
+      .limit(1);
+
+    if (tableError) {
+      console.error('❌ Tabla payroll_liquidations no existe:', tableError);
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Tabla payroll_liquidations no existe en la base de datos',
+          details: tableError.message 
+        },
+        { status: 500 }
+      );
+    }
 
     // Validar que el empleado exista
     const { data: employee, error: employeeError } = await supabase
@@ -32,11 +53,18 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (employeeError || !employee) {
+      console.error('❌ Empleado no encontrado:', employeeError);
       return NextResponse.json(
-        { success: false, error: 'Empleado no encontrado' },
+        { 
+          success: false, 
+          error: 'Empleado no encontrado',
+          details: employeeError?.message || 'Employee not found'
+        },
         { status: 404 }
       );
     }
+
+    console.log('✅ Empleado encontrado:', employee.first_name, employee.last_name);
 
     // Verificar si ya existe una liquidación para este período
     const { data: existing } = await supabase
@@ -63,9 +91,14 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (updateError) {
-        console.error('Error updating liquidation:', updateError);
+        console.error('❌ Error updating liquidation:', updateError);
         return NextResponse.json(
-          { success: false, error: 'Error al actualizar liquidación' },
+          { 
+            success: false, 
+            error: 'Error al actualizar liquidación',
+            details: updateError.message,
+            code: updateError.code 
+          },
           { status: 500 }
         );
       }
@@ -87,9 +120,14 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (createError) {
-        console.error('Error creating liquidation:', createError);
+        console.error('❌ Error creating liquidation:', createError);
         return NextResponse.json(
-          { success: false, error: 'Error al crear liquidación' },
+          { 
+            success: false, 
+            error: 'Error al crear liquidación',
+            details: createError.message,
+            code: createError.code
+          },
           { status: 500 }
         );
       }
