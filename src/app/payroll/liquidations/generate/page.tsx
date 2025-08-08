@@ -113,8 +113,8 @@ export default function GenerateLiquidationPage() {
     }
   }), [selectedEmployee, formData]);
 
-  // Hook de cálculo en tiempo real
-  const { result, isCalculating, errors, warnings, isValid } = useLivePayrollCalculation(calculationData);
+  // Hook de cálculo en tiempo real con configuración dinámica
+  const { result, isCalculating, errors, warnings, isValid, configurationStatus } = useLivePayrollCalculation(calculationData);
 
   useEffect(() => {
     fetchEmployees();
@@ -589,6 +589,7 @@ export default function GenerateLiquidationPage() {
               errors={errors}
               warnings={warnings}
               isValid={isValid}
+              configurationStatus={configurationStatus} // ✅ NUEVO: Estado de configuración
               employeeName={selectedEmployee ? getEmployeeDisplayName({
                 ...selectedEmployee,
                 employment_contracts: []

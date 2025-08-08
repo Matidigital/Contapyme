@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { PayrollCalculator, type EmployeeData, type PayrollPeriod, type AdditionalIncome, type AdditionalDeductions, type LiquidationResult } from '@/lib/services/payrollCalculator';
 import { CHILEAN_PAYROLL_CONFIG } from '@/lib/services/chileanPayrollConfig';
+import { usePayrollCalculatorSettings } from './usePayrollCalculatorSettings';
+import { useCompanyId } from '@/contexts/CompanyContext';
 
 interface LiveCalculationData {
   employee?: EmployeeData;
@@ -17,6 +19,7 @@ interface LiveCalculationResult {
   errors: string[];
   warnings: string[];
   isValid: boolean;
+  configurationStatus: 'loading' | 'default' | 'custom';
 }
 
 /**
@@ -29,10 +32,23 @@ export function useLivePayrollCalculation(data: LiveCalculationData): LiveCalcul
   const [errors, setErrors] = useState<string[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
 
-  // Crear instancia del calculador con configuración chilena
+  // ✅ NUEVO: Obtener configuración dinámica
+  const companyId = useCompanyId();
+  const { settings: dynamicSettings, loading: settingsLoading, error: settingsError } = usePayrollCalculatorSettings(companyId);
+
+  // ✅ MEJORADO: Crear calculadora con configuración dinámica o fallback
   const calculator = useMemo(() => {
-    return new PayrollCalculator(CHILEAN_PAYROLL_CONFIG);
-  }, []);
+    const configToUse = dynamicSettings || CHILEAN_PAYROLL_CONFIG;
+    console.log(`🧮 Creando calculadora con configuración ${dynamicSettings ? 'DINÁMICA' : 'POR DEFECTO'}`);
+    return new PayrollCalculator(configToUse);
+  }, [dynamicSettings]);
+
+  // Status de configuración para UI
+  const configurationStatus = useMemo(() => {
+    if (settingsLoading) return 'loading';
+    if (dynamicSettings && !settingsError) return 'custom';
+    return 'default';
+  }, [settingsLoading, dynamicSettings, settingsError]);
 
   // Validar datos de entrada
   const validationResult = useMemo(() => {
@@ -143,7 +159,8 @@ export function useLivePayrollCalculation(data: LiveCalculationData): LiveCalcul
     isCalculating,
     errors,
     warnings,
-    isValid: validationResult.isValid
+    isValid: validationResult.isValid,
+    configurationStatus // ✅ NUEVO: Estado de configuración
   };
 }
 

@@ -17,7 +17,9 @@ import {
   Heart,
   Shield,
   PiggyBank,
-  Receipt
+  Receipt,
+  Settings,
+  Database
 } from 'lucide-react';
 
 interface LivePayrollPreviewProps {
@@ -27,6 +29,7 @@ interface LivePayrollPreviewProps {
   warnings: string[];
   isValid: boolean;
   employeeName?: string;
+  configurationStatus?: 'loading' | 'default' | 'custom'; // ✅ NUEVO
 }
 
 export function LivePayrollPreview({
@@ -35,7 +38,8 @@ export function LivePayrollPreview({
   errors,
   warnings,
   isValid,
-  employeeName
+  employeeName,
+  configurationStatus = 'default' // ✅ NUEVO
 }: LivePayrollPreviewProps) {
   const formatCurrency = useChileanCurrency();
   const getContractInfo = useContractTypeInfo();
@@ -111,6 +115,27 @@ export function LivePayrollPreview({
               </div>
             </div>
             <div className="text-right">
+              {/* ✅ NUEVO: Indicador de configuración */}
+              <div className="flex items-center gap-2 mb-2">
+                {configurationStatus === 'loading' && (
+                  <div className="flex items-center gap-1 text-xs px-2 py-1 bg-gray-100 rounded-full">
+                    <RefreshCw className="w-3 h-3 animate-spin" />
+                    <span>Cargando config...</span>
+                  </div>
+                )}
+                {configurationStatus === 'custom' && (
+                  <div className="flex items-center gap-1 text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">
+                    <Settings className="w-3 h-3" />
+                    <span>Config. personalizada</span>
+                  </div>
+                )}
+                {configurationStatus === 'default' && (
+                  <div className="flex items-center gap-1 text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full">
+                    <Database className="w-3 h-3" />
+                    <span>Config. por defecto</span>
+                  </div>
+                )}
+              </div>
               <div className="flex items-center gap-2 mb-1">
                 <Calendar className="w-4 h-4 text-gray-500" />
                 <span className="text-sm font-medium">
