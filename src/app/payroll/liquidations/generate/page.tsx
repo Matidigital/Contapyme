@@ -74,7 +74,7 @@ export default function GenerateLiquidationPage() {
     if (!emp || !emp.employment_contracts?.[0]) return null;
 
     const contract = emp.employment_contracts[0];
-    const payrollConfig = emp.payroll_config?.[0]; // ✅ CORREGIDO: Obtener desde payroll_config
+    const payrollConfig = emp.payroll_config; // ✅ ARREGLADO: Es objeto directo, no array
     
     // ✅ DEBUG: Verificar estructura de datos del empleado
     console.log(`🔍 DEBUG EMPLEADO - Empleado completo:`, emp);
