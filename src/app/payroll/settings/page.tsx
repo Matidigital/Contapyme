@@ -531,30 +531,39 @@ export default function PayrollSettingsPage() {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {settings.health_configs?.map((health, index) => (
-                        <tr key={health.id}>
+                        <tr key={health.id} className="hover:bg-gray-50 transition-colors duration-200">
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="font-medium text-gray-900">{health.name}</div>
-                            <div className="text-sm text-gray-500">{health.code}</div>
+                            <div className="font-semibold text-gray-900">{health.name}</div>
+                            <div className="text-sm text-gray-600 bg-green-50 px-2 py-1 rounded-md inline-block mt-1">{health.code}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={health.plan_percentage}
-                              onChange={(e) => handleHealthUpdate(index, 'plan_percentage', parseFloat(e.target.value))}
-                              className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                            <span className="ml-1 text-sm text-gray-500">%</span>
+                            <div className="flex items-center">
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={health.plan_percentage}
+                                onChange={(e) => handleHealthUpdate(index, 'plan_percentage', parseFloat(e.target.value))}
+                                className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors duration-200"
+                              />
+                              <span className="ml-2 text-sm font-medium text-gray-600">%</span>
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <label className="inline-flex items-center">
+                            <label className="inline-flex items-center cursor-pointer">
                               <input
                                 type="checkbox"
                                 checked={health.active}
                                 onChange={(e) => handleHealthUpdate(index, 'active', e.target.checked)}
-                                className="form-checkbox h-4 w-4 text-blue-600"
+                                className="sr-only"
                               />
-                              <span className="ml-2 text-sm text-gray-700">
+                              <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${
+                                health.active ? 'bg-green-500' : 'bg-gray-300'
+                              }`}>
+                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
+                                  health.active ? 'translate-x-6' : 'translate-x-1'
+                                }`} />
+                              </div>
+                              <span className={`ml-3 text-sm font-medium ${health.active ? 'text-green-700' : 'text-gray-500'}`}>
                                 {health.active ? 'Activa' : 'Inactiva'}
                               </span>
                             </label>
@@ -562,8 +571,11 @@ export default function PayrollSettingsPage() {
                         </tr>
                       )) || (
                         <tr>
-                          <td colSpan={3} className="px-6 py-4 text-center text-gray-500">
-                            No hay instituciones de salud configuradas
+                          <td colSpan={3} className="px-6 py-8 text-center text-gray-500">
+                            <div className="flex flex-col items-center">
+                              <Heart className="h-8 w-8 text-gray-400 mb-2" />
+                              <p className="text-sm font-medium">No hay instituciones de salud configuradas</p>
+                            </div>
                           </td>
                         </tr>
                       )}
@@ -575,42 +587,47 @@ export default function PayrollSettingsPage() {
 
             {/* Info Card */}
             <Card className="border-green-200 bg-green-50">
-              <CardContent className="pt-6">
+              <CardContent className="p-4">
                 <div className="flex items-start">
-                  <AlertCircle className="h-5 w-5 text-green-600 mt-0.5 mr-3" />
+                  <AlertCircle className="h-5 w-5 text-green-600 mt-0.5 mr-3 flex-shrink-0" />
                   <div>
-                    <h4 className="text-sm font-medium text-green-800 mb-1">
+                    <h4 className="text-sm font-semibold text-green-900 mb-2">
                       Sistema de Salud Chileno
                     </h4>
-                    <p className="text-sm text-green-700">
-                      El descuento base es 7% del sueldo imponible. Las ISAPRE pueden cobrar un plan adicional.
+                    <p className="text-sm text-green-800 mb-3">
+                      El descuento base es <strong>7%</strong> del sueldo imponible. Las ISAPRE pueden cobrar un plan adicional.
                       FONASA no cobra adicional (solo el 7% legal).
                     </p>
+                    <div className="text-xs text-green-700 bg-white rounded-md p-2 border border-green-200">
+                      <strong>Importante:</strong> Los porcentajes mostrados incluyen el 7% base más el adicional de cada institución.
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Instituciones Comunes */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Instituciones Más Comunes en Chile</CardTitle>
-                <CardDescription>
+            <Card className="bg-white border border-gray-200">
+              <CardHeader className="border-b border-gray-100">
+                <CardTitle className="text-lg font-semibold text-gray-900">
+                  Instituciones Más Comunes en Chile
+                </CardTitle>
+                <CardDescription className="text-gray-600">
                   Referencia de las principales instituciones de salud
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <h4 className="font-medium text-blue-900 mb-2">FONASA (Público)</h4>
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <h4 className="font-semibold text-blue-900 mb-2">FONASA (Público)</h4>
                     <p className="text-sm text-blue-800">
                       • Solo 7% legal (sin adicional)<br/>
                       • Más del 80% de la población<br/>
                       • Código: FONASA
                     </p>
                   </div>
-                  <div className="bg-purple-50 p-4 rounded-lg">
-                    <h4 className="font-medium text-purple-900 mb-2">ISAPRE (Privadas)</h4>
+                  <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                    <h4 className="font-semibold text-purple-900 mb-2">ISAPRE (Privadas)</h4>
                     <p className="text-sm text-purple-800">
                       • 7% + plan adicional<br/>
                       • Principales: Colmena, Banmédica, Cruz Blanca<br/>
@@ -625,14 +642,16 @@ export default function PayrollSettingsPage() {
 
         {activeTab === 'limits' && settings && (
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Topes Imponibles</CardTitle>
-                <CardDescription>
+            <Card className="bg-white border border-gray-200">
+              <CardHeader className="border-b border-gray-100">
+                <CardTitle className="text-xl font-semibold text-gray-900">
+                  Topes Imponibles
+                </CardTitle>
+                <CardDescription className="text-gray-600">
                   Límites de renta para cálculos previsionales (valores en UF y CLP)
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -693,14 +712,16 @@ export default function PayrollSettingsPage() {
             </Card>
 
             {/* Contributions Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Cotizaciones y Descuentos</CardTitle>
-                <CardDescription>
+            <Card className="bg-white border border-gray-200">
+              <CardHeader className="border-b border-gray-100">
+                <CardTitle className="text-xl font-semibold text-gray-900">
+                  Cotizaciones y Descuentos
+                </CardTitle>
+                <CardDescription className="text-gray-600">
                   Porcentajes de cotizaciones obligatorias
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -756,14 +777,16 @@ export default function PayrollSettingsPage() {
         )}
 
         {activeTab === 'family' && settings && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Asignaciones Familiares</CardTitle>
-              <CardDescription>
+          <Card className="bg-white border border-gray-200">
+            <CardHeader className="border-b border-gray-100">
+              <CardTitle className="text-xl font-semibold text-gray-900">
+                Asignaciones Familiares
+              </CardTitle>
+              <CardDescription className="text-gray-600">
                 Montos por tramo según nivel de ingresos
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -833,14 +856,16 @@ export default function PayrollSettingsPage() {
         )}
 
         {activeTab === 'company' && settings && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Configuración de Empresa</CardTitle>
-              <CardDescription>
+          <Card className="bg-white border border-gray-200">
+            <CardHeader className="border-b border-gray-100">
+              <CardTitle className="text-xl font-semibold text-gray-900">
+                Configuración de Empresa
+              </CardTitle>
+              <CardDescription className="text-gray-600">
                 Mutual de Seguridad y Caja de Compensación
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
