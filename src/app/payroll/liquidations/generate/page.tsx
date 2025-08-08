@@ -133,6 +133,11 @@ export default function GenerateLiquidationPage() {
       const response = await fetch(`/api/payroll/employees?company_id=${COMPANY_ID}`);
       const data = await response.json();
 
+      // ✅ DEBUG: Verificar respuesta completa de la API
+      console.log('🔍 DEBUG API - Respuesta completa:', data);
+      console.log('🔍 DEBUG API - Primer empleado:', data.data?.[0]);
+      console.log('🔍 DEBUG API - payroll_config del primer empleado:', data.data?.[0]?.payroll_config);
+
       if (response.ok && data.success) {
         setEmployees(data.data || []);
       } else {
