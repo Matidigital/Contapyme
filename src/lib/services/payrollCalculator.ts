@@ -335,12 +335,23 @@ export class PayrollCalculator {
     healthCode: string,
     contractType: string
   ) {
+    // ✅ DEBUG: Verificar qué AFP llega y qué configuración encuentra
+    console.log(`🔍 DEBUG AFP - Código recibido: "${afpCode}"`);
+    console.log(`🔍 DEBUG AFP - Configuraciones disponibles:`, this.settings.afp_configs?.map(afp => ({
+      code: afp.code,
+      commission: afp.commission_percentage
+    })));
+    
     // AFP - 10% obligatorio
     const afpAmount = Math.round(taxableIncome * (CHILE_TAX_VALUES.AFP_PERCENTAGE / 100));
     
     // Comisión AFP variable según administradora
     const afpConfig = this.settings.afp_configs.find(afp => afp.code === afpCode);
-    const afpCommissionPercentage = afpConfig?.commission_percentage || 0.77; // Default Modelo 2025
+    console.log(`🔍 DEBUG AFP - Configuración encontrada:`, afpConfig);
+    
+    const afpCommissionPercentage = afpConfig?.commission_percentage || 0.58; // ✅ CAMBIÉ DEFAULT a 0.58
+    console.log(`🔍 DEBUG AFP - Comisión final: ${afpCommissionPercentage}%`);
+    
     const afpCommissionAmount = Math.round(taxableIncome * (afpCommissionPercentage / 100));
     
     // SIS - Seguro de Invalidez y Sobrevivencia
