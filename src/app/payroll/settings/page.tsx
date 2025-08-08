@@ -54,9 +54,177 @@ export default function PayrollSettingsPage() {
   const [activeTab, setActiveTab] = useState('afp');
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [savingProgress, setSavingProgress] = useState(0);
 
   // ✅ Usar company ID dinámico desde contexto
   const companyId = useCompanyId();
+
+  // 🛡️ MANEJO DE ERRORES ROBUSTO
+  const handleError = (error: any, context: string) => {
+    console.error(`❌ Error en ${context}:`, error);
+    
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      setError('❌ Error de conectividad - Verifique su conexión a internet');
+    } else if (error.name === 'SyntaxError') {
+      setError('❌ Error de respuesta del servidor - Intente nuevamente');
+    } else if (error.message?.includes('timeout')) {
+      setError('❌ Tiempo de espera agotado - El servidor tardó demasiado en responder');
+    } else if (error.status === 400) {
+      setError('❌ Datos inválidos - Revise la información ingresada');
+    } else if (error.status === 401) {
+      setError('❌ Sesión expirada - Por favor inicie sesión nuevamente');
+    } else if (error.status === 403) {
+      setError('❌ Sin permisos - No tiene autorización para realizar esta acción');
+    } else if (error.status === 404) {
+      setError('❌ Configuración no encontrada - Intente actualizar desde Previred');
+    } else if (error.status === 500) {
+      setError('❌ Error interno del servidor - Contacte al administrador');
+    } else if (error.message) {
+      setError(`❌ ${error.message}`);
+    } else {
+      setError(`❌ Error inesperado en ${context} - Intente nuevamente`);
+    }
+  };
+
+  const withErrorHandling = async (operation: () => Promise<void>, context: string) => {
+    try {
+      await operation();
+    } catch (error) {
+      handleError(error, context);
+    }
+  };
+
+  // 🎯 FUNCIONES PARA MEJORAR UX CON LOADING STATES
+  const simulateProgress = (setProgress: (progress: number) => void, duration: number = 2000) => {
+    setProgress(0);
+    const steps = 20;
+    const stepDuration = duration / steps;
+    
+    let currentStep = 0;
+    const interval = setInterval(() => {
+      currentStep++;
+      const progress = Math.min((currentStep / steps) * 100, 90);
+      setProgress(progress);
+      
+      if (currentStep >= steps) {
+        clearInterval(interval);
+      }
+    }, stepDuration);
+    
+    return () => {
+      clearInterval(interval);
+      setProgress(100);
+      setTimeout(() => setProgress(0), 500);
+    };
+  };
+
+  // 🔍 FUNCIONES DE VALIDACIÓN COMPLETAS
+  const validateAFPConfig = (afp: AFPConfig, index: number): string[] => {
+    const errors: string[] = [];
+    
+    if (!afp.code || afp.code.trim() === '') {
+      errors.push(`AFP ${index + 1}: Código es obligatorio`);
+    }
+    
+    if (afp.commission_percentage < 0 || afp.commission_percentage > 5) {
+      errors.push(`AFP ${index + 1}: Comisión debe estar entre 0% y 5%`);
+    }
+    
+    if (afp.sis_percentage < 0 || afp.sis_percentage > 3) {
+      errors.push(`AFP ${index + 1}: SIS debe estar entre 0% y 3%`);
+    }
+    
+    return errors;
+  };
+
+  const validateHealthConfig = (health: HealthConfig, index: number): string[] => {
+    const errors: string[] = [];
+    
+    if (!health.institution_name || health.institution_name.trim() === '') {
+      errors.push(`Salud ${index + 1}: Nombre de institución es obligatorio`);
+    }
+    
+    if (health.percentage < 7 || health.percentage > 15) {
+      errors.push(`Salud ${index + 1}: Porcentaje debe estar entre 7% y 15%`);
+    }
+    
+    return errors;
+  };
+
+  const validateIncomeLimit = (field: string, value: number): string | null => {
+    switch (field) {
+      case 'uf_limit':
+        if (value <= 0 || value > 200) {
+          return 'Tope UF debe estar entre 0 y 200';
+        }
+        break;
+      case 'minimum_wage':
+        if (value < 300000 || value > 1000000) {
+          return 'Sueldo mínimo debe estar entre $300.000 y $1.000.000';
+        }
+        break;
+      case 'family_allowance_limit':
+        if (value < 500000 || value > 2000000) {
+          return 'Límite asignación familiar debe estar entre $500.000 y $2.000.000';
+        }
+        break;
+    }
+    return null;
+  };
+
+  const validateFamilyAllowance = (field: string, value: number): string | null => {
+    if (value < 0 || value > 50000) {
+      return `${field}: Monto debe estar entre $0 y $50.000`;
+    }
+    return null;
+  };
+
+  const validateAllSettings = (): boolean => {
+    if (!settings) return false;
+    
+    const errors: {[key: string]: string} = {};
+    
+    // Validar AFP configs
+    settings.afp_configs.forEach((afp, index) => {
+      const afpErrors = validateAFPConfig(afp, index);
+      afpErrors.forEach(error => {
+        errors[`afp_${index}`] = error;
+      });
+    });
+    
+    // Validar Health configs
+    settings.health_configs.forEach((health, index) => {
+      const healthErrors = validateHealthConfig(health, index);
+      healthErrors.forEach(error => {
+        errors[`health_${index}`] = error;
+      });
+    });
+    
+    // Validar Income limits
+    const ufError = validateIncomeLimit('uf_limit', settings.income_limits?.uf_limit || 0);
+    if (ufError) errors.uf_limit = ufError;
+    
+    const wageError = validateIncomeLimit('minimum_wage', settings.income_limits?.minimum_wage || 0);
+    if (wageError) errors.minimum_wage = wageError;
+    
+    const familyLimitError = validateIncomeLimit('family_allowance_limit', settings.income_limits?.family_allowance_limit || 0);
+    if (familyLimitError) errors.family_allowance_limit = familyLimitError;
+    
+    // Validar Family allowances
+    const tramoAError = validateFamilyAllowance('Tramo A', settings.family_allowances?.tramo_a || 0);
+    if (tramoAError) errors.tramo_a = tramoAError;
+    
+    const tramoBError = validateFamilyAllowance('Tramo B', settings.family_allowances?.tramo_b || 0);
+    if (tramoBError) errors.tramo_b = tramoBError;
+    
+    const tramoCError = validateFamilyAllowance('Tramo C', settings.family_allowances?.tramo_c || 0);
+    if (tramoCError) errors.tramo_c = tramoCError;
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   // 🔧 OPTIMIZACIÓN: Referencias para timeouts seguros
   const timeouts = useRef({
@@ -85,57 +253,98 @@ export default function PayrollSettingsPage() {
   // Ya no se usa debounce automático, solo actualización de estado local
 
   const fetchSettings = async () => {
-    try {
+    await withErrorHandling(async () => {
       setLoading(true);
-      const response = await fetch(`/api/payroll/settings?company_id=${companyId}`);
-      const data = await response.json();
+      setError(null);
+      
+      // Iniciar simulación de progreso
+      const finishProgress = simulateProgress(setLoadingProgress, 3000);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos timeout
+      
+      try {
+        const response = await fetch(`/api/payroll/settings?company_id=${companyId}`, {
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw { status: response.status, message: errorData.error || `Error HTTP ${response.status}` };
+        }
 
-      if (response.ok && data.success) {
-        setSettings(data.data);
-      } else {
-        setError(data.error || 'Error al cargar configuración');
+        const data = await response.json();
+        
+        if (data.success) {
+          setSettings(data.data);
+          finishProgress(); // Completar progreso
+        } else {
+          throw new Error(data.error || 'Error al cargar configuración');
+        }
+      } catch (fetchError: any) {
+        finishProgress(); // Completar progreso incluso en error
+        if (fetchError.name === 'AbortError') {
+          throw new Error('timeout');
+        }
+        throw fetchError;
+      } finally {
+        clearTimeout(timeoutId);
+        setLoading(false);
       }
-    } catch (err) {
-      setError('Error de conexión');
-      console.error('Error fetching settings:', err);
-    } finally {
-      setLoading(false);
-    }
+    }, 'carga de configuración');
   };
 
   const updateSettings = async (updatedSettings: Partial<PayrollSettings>) => {
-    try {
+    await withErrorHandling(async () => {
       setSaving(true);
       setError(null);
       setSuccessMessage(null);
+      setValidationErrors({});
 
-      const response = await fetch(`/api/payroll/settings?company_id=${companyId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updatedSettings),
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 segundos para operaciones de escritura
 
-      const data = await response.json();
+      try {
+        const response = await fetch(`/api/payroll/settings?company_id=${companyId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updatedSettings),
+          signal: controller.signal
+        });
 
-      if (response.ok && data.success) {
-        setSettings(data.data); // ✅ CORREGIDO: Usar data completa del servidor
-        setSuccessMessage(data.message || 'Configuración actualizada exitosamente');
-        
-        setTimeout(() => setSuccessMessage(null), 3000);
-      } else {
-        setError(data.error || 'Error al actualizar configuración');
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw { status: response.status, message: errorData.error || `Error HTTP ${response.status}` };
+        }
+
+        const data = await response.json();
+
+        if (data.success) {
+          setSettings(data.data);
+          setSuccessMessage(data.message || '✅ Configuración actualizada exitosamente');
+          setTimeout(() => setSuccessMessage(null), 3000);
+        } else {
+          throw new Error(data.error || 'Error al actualizar configuración');
+        }
+      } catch (fetchError: any) {
+        if (fetchError.name === 'AbortError') {
+          throw new Error('timeout');
+        }
+        throw fetchError;
+      } finally {
+        clearTimeout(timeoutId);
+        setSaving(false);
       }
-    } catch (err) {
-      setError('Error de conexión');
-      console.error('Error updating settings:', err);
-    } finally {
-      setSaving(false);
-    }
+    }, 'actualización de configuración');
   };
 
-  // 🔧 OPTIMIZACIÓN: Manejo AFP - Solo actualización local
+  // 🔧 OPTIMIZACIÓN: Manejo AFP - Solo actualización local con validación en tiempo real
   const handleAFPUpdate = useCallback((index: number, field: keyof AFPConfig, value: any) => {
     if (!settings) return;
     
@@ -145,7 +354,19 @@ export default function PayrollSettingsPage() {
     // Solo actualizar estado local - guardado manual
     const updatedSettings = { ...settings, afp_configs: updatedAFPs };
     setSettings(updatedSettings);
-  }, [settings]);
+    
+    // Validación en tiempo real
+    const errors = validateAFPConfig(updatedAFPs[index], index);
+    const newValidationErrors = { ...validationErrors };
+    
+    if (errors.length > 0) {
+      newValidationErrors[`afp_${index}_${field}`] = errors[0];
+    } else {
+      delete newValidationErrors[`afp_${index}_${field}`];
+    }
+    
+    setValidationErrors(newValidationErrors);
+  }, [settings, validationErrors]);
 
   // 🔧 OPTIMIZACIÓN: Manejo Health - Solo actualización local
   const handleHealthUpdate = useCallback((index: number, field: keyof HealthConfig, value: any) => {
@@ -159,7 +380,7 @@ export default function PayrollSettingsPage() {
     setSettings(updatedSettings);
   }, [settings]);
 
-  // 🔧 OPTIMIZACIÓN: Manejo Family Allowance - Solo actualización local
+  // 🔧 OPTIMIZACIÓN: Manejo Family Allowance - Solo actualización local con validación
   const handleFamilyAllowanceUpdate = useCallback((field: string, value: number) => {
     if (!settings) return;
     
@@ -168,7 +389,19 @@ export default function PayrollSettingsPage() {
     // Solo actualizar estado local - guardado manual
     const updatedSettings = { ...settings, family_allowances: updatedAllowances };
     setSettings(updatedSettings);
-  }, [settings]);
+    
+    // Validación en tiempo real
+    const error = validateFamilyAllowance(field, value);
+    const newValidationErrors = { ...validationErrors };
+    
+    if (error) {
+      newValidationErrors[field] = error;
+    } else {
+      delete newValidationErrors[field];
+    }
+    
+    setValidationErrors(newValidationErrors);
+  }, [settings, validationErrors]);
 
   // 🔧 OPTIMIZACIÓN: Manejo Company Info - Solo actualización local
   const handleCompanyInfoUpdate = useCallback((field: string, value: string) => {
@@ -181,7 +414,7 @@ export default function PayrollSettingsPage() {
     setSettings(updatedSettings);
   }, [settings]);
 
-  // 🔧 OPTIMIZACIÓN: Manejo Income Limits - Solo actualización local
+  // 🔧 OPTIMIZACIÓN: Manejo Income Limits - Solo actualización local con validación
   const handleIncomeLimit = useCallback((field: string, value: number) => {
     if (!settings) return;
     
@@ -190,7 +423,19 @@ export default function PayrollSettingsPage() {
     // Solo actualizar estado local - guardado manual
     const updatedSettings = { ...settings, income_limits: updatedLimits };
     setSettings(updatedSettings);
-  }, [settings]);
+    
+    // Validación en tiempo real
+    const error = validateIncomeLimit(field, value);
+    const newValidationErrors = { ...validationErrors };
+    
+    if (error) {
+      newValidationErrors[field] = error;
+    } else {
+      delete newValidationErrors[field];
+    }
+    
+    setValidationErrors(newValidationErrors);
+  }, [settings, validationErrors]);
 
   // ✅ NUEVO: Función para actualizar desde Previred
   const handlePreviredUpdate = async () => {
@@ -220,14 +465,22 @@ export default function PayrollSettingsPage() {
     }
   };
 
-  // ✅ NUEVO: Función para guardar toda la configuración
+  // ✅ NUEVO: Función para guardar toda la configuración con validación completa
   const handleSaveAll = async () => {
     if (!settings) return;
+    
+    // 🔍 VALIDACIÓN COMPLETA ANTES DE GUARDAR
+    const isValid = validateAllSettings();
+    if (!isValid) {
+      setError('❌ Por favor corrija los errores de validación antes de guardar');
+      return;
+    }
     
     try {
       setSaving(true);
       setError(null);
       setSuccessMessage(null);
+      setValidationErrors({});
 
       // Enviar toda la configuración actual
       const response = await fetch(`/api/payroll/settings?company_id=${companyId}`, {
@@ -242,8 +495,8 @@ export default function PayrollSettingsPage() {
 
       if (response.ok && data.success) {
         setSettings(data.data);
-        setSuccessMessage('✅ Toda la configuración guardada exitosamente');
-        setTimeout(() => setSuccessMessage(null), 3000);
+        setSuccessMessage('✅ Toda la configuración guardada exitosamente - Validación completa aprobada');
+        setTimeout(() => setSuccessMessage(null), 4000);
       } else {
         setError(data.error || 'Error al guardar configuración completa');
       }
@@ -265,9 +518,23 @@ export default function PayrollSettingsPage() {
         />
         <div className="max-w-6xl mx-auto py-6 sm:px-6 lg:px-8">
           <div className="flex items-center justify-center h-64">
-            <div className="text-center">
+            <div className="text-center w-full max-w-md">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600">Cargando configuración...</p>
+              <p className="mt-4 text-gray-600 mb-4">Cargando configuración previsional...</p>
+              
+              {/* Barra de progreso */}
+              <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
+                  style={{ width: `${loadingProgress}%` }}
+                ></div>
+              </div>
+              <p className="text-xs text-gray-500">
+                {loadingProgress < 30 && "Conectando con servidor..."}
+                {loadingProgress >= 30 && loadingProgress < 70 && "Obteniendo configuración AFP..."}
+                {loadingProgress >= 70 && loadingProgress < 90 && "Cargando datos de salud..."}
+                {loadingProgress >= 90 && "Finalizando..."}
+              </p>
             </div>
           </div>
         </div>
@@ -290,18 +557,33 @@ export default function PayrollSettingsPage() {
               disabled={saving}
               className="bg-white border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors duration-200"
             >
-              <Globe className="h-4 w-4 mr-2" />
-              {saving ? 'Actualizando...' : 'Actualizar desde Previred'}
+              {saving ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+              ) : (
+                <Globe className="h-4 w-4 mr-2" />
+              )}
+              {saving ? 'Actualizando desde Previred...' : 'Actualizar desde Previred'}
             </Button>
             <Button 
               variant="primary" 
               size="md"
               onClick={handleSaveAll}
-              disabled={saving || !settings}
-              className="bg-blue-600 hover:bg-blue-700 text-white transition-colors duration-200"
+              disabled={saving || !settings || Object.keys(validationErrors).length > 0}
+              className={`transition-colors duration-200 ${
+                Object.keys(validationErrors).length > 0 
+                  ? 'bg-gray-400 cursor-not-allowed' 
+                  : 'bg-blue-600 hover:bg-blue-700'
+              } text-white`}
             >
-              <Save className="h-4 w-4 mr-2" />
-              {saving ? 'Guardando...' : 'Guardar Todo'}
+              {saving ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              {saving ? 'Guardando configuración...' : 'Guardar Todo'}
+              {Object.keys(validationErrors).length > 0 && (
+                <span className="ml-2 text-xs">({Object.keys(validationErrors).length} errores)</span>
+              )}
             </Button>
           </div>
         }
@@ -327,6 +609,27 @@ export default function PayrollSettingsPage() {
                 <CheckCircle className="h-5 w-5 mr-3 text-green-600" />
                 <span className="font-medium">{successMessage}</span>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {Object.keys(validationErrors).length > 0 && (
+          <Card className="mb-6 border-red-200 bg-red-50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-red-800 flex items-center">
+                <AlertCircle className="h-5 w-5 mr-2 text-red-600" />
+                Errores de Validación
+              </CardTitle>
+              <CardDescription className="text-red-700">
+                Por favor corrija los siguientes errores antes de guardar:
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <ul className="list-disc pl-5 space-y-1">
+                {Object.entries(validationErrors).map(([key, error]) => (
+                  <li key={key} className="text-red-700 text-sm">{error}</li>
+                ))}
+              </ul>
             </CardContent>
           </Card>
         )}
