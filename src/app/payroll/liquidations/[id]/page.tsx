@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import jsPDF from 'jspdf';
 import { Header } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { 
@@ -77,6 +78,7 @@ export default function LiquidationDetailPage() {
   
   const [liquidation, setLiquidation] = useState<LiquidationDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [downloadingPDF, setDownloadingPDF] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const COMPANY_ID = '8033ee69-b420-4d91-ba0e-482f46cd6fce';
@@ -145,11 +147,144 @@ export default function LiquidationDetailPage() {
   };
 
   const handleDownloadPDF = async () => {
+    if (!liquidation) return;
+    
     try {
-      // TODO: Implementar descarga PDF
-      console.log('Descargando PDF...');
+      setDownloadingPDF(true);
+      
+      console.log('🔍 Iniciando descarga PDF para liquidación:', liquidationId);
+      
+      // Llamar a la API de exportación con la liquidación existente
+      const response = await fetch(`/api/payroll/liquidations/export?company_id=${COMPANY_ID}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          liquidation_id: liquidationId
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Crear un blob con el contenido HTML y abrir en nueva ventana para imprimir/descargar
+        const htmlContent = data.data.html;
+        const newWindow = window.open('', '_blank');
+        
+        if (newWindow) {
+          newWindow.document.write(htmlContent);
+          newWindow.document.close();
+          
+          // Esperar a que se cargue el contenido y luego mostrar diálogo de impresión
+          setTimeout(() => {
+            newWindow.print();
+          }, 1000);
+          
+          console.log('✅ PDF generado exitosamente');
+        } else {
+          setError('Error: No se pudo abrir ventana para el PDF');
+        }
+      } else {
+        setError(data.error || 'Error al generar PDF');
+        console.error('❌ Error en API export:', data.error);
+      }
     } catch (error) {
-      console.error('Error downloading PDF:', error);
+      setError('Error de conexión al generar PDF');
+      console.error('❌ Error downloading PDF:', error);
+    } finally {
+      setDownloadingPDF(false);
+    }
+  };
+
+  const handleDownloadDirectPDF = () => {
+    if (!liquidation) return;
+    
+    try {
+      setDownloadingPDF(true);
+      
+      console.log('🔍 Generando PDF directo para liquidación:', liquidationId);
+      
+      // Crear PDF usando jsPDF
+      const pdf = new jsPDF();
+      
+      // Configuración
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const margin = 20;
+      const lineHeight = 7;
+      let yPosition = margin;
+      
+      // Helper para agregar texto
+      const addText = (text: string, x = margin, fontSize = 12, style = 'normal') => {
+        pdf.setFontSize(fontSize);
+        pdf.setFont('helvetica', style);
+        pdf.text(text, x, yPosition);
+        yPosition += lineHeight;
+      };
+      
+      // Header
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('LIQUIDACIÓN DE SUELDO', pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += lineHeight * 2;
+      
+      // Período
+      pdf.setFontSize(14);
+      pdf.text(formatPeriod(liquidation.period_year, liquidation.period_month), pageWidth / 2, yPosition, { align: 'center' });
+      yPosition += lineHeight * 2;
+      
+      // Datos del empleado
+      addText('DATOS DEL TRABAJADOR', margin, 14, 'bold');
+      addText(`Nombre: ${liquidation.employee.first_name} ${liquidation.employee.last_name}`);
+      addText(`RUT: ${liquidation.employee.rut}`);
+      addText(`Días Trabajados: ${liquidation.days_worked}`);
+      yPosition += lineHeight;
+      
+      // Haberes
+      addText('HABERES', margin, 14, 'bold');
+      addText(`Sueldo Base: ${formatCurrency(liquidation.base_salary)}`);
+      if (liquidation.overtime_amount > 0) addText(`Horas Extras: ${formatCurrency(liquidation.overtime_amount)}`);
+      if (liquidation.bonuses > 0) addText(`Bonos: ${formatCurrency(liquidation.bonuses)}`);
+      if (liquidation.commissions > 0) addText(`Comisiones: ${formatCurrency(liquidation.commissions)}`);
+      if (liquidation.gratification > 0) addText(`Gratificación: ${formatCurrency(liquidation.gratification)}`);
+      if (liquidation.food_allowance > 0) addText(`Colación: ${formatCurrency(liquidation.food_allowance)}`);
+      if (liquidation.transport_allowance > 0) addText(`Movilización: ${formatCurrency(liquidation.transport_allowance)}`);
+      if (liquidation.family_allowance > 0) addText(`Asignación Familiar: ${formatCurrency(liquidation.family_allowance)}`);
+      
+      addText(`TOTAL HABERES: ${formatCurrency(liquidation.total_gross_income)}`, margin, 12, 'bold');
+      yPosition += lineHeight;
+      
+      // Descuentos
+      addText('DESCUENTOS', margin, 14, 'bold');
+      addText(`AFP (${liquidation.afp_percentage}%): ${formatCurrency(liquidation.afp_amount)}`);
+      addText(`Comisión AFP (${liquidation.afp_commission_percentage}%): ${formatCurrency(liquidation.afp_commission_amount)}`);
+      addText(`Salud (${liquidation.health_percentage}%): ${formatCurrency(liquidation.health_amount)}`);
+      if (liquidation.unemployment_amount > 0) addText(`Cesantía (${liquidation.unemployment_percentage}%): ${formatCurrency(liquidation.unemployment_amount)}`);
+      if (liquidation.income_tax_amount > 0) addText(`Impuesto Único: ${formatCurrency(liquidation.income_tax_amount)}`);
+      if (liquidation.loan_deductions > 0) addText(`Préstamos: ${formatCurrency(liquidation.loan_deductions)}`);
+      if (liquidation.advance_payments > 0) addText(`Anticipos: ${formatCurrency(liquidation.advance_payments)}`);
+      if (liquidation.apv_amount > 0) addText(`APV: ${formatCurrency(liquidation.apv_amount)}`);
+      if (liquidation.other_deductions > 0) addText(`Otros: ${formatCurrency(liquidation.other_deductions)}`);
+      
+      addText(`TOTAL DESCUENTOS: ${formatCurrency(liquidation.total_deductions)}`, margin, 12, 'bold');
+      yPosition += lineHeight * 2;
+      
+      // Líquido a pagar
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`LÍQUIDO A PAGAR: ${formatCurrency(liquidation.net_salary)}`, pageWidth / 2, yPosition, { align: 'center' });
+      
+      // Descargar
+      const fileName = `liquidacion_${liquidation.employee.rut}_${liquidation.period_year}_${String(liquidation.period_month).padStart(2, '0')}.pdf`;
+      pdf.save(fileName);
+      
+      console.log('✅ PDF directo generado exitosamente:', fileName);
+      
+    } catch (error) {
+      setError('Error al generar PDF directo');
+      console.error('❌ Error generating direct PDF:', error);
+    } finally {
+      setDownloadingPDF(false);
     }
   };
 
@@ -232,9 +367,14 @@ export default function LiquidationDetailPage() {
                 <Printer className="h-4 w-4 mr-2" />
                 Imprimir
               </Button>
-              <Button variant="primary" size="sm" onClick={handleDownloadPDF}>
+              <Button 
+                variant="primary" 
+                size="sm" 
+                onClick={handleDownloadDirectPDF}
+                disabled={downloadingPDF}
+              >
                 <Download className="h-4 w-4 mr-2" />
-                Descargar PDF
+                {downloadingPDF ? 'Generando PDF...' : 'Descargar PDF'}
               </Button>
             </div>
           }
