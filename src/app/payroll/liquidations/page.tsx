@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Header } from '@/components/layout';
+import { PayrollHeader } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { Calculator, Plus, FileText, Users, TrendingUp, Calendar, Filter, Search, Download } from 'lucide-react';
 
@@ -138,7 +138,7 @@ export default function LiquidationsPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header 
+        <PayrollHeader 
           title="Liquidaciones de Sueldo"
           subtitle="Cargando liquidaciones..."
           showBackButton
@@ -157,7 +157,7 @@ export default function LiquidationsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header 
+      <PayrollHeader 
         title="Liquidaciones de Sueldo"
         subtitle="Gestión y seguimiento de liquidaciones"
         showBackButton

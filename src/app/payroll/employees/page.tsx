@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Header } from '@/components/layout';
+import { PayrollHeader } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { Plus, Users, Search, Filter } from 'lucide-react';
 
@@ -62,7 +62,7 @@ export default function EmployeesPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header 
+        <PayrollHeader 
           title="Empleados"
           subtitle="Gestión de empleados y contratos"
           showBackButton
@@ -81,7 +81,7 @@ export default function EmployeesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header 
+      <PayrollHeader 
         title="Empleados"
         subtitle="Gestión de empleados y contratos"
         showBackButton

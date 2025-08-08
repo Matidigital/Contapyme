@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Header } from '@/components/layout';
+import { PayrollHeader } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { Settings, Building2, Heart, Users, Calculator, Globe, AlertCircle, CheckCircle, Save } from 'lucide-react';
 import { useCompanyId } from '@/contexts/CompanyContext';
@@ -258,7 +258,7 @@ export default function PayrollSettingsPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header 
+        <PayrollHeader 
           title="Configuración Previsional"
           subtitle="Cargando configuración..."
           showBackButton
@@ -277,7 +277,7 @@ export default function PayrollSettingsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header 
+      <PayrollHeader 
         title="Configuración Previsional"
         subtitle="Gestiona AFP, Salud, Topes y Descuentos"
         showBackButton
