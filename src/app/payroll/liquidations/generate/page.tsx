@@ -76,6 +76,11 @@ export default function GenerateLiquidationPage() {
     const contract = emp.employment_contracts[0];
     const payrollConfig = emp.payroll_config?.[0]; // ✅ CORREGIDO: Obtener desde payroll_config
     
+    // ✅ DEBUG: Verificar estructura de datos del empleado
+    console.log(`🔍 DEBUG EMPLEADO - Empleado completo:`, emp);
+    console.log(`🔍 DEBUG EMPLEADO - payroll_config encontrado:`, payrollConfig);
+    console.log(`🔍 DEBUG EMPLEADO - afp_code será:`, payrollConfig?.afp_code || 'MODELO');
+    
     return {
       id: emp.id,
       rut: emp.rut,
