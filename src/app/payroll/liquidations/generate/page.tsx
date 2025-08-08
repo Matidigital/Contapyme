@@ -244,8 +244,30 @@ export default function GenerateLiquidationPage() {
   };
 
 
+  // Función para limpiar caracteres especiales malformados
+  const cleanText = (text: string) => {
+    if (!text) return '';
+    return text
+      .replace(/Ã¡/g, 'á')
+      .replace(/Ã©/g, 'é')
+      .replace(/Ã­/g, 'í')
+      .replace(/Ã³/g, 'ó')
+      .replace(/Ãº/g, 'ú')
+      .replace(/Ã±/g, 'ñ')
+      .replace(/Ã/g, 'Á')
+      .replace(/Ã/g, 'É')
+      .replace(/Ã/g, 'Í')
+      .replace(/Ã/g, 'Ó')
+      .replace(/Ã/g, 'Ú')
+      .replace(/Ã/g, 'Ñ')
+      .replace(/�/g, 'é')
+      .trim();
+  };
+
   const getEmployeeDisplayName = (employee: Employee) => {
-    return `${employee.first_name} ${employee.last_name} (${employee.rut})`;
+    const firstName = cleanText(employee.first_name);
+    const lastName = cleanText(employee.last_name);
+    return `${firstName} ${lastName} (${employee.rut})`;
   };
 
   if (loading) {
@@ -272,15 +294,35 @@ export default function GenerateLiquidationPage() {
         title="Generar Liquidación"
         subtitle="Creación de liquidaciones con previsualización en tiempo real"
         showBackButton={true}
-        actions={
-          <div className="flex items-center space-x-3">
-            <div className="hidden md:flex items-center space-x-2 px-3 py-1 bg-gradient-to-r from-green-100 to-blue-100 rounded-full text-xs font-medium text-green-800">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-              <span>Cálculo en Tiempo Real • Normativa 2025</span>
+      />
+
+      {/* Hero Section modernizado */}
+      <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            <div className="flex-1">
+              <h1 className="text-2xl sm:text-3xl font-bold mb-2">
+                Nueva Liquidación
+              </h1>
+              <p className="text-blue-100 text-sm sm:text-base mb-6">
+                Genera liquidaciones con cálculo automático en tiempo real según normativa chilena 2025
+              </p>
+              
+              {/* Indicador de cálculo en tiempo real */}
+              <div className="flex flex-wrap gap-3">
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/20 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                  <span className="text-xs font-medium">Cálculo en Tiempo Real</span>
+                </div>
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2 border border-white/20 flex items-center gap-2">
+                  <Calculator className="w-3 h-3" />
+                  <span className="text-xs font-medium">Normativa 2025</span>
+                </div>
+              </div>
             </div>
           </div>
-        }
-      />
+        </div>
+      </div>
 
       <div className="max-w-7xl mx-auto py-8 px-4">
         {error && (
@@ -297,36 +339,44 @@ export default function GenerateLiquidationPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Panel izquierdo - Formulario */}
           <div className="space-y-6">
-            <Card className="bg-white/90 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/80 transition-all duration-200">
+              <div className="mb-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
                   <Users className="w-5 h-5 text-blue-600" />
                   Datos del Empleado
-                </CardTitle>
-                <CardDescription>
+                </h3>
+                <p className="text-gray-600 text-sm">
                   Seleccione el empleado y configure los parámetros de la liquidación
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
+                </p>
+              </div>
+              
+              <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Empleado *
                   </label>
-                  <select
-                    value={selectedEmployeeId}
-                    onChange={(e) => setSelectedEmployeeId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">Seleccionar empleado...</option>
-                    {employees.map((employee) => (
-                      <option key={employee.id} value={employee.id}>
-                        {getEmployeeDisplayName(employee)}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={selectedEmployeeId}
+                      onChange={(e) => setSelectedEmployeeId(e.target.value)}
+                      className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200 appearance-none"
+                    >
+                      <option value="">Seleccionar empleado...</option>
+                      {employees.map((employee) => (
+                        <option key={employee.id} value={employee.id}>
+                          {getEmployeeDisplayName(employee)}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Año
@@ -338,25 +388,32 @@ export default function GenerateLiquidationPage() {
                       onChange={handleInputChange}
                       min="2020"
                       max="2030"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Mes
                     </label>
-                    <select
-                      name="period_month"
-                      value={formData.period_month}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    >
-                      {[...Array(12)].map((_, i) => (
-                        <option key={i + 1} value={i + 1}>
-                          {new Date(0, i).toLocaleDateString('es-CL', { month: 'long' })}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative">
+                      <select
+                        name="period_month"
+                        value={formData.period_month}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200 appearance-none"
+                      >
+                        {[...Array(12)].map((_, i) => (
+                          <option key={i + 1} value={i + 1}>
+                            {new Date(0, i).toLocaleDateString('es-CL', { month: 'long' })}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -371,188 +428,218 @@ export default function GenerateLiquidationPage() {
                     onChange={handleInputChange}
                     min="1"
                     max="31"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                   />
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Haberes adicionales */}
-            <Card className="bg-white/90 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/80 transition-all duration-200">
+              <div className="mb-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-green-600" />
                   Haberes Adicionales
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Bonos
-                    </label>
-                    <input
-                      type="number"
-                      name="bonuses"
-                      value={formData.bonuses}
-                      onChange={handleInputChange}
-                      min="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Comisiones
-                    </label>
-                    <input
-                      type="number"
-                      name="commissions"
-                      value={formData.commissions}
-                      onChange={handleInputChange}
-                      min="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Horas Extras ($)
-                    </label>
-                    <input
-                      type="number"
-                      name="overtime_amount"
-                      value={formData.overtime_amount}
-                      onChange={handleInputChange}
-                      min="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Gratificación
-                    </label>
-                    <input
-                      type="number"
-                      name="gratification"
-                      value={formData.gratification}
-                      onChange={handleInputChange}
-                      min="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Colación
-                    </label>
-                    <input
-                      type="number"
-                      name="food_allowance"
-                      value={formData.food_allowance}
-                      onChange={handleInputChange}
-                      min="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Movilización
-                    </label>
-                    <input
-                      type="number"
-                      name="transport_allowance"
-                      value={formData.transport_allowance}
-                      onChange={handleInputChange}
-                      min="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                    />
-                  </div>
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  Configure bonos, comisiones y otros ingresos adicionales
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Bonos
+                  </label>
+                  <input
+                    type="number"
+                    name="bonuses"
+                    value={formData.bonuses}
+                    onChange={handleInputChange}
+                    min="0"
+                    placeholder="0"
+                    className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500 transition-all duration-200"
+                  />
                 </div>
-              </CardContent>
-            </Card>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Comisiones
+                  </label>
+                  <input
+                    type="number"
+                    name="commissions"
+                    value={formData.commissions}
+                    onChange={handleInputChange}
+                    min="0"
+                    placeholder="0"
+                    className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500 transition-all duration-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Horas Extras ($)
+                  </label>
+                  <input
+                    type="number"
+                    name="overtime_amount"
+                    value={formData.overtime_amount}
+                    onChange={handleInputChange}
+                    min="0"
+                    placeholder="0"
+                    className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500 transition-all duration-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Gratificación
+                  </label>
+                  <input
+                    type="number"
+                    name="gratification"
+                    value={formData.gratification}
+                    onChange={handleInputChange}
+                    min="0"
+                    placeholder="0"
+                    className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500 transition-all duration-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Colación
+                  </label>
+                  <input
+                    type="number"
+                    name="food_allowance"
+                    value={formData.food_allowance}
+                    onChange={handleInputChange}
+                    min="0"
+                    placeholder="0"
+                    className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500 transition-all duration-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Movilización
+                  </label>
+                  <input
+                    type="number"
+                    name="transport_allowance"
+                    value={formData.transport_allowance}
+                    onChange={handleInputChange}
+                    min="0"
+                    placeholder="0"
+                    className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500 transition-all duration-200"
+                  />
+                </div>
+              </div>
+            </div>
 
             {/* Descuentos adicionales */}
-            <Card className="bg-white/90 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/80 transition-all duration-200">
+              <div className="mb-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
                   <DollarSign className="w-5 h-5 text-red-600" />
                   Descuentos Adicionales
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Préstamos
-                    </label>
-                    <input
-                      type="number"
-                      name="loan_deductions"
-                      value={formData.loan_deductions}
-                      onChange={handleInputChange}
-                      min="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Anticipos
-                    </label>
-                    <input
-                      type="number"
-                      name="advance_payments"
-                      value={formData.advance_payments}
-                      onChange={handleInputChange}
-                      min="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      APV
-                    </label>
-                    <input
-                      type="number"
-                      name="apv_amount"
-                      value={formData.apv_amount}
-                      onChange={handleInputChange}
-                      min="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Otros
-                    </label>
-                    <input
-                      type="number"
-                      name="other_deductions"
-                      value={formData.other_deductions}
-                      onChange={handleInputChange}
-                      min="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
-                    />
-                  </div>
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  Configure préstamos, anticipos y otros descuentos
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Préstamos
+                  </label>
+                  <input
+                    type="number"
+                    name="loan_deductions"
+                    value={formData.loan_deductions}
+                    onChange={handleInputChange}
+                    min="0"
+                    placeholder="0"
+                    className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all duration-200"
+                  />
                 </div>
-              </CardContent>
-            </Card>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Anticipos
+                  </label>
+                  <input
+                    type="number"
+                    name="advance_payments"
+                    value={formData.advance_payments}
+                    onChange={handleInputChange}
+                    min="0"
+                    placeholder="0"
+                    className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all duration-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    APV
+                  </label>
+                  <input
+                    type="number"
+                    name="apv_amount"
+                    value={formData.apv_amount}
+                    onChange={handleInputChange}
+                    min="0"
+                    placeholder="0"
+                    className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all duration-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Otros
+                  </label>
+                  <input
+                    type="number"
+                    name="other_deductions"
+                    value={formData.other_deductions}
+                    onChange={handleInputChange}
+                    min="0"
+                    placeholder="0"
+                    className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:border-red-500 transition-all duration-200"
+                  />
+                </div>
+              </div>
+            </div>
 
             {/* Botón de acción principal */}
-            <div className="space-y-4">
-              <Button
+            <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-white/20 space-y-4">
+              <button
                 onClick={handleSaveAndGenerate}
                 disabled={!isValid || saving}
-                loading={saving}
-                className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
+                className={`w-full group relative px-6 py-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-3 ${
+                  !isValid || saving
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white hover:shadow-lg transform hover:scale-105'
+                }`}
               >
-                <Save className="w-4 h-4 mr-2" />
-                {saving ? 'Generando...' : 'Generar y Guardar'}
-              </Button>
+                {saving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Generando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                    <span>Generar y Guardar Liquidación</span>
+                  </>
+                )}
+              </button>
               
-              <div className="text-center text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
-                <div className="flex items-center justify-center mb-2">
-                  <FileText className="w-4 h-4 mr-2 text-blue-600" />
-                  <span className="font-medium">Después de guardar</span>
+              <div className="bg-blue-50/80 backdrop-blur-sm rounded-xl p-4 border border-blue-200/50">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <FileText className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div className="text-sm">
+                    <div className="font-medium text-blue-900 mb-1">Después de guardar</div>
+                    <p className="text-blue-700">Podrás ver, imprimir y descargar la liquidación en PDF desde la lista de liquidaciones.</p>
+                  </div>
                 </div>
-                <p>Podrás ver, imprimir y descargar la liquidación en PDF desde la lista de liquidaciones.</p>
               </div>
             </div>
           </div>
