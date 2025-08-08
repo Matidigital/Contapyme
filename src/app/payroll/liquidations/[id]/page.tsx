@@ -16,7 +16,14 @@ import {
   User,
   FileText,
   Calculator,
-  Building
+  Building,
+  Trash2,
+  CheckCircle,
+  X,
+  Clock,
+  AlertTriangle,
+  Eye,
+  Send
 } from 'lucide-react';
 
 interface LiquidationDetail {
@@ -79,8 +86,55 @@ export default function LiquidationDetailPage() {
   const [loading, setLoading] = useState(true);
   const [downloadingPDF, setDownloadingPDF] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const COMPANY_ID = '8033ee69-b420-4d91-ba0e-482f46cd6fce';
+
+  // 🎯 SISTEMA DE WORKFLOW: Estados y configuración
+  type LiquidationStatus = 'draft' | 'review' | 'approved' | 'paid' | 'cancelled';
+  
+  const STATUS_CONFIG = {
+    draft: { 
+      label: 'Borrador', 
+      color: 'bg-gray-100 text-gray-800', 
+      icon: FileText,
+      description: 'Puede editarse libremente'
+    },
+    review: { 
+      label: 'En Revisión', 
+      color: 'bg-yellow-100 text-yellow-800', 
+      icon: Clock,
+      description: 'Pendiente de aprobación'
+    },
+    approved: { 
+      label: 'Aprobada', 
+      color: 'bg-green-100 text-green-800', 
+      icon: CheckCircle,
+      description: 'Lista para pago'
+    },
+    paid: { 
+      label: 'Pagada', 
+      color: 'bg-blue-100 text-blue-800', 
+      icon: DollarSign,
+      description: 'Proceso completado'
+    },
+    cancelled: { 
+      label: 'Cancelada', 
+      color: 'bg-red-100 text-red-800', 
+      icon: X,
+      description: 'Liquidación cancelada'
+    }
+  };
+
+  // Transiciones permitidas entre estados
+  const WORKFLOW_TRANSITIONS = {
+    draft: ['review', 'cancelled'],      // Borrador → Revisión o Cancelar
+    review: ['approved', 'draft'],       // Revisión → Aprobar o Rechazar
+    approved: ['paid', 'cancelled'],     // Aprobada → Pagar o Cancelar
+    paid: [],                           // Pagada → Estado final
+    cancelled: ['draft']                // Cancelada → Restaurar a borrador
+  };
 
   useEffect(() => {
     if (liquidationId) {
@@ -109,6 +163,122 @@ export default function LiquidationDetailPage() {
     }
   };
 
+  // 🔄 FUNCIÓN PRINCIPAL: Actualizar estado de liquidación
+  const updateLiquidationStatus = async (newStatus: LiquidationStatus, confirmMessage?: string) => {
+    if (!liquidation) return;
+
+    // Verificar si la transición está permitida
+    const currentStatus = liquidation.status as LiquidationStatus;
+    if (!WORKFLOW_TRANSITIONS[currentStatus]?.includes(newStatus)) {
+      setError(`No se puede cambiar de ${STATUS_CONFIG[currentStatus]?.label} a ${STATUS_CONFIG[newStatus]?.label}`);
+      return;
+    }
+
+    // Confirmar la acción con el usuario
+    const confirmed = confirm(
+      confirmMessage || `¿Confirmas cambiar el estado a "${STATUS_CONFIG[newStatus].label}"?`
+    );
+    if (!confirmed) return;
+
+    try {
+      setUpdatingStatus(true);
+      setError(null);
+
+      const response = await fetch(`/api/payroll/liquidations/${liquidationId}?company_id=${COMPANY_ID}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: newStatus,
+          updated_at: new Date().toISOString()
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setLiquidation({ ...liquidation, status: newStatus });
+        setSuccessMessage(`Estado actualizado a: ${STATUS_CONFIG[newStatus].label}`);
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } else {
+        setError(data.error || 'Error al actualizar estado');
+      }
+    } catch (err) {
+      setError('Error de conexión al actualizar estado');
+      console.error('Error updating liquidation status:', err);
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  // 🗑️ FUNCIÓN: Eliminar liquidación con confirmación detallada
+  const handleDelete = async () => {
+    if (!liquidation) return;
+
+    const employeeName = `${liquidation.employee.first_name} ${liquidation.employee.last_name}`;
+    const period = formatPeriod(liquidation.period_year, liquidation.period_month);
+    
+    const confirmed = confirm(
+      `⚠️ ELIMINAR LIQUIDACIÓN\n\n` +
+      `Empleado: ${employeeName}\n` +
+      `Período: ${period}\n` +
+      `Monto: ${formatCurrency(liquidation.net_salary)}\n\n` +
+      `Esta acción NO se puede deshacer.\n\n` +
+      `¿Estás completamente seguro?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setUpdatingStatus(true);
+      setError(null);
+
+      const response = await fetch(`/api/payroll/liquidations/${liquidationId}?company_id=${COMPANY_ID}`, {
+        method: 'DELETE'
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        router.push('/payroll/liquidations?deleted=true');
+      } else {
+        setError(data.error || 'Error al eliminar liquidación');
+      }
+    } catch (err) {
+      setError('Error de conexión al eliminar');
+      console.error('Error deleting liquidation:', err);
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  // 🎯 ACCIONES ESPECÍFICAS: Cada una con su mensaje personalizado
+  const handleSubmitForReview = () => updateLiquidationStatus(
+    'review', 
+    '📋 ENVIAR A REVISIÓN\n\nEsta liquidación será enviada para revisión y aprobación.\n\n¿Confirmas el envío?'
+  );
+
+  const handleApprove = () => updateLiquidationStatus(
+    'approved',
+    '✅ APROBAR LIQUIDACIÓN\n\nEsta liquidación será marcada como aprobada y estará lista para el pago.\n\n¿Confirmas la aprobación?'
+  );
+
+  const handleReject = () => updateLiquidationStatus(
+    'draft',
+    '❌ RECHAZAR LIQUIDACIÓN\n\nEsta liquidación será devuelta al estado de borrador para correcciones.\n\n¿Confirmas el rechazo?'
+  );
+
+  const handleMarkAsPaid = () => updateLiquidationStatus(
+    'paid',
+    '💰 MARCAR COMO PAGADA\n\nEsta liquidación será marcada como pagada y el proceso estará completo.\n\n¿Confirmas que el pago fue realizado?'
+  );
+
+  const handleCancel = () => updateLiquidationStatus(
+    'cancelled',
+    '🚫 CANCELAR LIQUIDACIÓN\n\nEsta liquidación será cancelada.\n\nPuedes restaurarla posteriormente si es necesario.\n\n¿Confirmas la cancelación?'
+  );
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-CL', {
       style: 'currency',
@@ -126,19 +296,123 @@ export default function LiquidationDetailPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      draft: { label: 'Borrador', class: 'bg-gray-100 text-gray-800' },
-      approved: { label: 'Aprobada', class: 'bg-green-100 text-green-800' },
-      paid: { label: 'Pagada', class: 'bg-blue-100 text-blue-800' }
-    };
-
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
+    const statusConfig = STATUS_CONFIG[status as LiquidationStatus] || STATUS_CONFIG.draft;
+    const IconComponent = statusConfig.icon;
     
     return (
-      <span className={`px-3 py-1 rounded-full text-sm font-medium ${config.class}`}>
-        {config.label}
+      <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusConfig.color} flex items-center gap-1`}>
+        <IconComponent className="h-3 w-3" />
+        {statusConfig.label}
       </span>
     );
+  };
+
+  // 🎯 FUNCIÓN: Generar botones contextuales según estado actual
+  const getActionButtons = () => {
+    if (!liquidation) return null;
+    
+    const currentStatus = liquidation.status as LiquidationStatus;
+    const availableActions = WORKFLOW_TRANSITIONS[currentStatus] || [];
+    
+    const buttons = [];
+    
+    // Botones específicos según transiciones disponibles
+    availableActions.forEach(targetStatus => {
+      switch (targetStatus) {
+        case 'review':
+          buttons.push(
+            <Button 
+              key="submit-review"
+              variant="warning"
+              size="sm"
+              onClick={handleSubmitForReview}
+              disabled={updatingStatus}
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Enviar a Revisión
+            </Button>
+          );
+          break;
+          
+        case 'approved':
+          buttons.push(
+            <Button 
+              key="approve"
+              variant="success"
+              size="sm"
+              onClick={handleApprove}
+              disabled={updatingStatus}
+            >
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Aprobar
+            </Button>
+          );
+          break;
+          
+        case 'paid':
+          buttons.push(
+            <Button 
+              key="mark-paid"
+              variant="primary"
+              size="sm"
+              onClick={handleMarkAsPaid}
+              disabled={updatingStatus}
+            >
+              <DollarSign className="h-4 w-4 mr-2" />
+              Marcar Pagada
+            </Button>
+          );
+          break;
+          
+        case 'draft':
+          buttons.push(
+            <Button 
+              key="reject"
+              variant="outline"
+              size="sm"
+              onClick={handleReject}
+              disabled={updatingStatus}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Rechazar
+            </Button>
+          );
+          break;
+          
+        case 'cancelled':
+          buttons.push(
+            <Button 
+              key="cancel"
+              variant="danger"
+              size="sm"
+              onClick={handleCancel}
+              disabled={updatingStatus}
+            >
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              Cancelar
+            </Button>
+          );
+          break;
+      }
+    });
+    
+    // Botón de eliminar (siempre disponible, pero con confirmación extra)
+    if (currentStatus === 'draft') {
+      buttons.push(
+        <Button 
+          key="delete"
+          variant="danger"
+          size="sm"
+          onClick={handleDelete}
+          disabled={updatingStatus}
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          Eliminar
+        </Button>
+      );
+    }
+    
+    return buttons;
   };
 
 
@@ -379,10 +653,19 @@ export default function LiquidationDetailPage() {
           actions={
             <div className="flex items-center space-x-2">
               {getStatusBadge(liquidation.status)}
-              <Button variant="outline" size="sm" onClick={handleEdit}>
-                <Edit3 className="h-4 w-4 mr-2" />
-                Editar Liquidación
-              </Button>
+              
+              {/* Botones de workflow contextuales */}
+              {getActionButtons()}
+              
+              {/* Botón Editar (solo para borradores) */}
+              {liquidation.status === 'draft' && (
+                <Button variant="outline" size="sm" onClick={handleEdit}>
+                  <Edit3 className="h-4 w-4 mr-2" />
+                  Editar
+                </Button>
+              )}
+              
+              {/* Botón Descargar PDF (siempre disponible) */}
               <Button 
                 variant="primary" 
                 size="sm" 
@@ -396,6 +679,33 @@ export default function LiquidationDetailPage() {
           }
         />
       </div>
+
+      {/* 🎯 MENSAJES DE ÉXITO/ERROR */}
+      {successMessage && (
+        <div className="max-w-4xl mx-auto px-4 mb-4">
+          <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex items-center gap-2">
+            <CheckCircle className="h-4 w-4" />
+            <span className="font-medium">{successMessage}</span>
+          </div>
+        </div>
+      )}
+      
+      {error && (
+        <div className="max-w-4xl mx-auto px-4 mb-4">
+          <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg flex items-center gap-2">
+            <X className="h-4 w-4" />
+            <span className="font-medium">{error}</span>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setError(null)}
+              className="ml-auto p-1 h-auto"
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-4xl mx-auto py-6 px-4 print:py-0 print:px-0 print:max-w-none">
         {/* Header de liquidación para impresión */}
@@ -697,9 +1007,7 @@ export default function LiquidationDetailPage() {
                   <label className="block text-sm font-medium text-gray-500 mb-1">Estado Actual</label>
                   <div className="flex items-center gap-2">
                     {getStatusBadge(liquidation.status)}
-                    {liquidation.status === 'draft' && (
-                      <span className="text-xs text-gray-500">• Puede editarse</span>
-                    )}
+                    <span className="text-xs text-gray-500">• {STATUS_CONFIG[liquidation.status as LiquidationStatus]?.description || 'Estado válido'}</span>
                   </div>
                 </div>
                 <div>
@@ -734,20 +1042,36 @@ export default function LiquidationDetailPage() {
                 </div>
               </div>
               
-              {/* Acciones rápidas */}
+              {/* 🎯 WORKFLOW DE ESTADO */}
               <div className="mt-6 pt-6 border-t border-gray-200">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="font-medium text-gray-900">Acciones Disponibles</h4>
+                    <h4 className="font-medium text-gray-900">Workflow de Estados</h4>
                     <p className="text-sm text-gray-500 mt-1">
-                      {liquidation.status === 'draft' 
-                        ? 'Esta liquidación puede editarse y su estado puede cambiarse.'
-                        : 'Liquidación finalizada. Solo disponible consulta y descarga.'
-                      }
+                      {STATUS_CONFIG[liquidation.status as LiquidationStatus]?.description || 'Estado válido'}
                     </p>
+                    
+                    {/* Transiciones disponibles */}
+                    {WORKFLOW_TRANSITIONS[liquidation.status as LiquidationStatus]?.length > 0 && (
+                      <div className="mt-2">
+                        <span className="text-xs text-gray-600">Próximos estados posibles: </span>
+                        {WORKFLOW_TRANSITIONS[liquidation.status as LiquidationStatus].map((nextStatus, index) => (
+                          <span key={nextStatus} className="text-xs text-blue-600">
+                            {STATUS_CONFIG[nextStatus]?.label}
+                            {index < WORKFLOW_TRANSITIONS[liquidation.status as LiquidationStatus].length - 1 && ', '}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="text-right">
                     <div className="text-xs text-gray-500">Utiliza Ctrl+P para imprimir</div>
+                    {updatingStatus && (
+                      <div className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                        <div className="animate-spin rounded-full h-3 w-3 border border-blue-600 border-t-transparent"></div>
+                        Actualizando...
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
