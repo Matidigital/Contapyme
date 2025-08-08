@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { PayrollHeader } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
-import { Calculator, Plus, FileText, Users, TrendingUp, Calendar, Filter, Search, Download } from 'lucide-react';
+import { Calculator, Plus, FileText, Users, TrendingUp, Calendar, Filter, Search, Download, Eye, DollarSign, ArrowRight, Activity } from 'lucide-react';
 
 interface LiquidationSummary {
   id: string;
@@ -90,6 +90,26 @@ export default function LiquidationsPage() {
     });
   };
 
+  // Función para limpiar caracteres especiales malformados
+  const cleanText = (text: string) => {
+    if (!text) return '';
+    return text
+      .replace(/Ã¡/g, 'á')
+      .replace(/Ã©/g, 'é')
+      .replace(/Ã­/g, 'í')
+      .replace(/Ã³/g, 'ó')
+      .replace(/Ãº/g, 'ú')
+      .replace(/Ã±/g, 'ñ')
+      .replace(/Ã/g, 'Á')
+      .replace(/Ã/g, 'É')
+      .replace(/Ã/g, 'Í')
+      .replace(/Ã/g, 'Ó')
+      .replace(/Ã/g, 'Ú')
+      .replace(/Ã/g, 'Ñ')
+      .replace(/�/g, 'é')
+      .trim();
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-CL', {
       style: 'currency',
@@ -137,13 +157,13 @@ export default function LiquidationsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <PayrollHeader 
           title="Liquidaciones de Sueldo"
           subtitle="Cargando liquidaciones..."
           showBackButton
         />
-        <div className="max-w-6xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
@@ -156,125 +176,129 @@ export default function LiquidationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <PayrollHeader 
         title="Liquidaciones de Sueldo"
         subtitle="Gestión y seguimiento de liquidaciones"
         showBackButton
-        actions={
-          <div className="flex space-x-2">
-            <Button variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-2" />
-              Exportar Lote
-            </Button>
-            <Link href="/payroll/liquidations/generate">
-              <Button variant="primary" size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Nueva Liquidación
-              </Button>
-            </Link>
-          </div>
-        }
       />
 
-      <div className="max-w-6xl mx-auto py-6 sm:px-6 lg:px-8">
-        {error && (
-          <Card className="mb-6 border-red-200 bg-red-50">
-            <CardContent className="pt-6">
-              <div className="flex items-center text-red-700">
-                <FileText className="h-5 w-5 mr-2" />
-                <span>{error}</span>
+      {/* Hero Section con métricas destacadas */}
+      <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Título y acciones principales */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
+            <div className="flex-1">
+              <h1 className="text-2xl sm:text-3xl font-bold mb-2">
+                Panel de Liquidaciones
+              </h1>
+              <p className="text-blue-100 text-sm sm:text-base">
+                Gestión completa de liquidaciones de sueldo para tu empresa
+              </p>
+            </div>
+            
+            {/* Acciones principales - responsive */}
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+              <button className="group relative px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/40 backdrop-blur-sm transition-all duration-200 flex items-center justify-center gap-2 text-white font-medium">
+                <Download className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                <span className="text-sm">Exportar Lote</span>
+              </button>
+              <Link href="/payroll/liquidations/generate">
+                <button className="w-full sm:w-auto group relative px-4 py-2.5 rounded-xl bg-green-500/80 hover:bg-green-500 border border-green-400/50 hover:border-green-400 backdrop-blur-sm transition-all duration-200 flex items-center justify-center gap-2 text-white font-medium">
+                  <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  <span className="text-sm">Nueva Liquidación</span>
+                </button>
+              </Link>
+            </div>
+          </div>
+
+          {/* Stats Cards mejoradas para mobile */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-500/20 rounded-lg">
+                  <FileText className="w-5 h-5 text-blue-100" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-2xl font-bold truncate">{stats.total_liquidations}</div>
+                  <div className="text-xs text-blue-100 truncate">Total Liquidaciones</div>
+                </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-500/20 rounded-lg">
+                  <DollarSign className="w-5 h-5 text-green-100" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-lg sm:text-xl font-bold truncate">
+                    {formatCurrency(stats.current_month_total).replace('$', '$').slice(0, 8)}
+                    {formatCurrency(stats.current_month_total).length > 8 && '...'}
+                  </div>
+                  <div className="text-xs text-green-100 truncate">Mes Actual</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-yellow-500/20 rounded-lg">
+                  <Calendar className="w-5 h-5 text-yellow-100" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-2xl font-bold truncate">{stats.pending_count}</div>
+                  <div className="text-xs text-yellow-100 truncate">Pendientes</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-500/20 rounded-lg">
+                  <Activity className="w-5 h-5 text-purple-100" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-2xl font-bold truncate">{stats.approved_count}</div>
+                  <div className="text-xs text-purple-100 truncate">Aprobadas</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {error && (
+          <div className="mb-6 p-4 rounded-xl bg-red-50/80 backdrop-blur-sm border border-red-200">
+            <div className="flex items-center text-red-700">
+              <FileText className="h-5 w-5 mr-2" />
+              <span>{error}</span>
+            </div>
+          </div>
         )}
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Liquidaciones</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.total_liquidations}</p>
-                  <p className="text-xs text-gray-500 mt-1">Históricas</p>
-                </div>
-                <div className="p-3 bg-blue-100 rounded-lg">
-                  <FileText className="w-6 h-6 text-blue-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Mes Actual</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {formatCurrency(stats.current_month_total)}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">Total pagado</p>
-                </div>
-                <div className="p-3 bg-green-100 rounded-lg">
-                  <TrendingUp className="w-6 h-6 text-green-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Pendientes</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.pending_count}</p>
-                  <p className="text-xs text-gray-500 mt-1">Por aprobar</p>
-                </div>
-                <div className="p-3 bg-yellow-100 rounded-lg">
-                  <Calendar className="w-6 h-6 text-yellow-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Aprobadas</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.approved_count}</p>
-                  <p className="text-xs text-gray-500 mt-1">Listas para pago</p>
-                </div>
-                <div className="p-3 bg-purple-100 rounded-lg">
-                  <Users className="w-6 h-6 text-purple-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filters */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="flex flex-wrap gap-4">
-              <div className="flex-1 min-w-64">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Buscar por nombre o RUT..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-              
+        {/* Filtros modernos y responsivos */}
+        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-white/20 mb-6">
+          <div className="flex flex-col gap-4">
+            {/* Búsqueda principal */}
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar por nombre o RUT..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-11 pr-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+              />
+            </div>
+            
+            {/* Filtros en fila para desktop, columnas para mobile */}
+            <div className="flex flex-col sm:flex-row gap-3">
               <select
                 value={filterPeriod}
                 onChange={(e) => setFilterPeriod(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
               >
                 <option value="">Todos los períodos</option>
                 <option value="2025-01">Enero 2025</option>
@@ -286,7 +310,7 @@ export default function LiquidationsPage() {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
               >
                 <option value="">Todos los estados</option>
                 <option value="draft">Borrador</option>
@@ -294,140 +318,160 @@ export default function LiquidationsPage() {
                 <option value="paid">Pagada</option>
               </select>
 
-              <Button variant="outline">
-                <Filter className="h-4 w-4 mr-2" />
-                Filtros
-              </Button>
+              <button className="sm:w-auto px-4 py-3 bg-gradient-to-r from-blue-500/10 to-purple-500/10 hover:from-blue-500/20 hover:to-purple-500/20 border border-blue-200 hover:border-blue-300 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-blue-700 font-medium">
+                <Filter className="h-4 w-4" />
+                <span>Filtros</span>
+              </button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Liquidations List */}
+        {/* Lista de liquidaciones modernizada */}
         {filteredLiquidations.length === 0 ? (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center py-12">
-                <Calculator className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  {liquidations.length === 0 ? 'No hay liquidaciones registradas' : 'No se encontraron liquidaciones'}
-                </h3>
-                <p className="text-gray-500 mb-6">
-                  {liquidations.length === 0 
-                    ? 'Comience generando su primera liquidación de sueldo'
-                    : 'Intente ajustar los filtros de búsqueda'
-                  }
-                </p>
-                <Link href="/payroll/liquidations/generate">
-                  <Button variant="primary">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Generar Primera Liquidación
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-8 sm:p-12 border border-white/20 text-center">
+            <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Calculator className="h-10 w-10 text-blue-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">
+              {liquidations.length === 0 ? 'No hay liquidaciones registradas' : 'No se encontraron liquidaciones'}
+            </h3>
+            <p className="text-gray-600 mb-8 max-w-md mx-auto">
+              {liquidations.length === 0 
+                ? 'Comience generando su primera liquidación de sueldo para gestionar los pagos de su equipo'
+                : 'Intente ajustar los filtros de búsqueda para encontrar las liquidaciones que busca'
+              }
+            </p>
+            <Link href="/payroll/liquidations/generate">
+              <button className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium rounded-xl transition-all duration-200 transform hover:scale-105">
+                <Plus className="h-4 w-4" />
+                Generar Primera Liquidación
+              </button>
+            </Link>
+          </div>
         ) : (
-          <div className="grid gap-4">
+          <div className="space-y-4">
             {filteredLiquidations.map((liquidation) => (
-              <Card key={liquidation.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                        <Users className="h-6 w-6 text-blue-600" />
+              <div key={liquidation.id} className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 sm:p-6 border border-white/20 hover:bg-white/80 transition-all duration-200 group">
+                {/* Vista mobile-first */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  {/* Info principal del empleado */}
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-xl flex items-center justify-center">
+                      <Users className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-bold text-gray-900 truncate">
+                        {cleanText(liquidation.employee_name)}
+                      </h3>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-sm text-gray-600">
+                        <span className="truncate">RUT: {liquidation.employee_rut}</span>
+                        <span className="hidden sm:inline">•</span>
+                        <span>{formatPeriod(liquidation.period_year, liquidation.period_month)}</span>
                       </div>
-                      <div>
-                        <h3 className="text-lg font-medium text-gray-900">
-                          {liquidation.employee_name}
-                        </h3>
-                        <div className="flex items-center space-x-4 text-sm text-gray-500">
-                          <span>RUT: {liquidation.employee_rut}</span>
-                          <span>•</span>
-                          <span>{formatPeriod(liquidation.period_year, liquidation.period_month)}</span>
-                          <span>•</span>
-                          <span>Líquido: {formatCurrency(liquidation.net_salary)}</span>
+                    </div>
+                  </div>
+                  
+                  {/* Métricas y acciones */}
+                  <div className="flex flex-col sm:flex-row gap-4 sm:items-center">
+                    {/* Métricas financieras - responsive */}
+                    <div className="grid grid-cols-3 sm:flex sm:gap-6 gap-3">
+                      <div className="text-center sm:text-right">
+                        <div className="text-xs text-gray-500 mb-1">Haberes</div>
+                        <div className="font-bold text-green-600 text-sm sm:text-base truncate">
+                          {formatCurrency(liquidation.total_gross_income).replace('$', '$').slice(0, 8)}
+                          {formatCurrency(liquidation.total_gross_income).length > 8 && '...'}
+                        </div>
+                      </div>
+                      <div className="text-center sm:text-right">
+                        <div className="text-xs text-gray-500 mb-1">Descuentos</div>
+                        <div className="font-bold text-red-600 text-sm sm:text-base truncate">
+                          {formatCurrency(liquidation.total_deductions).replace('$', '$').slice(0, 8)}
+                          {formatCurrency(liquidation.total_deductions).length > 8 && '...'}
+                        </div>
+                      </div>
+                      <div className="text-center sm:text-right">
+                        <div className="text-xs text-gray-500 mb-1">Líquido</div>
+                        <div className="font-bold text-blue-600 text-sm sm:text-base truncate">
+                          {formatCurrency(liquidation.net_salary).replace('$', '$').slice(0, 8)}
+                          {formatCurrency(liquidation.net_salary).length > 8 && '...'}
                         </div>
                       </div>
                     </div>
                     
-                    <div className="flex items-center space-x-4">
-                      <div className="text-right">
-                        <div className="text-sm text-gray-500">Total Haberes</div>
-                        <div className="font-medium text-green-600">
-                          {formatCurrency(liquidation.total_gross_income)}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm text-gray-500">Descuentos</div>
-                        <div className="font-medium text-red-600">
-                          {formatCurrency(liquidation.total_deductions)}
-                        </div>
+                    {/* Status y acciones */}
+                    <div className="flex flex-col sm:items-end gap-3">
+                      <div className="flex items-center justify-between sm:justify-end gap-3">
+                        {getStatusBadge(liquidation.status)}
                       </div>
                       
-                      <div className="flex flex-col items-end space-y-2">
-                        {getStatusBadge(liquidation.status)}
-                        
-                        <div className="flex space-x-2">
-                          <Link href={`/payroll/liquidations/${liquidation.id}`}>
-                            <Button variant="primary" size="sm">
-                              Ver Liquidación
-                            </Button>
-                          </Link>
-                        </div>
-                      </div>
+                      <Link href={`/payroll/liquidations/${liquidation.id}`} className="w-full sm:w-auto">
+                        <button className="w-full sm:w-auto group/btn relative px-4 py-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 hover:border-blue-500/40 backdrop-blur-sm transition-all duration-200 flex items-center justify-center gap-2 text-blue-600 hover:text-blue-700 font-medium text-sm">
+                          <Eye className="w-4 h-4 group-hover/btn:scale-110 transition-transform" />
+                          <span>Ver Liquidación</span>
+                          <ArrowRight className="w-3 h-3 opacity-50 group-hover/btn:translate-x-0.5 transition-transform" />
+                        </button>
+                      </Link>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
           </div>
         )}
 
-        {/* Quick Actions */}
+        {/* Acciones Rápidas modernizadas */}
         <div className="mt-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Acciones Rápidas</CardTitle>
-              <CardDescription>Herramientas para gestión de liquidaciones</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Link href="/payroll/liquidations/generate">
-                  <Button variant="outline" className="w-full justify-start h-auto p-4">
-                    <div className="flex items-center">
-                      <Calculator className="h-8 w-8 text-blue-600 mr-4" />
-                      <div className="text-left">
-                        <div className="font-medium">Generar Liquidación</div>
-                        <div className="text-sm text-gray-500">Crear nueva liquidación individual</div>
-                      </div>
+          <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
+            <div className="mb-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Acciones Rápidas</h3>
+              <p className="text-gray-600">Herramientas esenciales para gestión eficiente de liquidaciones</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Link href="/payroll/liquidations/generate" className="group">
+                <div className="p-6 bg-gradient-to-br from-blue-50/80 to-blue-100/80 rounded-xl border border-blue-200/50 hover:border-blue-300 transition-all duration-200 group-hover:shadow-md group-hover:scale-105">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center group-hover:bg-blue-500/20 transition-colors">
+                      <Calculator className="h-6 w-6 text-blue-600" />
                     </div>
-                  </Button>
-                </Link>
-                
-                <Button variant="outline" className="w-full justify-start h-auto p-4" disabled>
-                  <div className="flex items-center">
-                    <Users className="h-8 w-8 text-green-600 mr-4" />
-                    <div className="text-left">
-                      <div className="font-medium">Lote Masivo</div>
-                      <div className="text-sm text-gray-500">Generar múltiples liquidaciones</div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-gray-900 mb-1">Generar Liquidación</h4>
+                      <p className="text-sm text-gray-600">Crear nueva liquidación individual con cálculos automáticos</p>
                     </div>
                   </div>
-                </Button>
-                
-                <Link href="/payroll/settings">
-                  <Button variant="outline" className="w-full justify-start h-auto p-4">
-                    <div className="flex items-center">
-                      <FileText className="h-8 w-8 text-purple-600 mr-4" />
-                      <div className="text-left">
-                        <div className="font-medium">Configuración</div>
-                        <div className="text-sm text-gray-500">AFP, Salud, Topes e Indicadores</div>
-                      </div>
+                </div>
+              </Link>
+              
+              <div className="group opacity-60">
+                <div className="p-6 bg-gradient-to-br from-green-50/80 to-green-100/80 rounded-xl border border-green-200/50 transition-all duration-200">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-green-500/10 rounded-xl flex items-center justify-center">
+                      <Users className="h-6 w-6 text-green-600" />
                     </div>
-                  </Button>
-                </Link>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-gray-900 mb-1">Lote Masivo</h4>
+                      <p className="text-sm text-gray-600">Generar múltiples liquidaciones simultáneamente</p>
+                      <span className="inline-block mt-2 px-2 py-1 bg-gray-100 text-xs text-gray-500 rounded-full">Próximamente</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </CardContent>
-          </Card>
+              
+              <Link href="/payroll/settings" className="group">
+                <div className="p-6 bg-gradient-to-br from-purple-50/80 to-purple-100/80 rounded-xl border border-purple-200/50 hover:border-purple-300 transition-all duration-200 group-hover:shadow-md group-hover:scale-105">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center group-hover:bg-purple-500/20 transition-colors">
+                      <FileText className="h-6 w-6 text-purple-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-gray-900 mb-1">Configuración</h4>
+                      <p className="text-sm text-gray-600">AFP, Salud, Topes e Indicadores del sistema</p>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     </div>
