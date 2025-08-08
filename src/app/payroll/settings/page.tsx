@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Header } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { Settings, Building2, Heart, Users, Calculator, Globe, AlertCircle, CheckCircle, Save } from 'lucide-react';
@@ -58,9 +58,73 @@ export default function PayrollSettingsPage() {
   // ✅ Usar company ID dinámico desde contexto
   const companyId = useCompanyId();
 
+  // 🔧 OPTIMIZACIÓN: Referencias para timeouts seguros
+  const timeouts = useRef({
+    afp: null as NodeJS.Timeout | null,
+    health: null as NodeJS.Timeout | null,
+    family: null as NodeJS.Timeout | null,
+    company: null as NodeJS.Timeout | null,
+    limits: null as NodeJS.Timeout | null,
+  });
+
   useEffect(() => {
     fetchSettings();
   }, []);
+
+  // 🔧 OPTIMIZACIÓN: Cleanup de timeouts al desmontar
+  useEffect(() => {
+    return () => {
+      // Limpiar todos los timeouts pendientes
+      Object.values(timeouts.current).forEach(timeout => {
+        if (timeout) clearTimeout(timeout);
+      });
+    };
+  }, []);
+
+  // 🔧 OPTIMIZACIÓN: Función de debounce segura y reutilizable
+  const debouncedUpdate = useCallback((
+    timeoutKey: keyof typeof timeouts.current,
+    updateData: Partial<PayrollSettings>,
+    delay = 1000
+  ) => {
+    // Limpiar timeout anterior si existe
+    if (timeouts.current[timeoutKey]) {
+      clearTimeout(timeouts.current[timeoutKey]!);
+    }
+
+    // Crear nuevo timeout
+    timeouts.current[timeoutKey] = setTimeout(async () => {
+      try {
+        setSaving(true);
+        setError(null);
+        setSuccessMessage(null);
+
+        const response = await fetch(`/api/payroll/settings?company_id=${companyId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updateData),
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          setSettings(data.data);
+          // ✅ Mensaje de éxito más sutil para auto-save
+          console.log('✅ Auto-guardado exitoso');
+        } else {
+          setError(data.error || 'Error al guardar automáticamente');
+        }
+      } catch (err) {
+        setError('Error de conexión al auto-guardar');
+        console.error('Error in auto-save:', err);
+      } finally {
+        setSaving(false);
+        timeouts.current[timeoutKey] = null;
+      }
+    }, delay);
+  }, [companyId]);
 
   const fetchSettings = async () => {
     try {
@@ -113,90 +177,77 @@ export default function PayrollSettingsPage() {
     }
   };
 
-  const handleAFPUpdate = (index: number, field: keyof AFPConfig, value: any) => {
+  // 🔧 OPTIMIZACIÓN: Manejo AFP con debounce mejorado
+  const handleAFPUpdate = useCallback((index: number, field: keyof AFPConfig, value: any) => {
     if (!settings) return;
     
     const updatedAFPs = [...settings.afp_configs];
     updatedAFPs[index] = { ...updatedAFPs[index], [field]: value };
     
-    // ✅ MEJORADO: Actualizar estado local inmediatamente y luego guardar
+    // Actualizar estado local inmediatamente para UX responsiva
     const updatedSettings = { ...settings, afp_configs: updatedAFPs };
     setSettings(updatedSettings);
     
-    // Debounce: Guardar en servidor tras 1 segundo sin cambios
-    clearTimeout((window as any).afpUpdateTimeout);
-    (window as any).afpUpdateTimeout = setTimeout(() => {
-      updateSettings({ afp_configs: updatedAFPs });
-    }, 1000);
-  };
+    // Usar debounce optimizado
+    debouncedUpdate('afp', { afp_configs: updatedAFPs });
+  }, [settings, debouncedUpdate]);
 
-  // ✅ NUEVO: Función para actualizar configuración de salud
-  const handleHealthUpdate = (index: number, field: keyof HealthConfig, value: any) => {
+  // 🔧 OPTIMIZACIÓN: Manejo Health con debounce mejorado
+  const handleHealthUpdate = useCallback((index: number, field: keyof HealthConfig, value: any) => {
     if (!settings) return;
     
     const updatedHealth = [...settings.health_configs];
     updatedHealth[index] = { ...updatedHealth[index], [field]: value };
     
-    // Actualizar estado local inmediatamente
+    // Actualizar estado local inmediatamente para UX responsiva
     const updatedSettings = { ...settings, health_configs: updatedHealth };
     setSettings(updatedSettings);
     
-    // Debounce: Guardar en servidor
-    clearTimeout((window as any).healthUpdateTimeout);
-    (window as any).healthUpdateTimeout = setTimeout(() => {
-      updateSettings({ health_configs: updatedHealth });
-    }, 1000);
-  };
+    // Usar debounce optimizado
+    debouncedUpdate('health', { health_configs: updatedHealth });
+  }, [settings, debouncedUpdate]);
 
-  // ✅ NUEVO: Función para actualizar asignaciones familiares
-  const handleFamilyAllowanceUpdate = (field: string, value: number) => {
+  // 🔧 OPTIMIZACIÓN: Manejo Family Allowance con debounce mejorado
+  const handleFamilyAllowanceUpdate = useCallback((field: string, value: number) => {
     if (!settings) return;
     
     const updatedAllowances = { ...settings.family_allowances, [field]: value };
     
-    // Actualizar estado local inmediatamente
+    // Actualizar estado local inmediatamente para UX responsiva
     const updatedSettings = { ...settings, family_allowances: updatedAllowances };
     setSettings(updatedSettings);
     
-    // Debounce: Guardar en servidor
-    clearTimeout((window as any).familyUpdateTimeout);
-    (window as any).familyUpdateTimeout = setTimeout(() => {
-      updateSettings({ family_allowances: updatedAllowances });
-    }, 1000);
-  };
+    // Usar debounce optimizado
+    debouncedUpdate('family', { family_allowances: updatedAllowances });
+  }, [settings, debouncedUpdate]);
 
-  // ✅ NUEVO: Función para actualizar info de empresa
-  const handleCompanyInfoUpdate = (field: string, value: string) => {
+  // 🔧 OPTIMIZACIÓN: Manejo Company Info con debounce mejorado
+  const handleCompanyInfoUpdate = useCallback((field: string, value: string) => {
     if (!settings) return;
     
     const updatedCompanyInfo = { ...settings.company_info, [field]: value };
     
-    // Actualizar estado local inmediatamente
+    // Actualizar estado local inmediatamente para UX responsiva
     const updatedSettings = { ...settings, company_info: updatedCompanyInfo };
     setSettings(updatedSettings);
     
-    // Debounce: Guardar en servidor
-    clearTimeout((window as any).companyUpdateTimeout);
-    (window as any).companyUpdateTimeout = setTimeout(() => {
-      updateSettings({ company_info: updatedCompanyInfo });
-    }, 1000);
-  };
+    // Usar debounce optimizado
+    debouncedUpdate('company', { company_info: updatedCompanyInfo });
+  }, [settings, debouncedUpdate]);
 
-  const handleIncomeLimit = (field: string, value: number) => {
+  // 🔧 OPTIMIZACIÓN: Manejo Income Limits con debounce mejorado
+  const handleIncomeLimit = useCallback((field: string, value: number) => {
     if (!settings) return;
     
     const updatedLimits = { ...settings.income_limits, [field]: value };
     
-    // ✅ MEJORADO: Actualizar estado local inmediatamente
+    // Actualizar estado local inmediatamente para UX responsiva
     const updatedSettings = { ...settings, income_limits: updatedLimits };
     setSettings(updatedSettings);
     
-    // Debounce: Guardar en servidor
-    clearTimeout((window as any).limitsUpdateTimeout);
-    (window as any).limitsUpdateTimeout = setTimeout(() => {
-      updateSettings({ income_limits: updatedLimits });
-    }, 1000);
-  };
+    // Usar debounce optimizado
+    debouncedUpdate('limits', { income_limits: updatedLimits });
+  }, [settings, debouncedUpdate]);
 
   // ✅ NUEVO: Función para actualizar desde Previred
   const handlePreviredUpdate = async () => {
