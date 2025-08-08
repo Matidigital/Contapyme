@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
           status: liquidationData.status || 'draft',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-          generated_by: companyId // TODO: usar ID de usuario real
+          generated_by: null // ✅ CORREGIDO: NULL en lugar de company_id que no existe en users
         })
         .select()
         .single();
