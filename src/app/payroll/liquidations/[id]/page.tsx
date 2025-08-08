@@ -977,25 +977,25 @@ export default function LiquidationDetailPage() {
                     Descuentos Previsionales
                   </h4>
                   <span className="text-sm font-medium text-red-700">
-                    {formatCurrency(liquidation.afp_deduction + liquidation.afp_sis_commission + liquidation.health_deduction + liquidation.unemployment_insurance)}
+                    {formatCurrency(liquidation.afp_amount + liquidation.afp_commission_amount + liquidation.health_amount + liquidation.unemployment_amount)}
                   </span>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">AFP (10%)</span>
-                    <span className="font-medium">{formatCurrency(liquidation.afp_deduction)}</span>
+                    <span className="text-gray-600">AFP ({liquidation.afp_percentage}%)</span>
+                    <span className="font-medium">{formatCurrency(liquidation.afp_amount)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Comisión AFP (1.27%)</span>
-                    <span className="font-medium">{formatCurrency(liquidation.afp_sis_commission)}</span>
+                    <span className="text-gray-600">Comisión AFP ({liquidation.afp_commission_percentage}%)</span>
+                    <span className="font-medium">{formatCurrency(liquidation.afp_commission_amount)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Salud (7%)</span>
-                    <span className="font-medium">{formatCurrency(liquidation.health_deduction)}</span>
+                    <span className="text-gray-600">Salud ({liquidation.health_percentage}%)</span>
+                    <span className="font-medium">{formatCurrency(liquidation.health_amount)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Cesantía (0.6%)</span>
-                    <span className="font-medium">{formatCurrency(liquidation.unemployment_insurance)}</span>
+                    <span className="text-gray-600">Cesantía ({liquidation.unemployment_percentage}%)</span>
+                    <span className="font-medium">{formatCurrency(liquidation.unemployment_amount)}</span>
                   </div>
                 </div>
               </div>
