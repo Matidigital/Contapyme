@@ -161,19 +161,19 @@ export default function GenerateLiquidationPage() {
         days_worked: formData.days_worked,
         
         // Haberes
-        base_salary: result.haberes.sueldo_base || 0,
-        overtime_amount: formData.overtime_amount || 0,
-        bonuses: formData.bonuses || 0,
-        commissions: formData.commissions || 0,
-        gratification: formData.gratification || 0,
-        food_allowance: formData.food_allowance || 0,
-        transport_allowance: formData.transport_allowance || 0,
-        family_allowance: result.haberes.asignacion_familiar || 0,
+        base_salary: result.base_salary || 0,
+        overtime_amount: result.overtime_amount || 0,
+        bonuses: result.bonuses || 0,
+        commissions: result.commissions || 0,
+        gratification: result.gratification || 0,
+        food_allowance: result.food_allowance || 0,
+        transport_allowance: result.transport_allowance || 0,
+        family_allowance: result.family_allowance || 0,
         
         // Descuentos legales
-        afp_discount: result.descuentos.afp || 0,
-        health_discount: result.descuentos.salud || 0,
-        unemployment_discount: result.descuentos.cesantia || 0,
+        afp_discount: (result.afp_amount || 0) + (result.afp_commission_amount || 0),
+        health_discount: result.health_amount || 0,
+        unemployment_discount: result.unemployment_amount || 0,
         
         // Descuentos adicionales
         loan_deductions: formData.loan_deductions || 0,
@@ -182,9 +182,9 @@ export default function GenerateLiquidationPage() {
         other_deductions: formData.other_deductions || 0,
         
         // Totales
-        total_haberes: result.totales.total_haberes || 0,
-        total_descuentos: result.totales.total_descuentos || 0,
-        net_salary: result.totales.liquido_a_pagar || 0
+        total_haberes: result.total_gross_income || 0,
+        total_descuentos: result.total_deductions || 0,
+        net_salary: result.net_salary || 0
       };
 
       // Guardar en la base de datos usando la nueva API
