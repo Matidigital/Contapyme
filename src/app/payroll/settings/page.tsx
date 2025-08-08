@@ -98,18 +98,8 @@ export default function PayrollSettingsPage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setSettings(prev => prev ? { ...prev, ...updatedSettings } : null);
-        setSuccessMessage('Configuración actualizada exitosamente');
-        
-        // ✅ NUEVO: Invalidar cache de opciones para que se reflejen los cambios
-        try {
-          await fetch(`/api/payroll/config/options?company_id=${companyId}&invalidate=true`, {
-            method: 'POST'
-          });
-        } catch (cacheError) {
-          console.warn('No se pudo invalidar el cache de opciones:', cacheError);
-          // No fallar si el cache no se puede invalidar
-        }
+        setSettings(data.data); // ✅ CORREGIDO: Usar data completa del servidor
+        setSuccessMessage(data.message || 'Configuración actualizada exitosamente');
         
         setTimeout(() => setSuccessMessage(null), 3000);
       } else {
@@ -129,14 +119,146 @@ export default function PayrollSettingsPage() {
     const updatedAFPs = [...settings.afp_configs];
     updatedAFPs[index] = { ...updatedAFPs[index], [field]: value };
     
-    updateSettings({ afp_configs: updatedAFPs });
+    // ✅ MEJORADO: Actualizar estado local inmediatamente y luego guardar
+    const updatedSettings = { ...settings, afp_configs: updatedAFPs };
+    setSettings(updatedSettings);
+    
+    // Debounce: Guardar en servidor tras 1 segundo sin cambios
+    clearTimeout((window as any).afpUpdateTimeout);
+    (window as any).afpUpdateTimeout = setTimeout(() => {
+      updateSettings({ afp_configs: updatedAFPs });
+    }, 1000);
+  };
+
+  // ✅ NUEVO: Función para actualizar configuración de salud
+  const handleHealthUpdate = (index: number, field: keyof HealthConfig, value: any) => {
+    if (!settings) return;
+    
+    const updatedHealth = [...settings.health_configs];
+    updatedHealth[index] = { ...updatedHealth[index], [field]: value };
+    
+    // Actualizar estado local inmediatamente
+    const updatedSettings = { ...settings, health_configs: updatedHealth };
+    setSettings(updatedSettings);
+    
+    // Debounce: Guardar en servidor
+    clearTimeout((window as any).healthUpdateTimeout);
+    (window as any).healthUpdateTimeout = setTimeout(() => {
+      updateSettings({ health_configs: updatedHealth });
+    }, 1000);
+  };
+
+  // ✅ NUEVO: Función para actualizar asignaciones familiares
+  const handleFamilyAllowanceUpdate = (field: string, value: number) => {
+    if (!settings) return;
+    
+    const updatedAllowances = { ...settings.family_allowances, [field]: value };
+    
+    // Actualizar estado local inmediatamente
+    const updatedSettings = { ...settings, family_allowances: updatedAllowances };
+    setSettings(updatedSettings);
+    
+    // Debounce: Guardar en servidor
+    clearTimeout((window as any).familyUpdateTimeout);
+    (window as any).familyUpdateTimeout = setTimeout(() => {
+      updateSettings({ family_allowances: updatedAllowances });
+    }, 1000);
+  };
+
+  // ✅ NUEVO: Función para actualizar info de empresa
+  const handleCompanyInfoUpdate = (field: string, value: string) => {
+    if (!settings) return;
+    
+    const updatedCompanyInfo = { ...settings.company_info, [field]: value };
+    
+    // Actualizar estado local inmediatamente
+    const updatedSettings = { ...settings, company_info: updatedCompanyInfo };
+    setSettings(updatedSettings);
+    
+    // Debounce: Guardar en servidor
+    clearTimeout((window as any).companyUpdateTimeout);
+    (window as any).companyUpdateTimeout = setTimeout(() => {
+      updateSettings({ company_info: updatedCompanyInfo });
+    }, 1000);
   };
 
   const handleIncomeLimit = (field: string, value: number) => {
     if (!settings) return;
     
     const updatedLimits = { ...settings.income_limits, [field]: value };
-    updateSettings({ income_limits: updatedLimits });
+    
+    // ✅ MEJORADO: Actualizar estado local inmediatamente
+    const updatedSettings = { ...settings, income_limits: updatedLimits };
+    setSettings(updatedSettings);
+    
+    // Debounce: Guardar en servidor
+    clearTimeout((window as any).limitsUpdateTimeout);
+    (window as any).limitsUpdateTimeout = setTimeout(() => {
+      updateSettings({ income_limits: updatedLimits });
+    }, 1000);
+  };
+
+  // ✅ NUEVO: Función para actualizar desde Previred
+  const handlePreviredUpdate = async () => {
+    try {
+      setSaving(true);
+      setError(null);
+      setSuccessMessage(null);
+
+      const response = await fetch(`/api/payroll/settings?company_id=${companyId}`, {
+        method: 'POST'
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setSettings(data.data);
+        setSuccessMessage('✅ Configuración actualizada desde Previred exitosamente');
+        setTimeout(() => setSuccessMessage(null), 5000);
+      } else {
+        setError(data.error || 'Error al actualizar desde Previred');
+      }
+    } catch (err) {
+      setError('Error de conexión con Previred');
+      console.error('Error updating from Previred:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ✅ NUEVO: Función para guardar toda la configuración
+  const handleSaveAll = async () => {
+    if (!settings) return;
+    
+    try {
+      setSaving(true);
+      setError(null);
+      setSuccessMessage(null);
+
+      // Enviar toda la configuración actual
+      const response = await fetch(`/api/payroll/settings?company_id=${companyId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settings),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setSettings(data.data);
+        setSuccessMessage('✅ Toda la configuración guardada exitosamente');
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } else {
+        setError(data.error || 'Error al guardar configuración completa');
+      }
+    } catch (err) {
+      setError('Error de conexión');
+      console.error('Error saving all settings:', err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) {
@@ -170,16 +292,17 @@ export default function PayrollSettingsPage() {
             <Button 
               variant="outline" 
               size="sm"
-              onClick={fetchSettings}
+              onClick={handlePreviredUpdate}
               disabled={saving}
             >
               <Globe className="h-4 w-4 mr-2" />
-              Actualizar desde Previred
+              {saving ? 'Actualizando...' : 'Actualizar desde Previred'}
             </Button>
             <Button 
               variant="primary" 
               size="sm"
-              disabled={saving}
+              onClick={handleSaveAll}
+              disabled={saving || !settings}
             >
               <Save className="h-4 w-4 mr-2" />
               {saving ? 'Guardando...' : 'Guardar Todo'}
@@ -516,7 +639,9 @@ export default function PayrollSettingsPage() {
                   </label>
                   <input
                     type="number"
+                    step="1"
                     value={settings.family_allowances?.tramo_a || 13596}
+                    onChange={(e) => handleFamilyAllowanceUpdate('tramo_a', parseInt(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <p className="mt-1 text-xs text-gray-500">
@@ -530,7 +655,9 @@ export default function PayrollSettingsPage() {
                   </label>
                   <input
                     type="number"
+                    step="1"
                     value={settings.family_allowances?.tramo_b || 8397}
+                    onChange={(e) => handleFamilyAllowanceUpdate('tramo_b', parseInt(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <p className="mt-1 text-xs text-gray-500">
@@ -544,7 +671,9 @@ export default function PayrollSettingsPage() {
                   </label>
                   <input
                     type="number"
+                    step="1"
                     value={settings.family_allowances?.tramo_c || 2798}
+                    onChange={(e) => handleFamilyAllowanceUpdate('tramo_c', parseInt(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <p className="mt-1 text-xs text-gray-500">
@@ -587,6 +716,7 @@ export default function PayrollSettingsPage() {
                   </label>
                   <select
                     value={settings.company_info?.mutual_code || 'ACHS'}
+                    onChange={(e) => handleCompanyInfoUpdate('mutual_code', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="ACHS">ACHS (Asociación Chilena de Seguridad)</option>
@@ -603,7 +733,8 @@ export default function PayrollSettingsPage() {
                     Caja de Compensación
                   </label>
                   <select
-                    value={settings.company_info?.caja_compensacion_code || 'CCAF_ANDES'}
+                    value={settings.company_info?.caja_compensacion_code || ''}
+                    onChange={(e) => handleCompanyInfoUpdate('caja_compensacion_code', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Sin Caja de Compensación</option>
