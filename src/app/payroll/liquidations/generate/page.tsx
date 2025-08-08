@@ -41,7 +41,6 @@ export default function GenerateLiquidationPage() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const COMPANY_ID = '8033ee69-b420-4d91-ba0e-482f46cd6fce';
@@ -244,56 +243,6 @@ export default function GenerateLiquidationPage() {
     }
   };
 
-  const handleExportPDF = async () => {
-    if (!result || !selectedEmployee) return;
-
-    setExporting(true);
-    try {
-      // Preparar los datos para la exportación
-      const exportData = {
-        employee_id: selectedEmployeeId,
-        employee_name: `${selectedEmployee.first_name} ${selectedEmployee.last_name}`,
-        employee_rut: selectedEmployee.rut,
-        period_year: formData.period_year,
-        period_month: formData.period_month,
-        days_worked: formData.days_worked,
-        calculation_result: result
-      };
-
-      // Llamar a la API de exportación
-      const response = await fetch(`/api/payroll/liquidations/export?company_id=${COMPANY_ID}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(exportData)
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        // Crear un blob con el contenido HTML y abrir en nueva ventana para imprimir
-        const htmlContent = data.html;
-        const newWindow = window.open('', '_blank');
-        if (newWindow) {
-          newWindow.document.write(htmlContent);
-          newWindow.document.close();
-          
-          // Esperar a que se cargue el contenido y luego mostrar diálogo de impresión
-          setTimeout(() => {
-            newWindow.print();
-          }, 1000);
-        }
-      } else {
-        setError(data.error || 'Error al exportar liquidación');
-      }
-    } catch (err) {
-      setError('Error al exportar liquidación');
-      console.error('Error exporting liquidation:', err);
-    } finally {
-      setExporting(false);
-    }
-  };
 
   const getEmployeeDisplayName = (employee: Employee) => {
     return `${employee.first_name} ${employee.last_name} (${employee.rut})`;
@@ -588,28 +537,25 @@ export default function GenerateLiquidationPage() {
               </CardContent>
             </Card>
 
-            {/* Botones de acción */}
-            <div className="flex gap-3">
+            {/* Botón de acción principal */}
+            <div className="space-y-4">
               <Button
                 onClick={handleSaveAndGenerate}
                 disabled={!isValid || saving}
                 loading={saving}
-                className="flex-1 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
+                className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
               >
                 <Save className="w-4 h-4 mr-2" />
                 {saving ? 'Generando...' : 'Generar y Guardar'}
               </Button>
               
-              <Button
-                variant="outline"
-                onClick={handleExportPDF}
-                disabled={!isValid || exporting}
-                loading={exporting}
-                className="border-blue-300 hover:bg-blue-50"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Exportar PDF
-              </Button>
+              <div className="text-center text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+                <div className="flex items-center justify-center mb-2">
+                  <FileText className="w-4 h-4 mr-2 text-blue-600" />
+                  <span className="font-medium">Después de guardar</span>
+                </div>
+                <p>Podrás ver, imprimir y descargar la liquidación en PDF desde la lista de liquidaciones.</p>
+              </div>
             </div>
           </div>
 
