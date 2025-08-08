@@ -11,6 +11,7 @@ interface PayrollHeaderProps {
   title: string
   subtitle?: string
   showBackButton?: boolean
+  backUrl?: string
   actions?: React.ReactNode
   className?: string
 }
@@ -19,6 +20,7 @@ const PayrollHeader: React.FC<PayrollHeaderProps> = ({
   title,
   subtitle,
   showBackButton = false,
+  backUrl = '/payroll',
   actions,
   className
 }) => {
@@ -35,7 +37,7 @@ const PayrollHeader: React.FC<PayrollHeaderProps> = ({
             {/* Información de la página */}
             <div className="flex items-center gap-4">
               {showBackButton && (
-                <Link href="/payroll">
+                <Link href={backUrl}>
                   <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900 flex-shrink-0">
                     <ArrowLeft className="h-4 w-4" />
                   </Button>

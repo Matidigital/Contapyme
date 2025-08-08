@@ -609,6 +609,7 @@ export default function LiquidationDetailPage() {
           title="Liquidación de Sueldo"
           subtitle="Cargando detalles..."
           showBackButton
+          backUrl="/payroll/liquidations"
         />
         <div className="max-w-4xl mx-auto py-6 px-4">
           <div className="flex items-center justify-center h-64">
@@ -629,6 +630,7 @@ export default function LiquidationDetailPage() {
           title="Liquidación de Sueldo"
           subtitle="Error al cargar"
           showBackButton
+          backUrl="/payroll/liquidations"
         />
         <div className="max-w-4xl mx-auto py-6 px-4">
           <Card className="border-red-200 bg-red-50">
@@ -663,6 +665,7 @@ export default function LiquidationDetailPage() {
           title="Liquidación de Sueldo"
           subtitle={`${cleanText(liquidation.employee.first_name)} ${cleanText(liquidation.employee.last_name)} - ${formatPeriod(liquidation.period_year, liquidation.period_month)}`}
           showBackButton
+          backUrl="/payroll/liquidations"
           actions={
             <div className="w-full space-y-4">
               {/* Badge de estado - moderno y destacado */}
