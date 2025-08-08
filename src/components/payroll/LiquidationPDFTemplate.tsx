@@ -33,6 +33,26 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
     }).format(amount);
   };
 
+  // Función para limpiar caracteres especiales malformados
+  const cleanText = (text: string) => {
+    if (!text) return '';
+    return text
+      .replace(/Ã¡/g, 'á')
+      .replace(/Ã©/g, 'é')
+      .replace(/Ã­/g, 'í')
+      .replace(/Ã³/g, 'ó')
+      .replace(/Ãº/g, 'ú')
+      .replace(/Ã±/g, 'ñ')
+      .replace(/Ã/g, 'Á')
+      .replace(/Ã/g, 'É')
+      .replace(/Ã/g, 'Í')
+      .replace(/Ã/g, 'Ó')
+      .replace(/Ã/g, 'Ú')
+      .replace(/Ã/g, 'Ñ')
+      .replace(/�/g, 'é')
+      .trim();
+  };
+
   // Calcular gratificación legal según configuración del empleado
   const calculateLegalGratification = () => {
     const baseSalary = liquidationData.base_salary || 0;
@@ -261,7 +281,7 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
             fontSize: '11px',
             borderRight: '1px solid #000',
             width: '30%'
-          }}>{employeeName.toUpperCase()}</td>
+          }}>{cleanText(employeeName).toUpperCase()}</td>
           <td style={{ 
             padding: '8px', 
             fontSize: '11px', 
@@ -652,7 +672,7 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
               RECIBO Y FIRMO CONFORME
             </div>
             <div style={{ fontSize: '10px', marginTop: '10px' }}>
-              {employeeName.toUpperCase()}
+              {cleanText(employeeName).toUpperCase()}
             </div>
             <div style={{ fontSize: '10px' }}>
               {employeeRut}

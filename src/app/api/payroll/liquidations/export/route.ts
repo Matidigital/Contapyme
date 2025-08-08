@@ -23,13 +23,33 @@ function generateLiquidationHTML(liquidation: any, employee: any, company: any) 
     return `${months[month - 1]} ${year}`;
   };
 
+  // Función para limpiar caracteres especiales malformados
+  const cleanText = (text: string) => {
+    if (!text) return '';
+    return text
+      .replace(/Ã¡/g, 'á')
+      .replace(/Ã©/g, 'é')
+      .replace(/Ã­/g, 'í')
+      .replace(/Ã³/g, 'ó')
+      .replace(/Ãº/g, 'ú')
+      .replace(/Ã±/g, 'ñ')
+      .replace(/Ã/g, 'Á')
+      .replace(/Ã/g, 'É')
+      .replace(/Ã/g, 'Í')
+      .replace(/Ã/g, 'Ó')
+      .replace(/Ã/g, 'Ú')
+      .replace(/Ã/g, 'Ñ')
+      .replace(/�/g, 'é')
+      .trim();
+  };
+
   return `
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Liquidación de Sueldo - ${employee.first_name} ${employee.last_name}</title>
+    <title>Liquidación de Sueldo - ${cleanText(employee.first_name)} ${cleanText(employee.last_name)}</title>
     <style>
         * {
             margin: 0;
@@ -160,7 +180,7 @@ function generateLiquidationHTML(liquidation: any, employee: any, company: any) 
             <table>
                 <tr>
                     <th style="width: 25%">Nombre:</th>
-                    <td style="width: 25%">${employee.first_name} ${employee.last_name}</td>
+                    <td style="width: 25%">${cleanText(employee.first_name)} ${cleanText(employee.last_name)}</td>
                     <th style="width: 25%">RUT:</th>
                     <td style="width: 25%">${employee.rut}</td>
                 </tr>
@@ -301,7 +321,7 @@ function generateLiquidationHTML(liquidation: any, employee: any, company: any) 
                 <div class="signature-line">
                     <div>Trabajador</div>
                     <div style="font-size: 10px; margin-top: 5px;">
-                        ${employee.first_name} ${employee.last_name}<br>
+                        ${cleanText(employee.first_name)} ${cleanText(employee.last_name)}<br>
                         RUT: ${employee.rut}
                     </div>
                 </div>
@@ -424,6 +444,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Función para limpiar caracteres especiales malformados (para CSV)
+    const cleanText = (text: string) => {
+      if (!text) return '';
+      return text
+        .replace(/Ã¡/g, 'á')
+        .replace(/Ã©/g, 'é')
+        .replace(/Ã­/g, 'í')
+        .replace(/Ã³/g, 'ó')
+        .replace(/Ãº/g, 'ú')
+        .replace(/Ã±/g, 'ñ')
+        .replace(/Ã/g, 'Á')
+        .replace(/Ã/g, 'É')
+        .replace(/Ã/g, 'Í')
+        .replace(/Ã/g, 'Ó')
+        .replace(/Ã/g, 'Ú')
+        .replace(/Ã/g, 'Ñ')
+        .replace(/�/g, 'é')
+        .trim();
+    };
+
     let query = supabase
       .from('payroll_liquidations')
       .select(`
@@ -465,7 +505,7 @@ export async function GET(request: NextRequest) {
 
     const rows = liquidations?.map(liq => [
       liq.employees.rut,
-      `${liq.employees.first_name} ${liq.employees.last_name}`,
+      `${cleanText(liq.employees.first_name)} ${cleanText(liq.employees.last_name)}`,
       liq.period_year,
       liq.period_month,
       liq.days_worked,
