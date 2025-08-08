@@ -3,26 +3,25 @@
 import Link from 'next/link';
 import { CompanyProvider } from '@/contexts/CompanyContext';
 import { CompanyHeader } from '@/components/company';
-import { Header } from '@/components/layout';
+import { MinimalHeader } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 
 export default function DashboardPage() {
   return (
     <CompanyProvider demoMode={true}>
       <div className="min-h-screen bg-gray-50">
-        <Header 
-          title="Dashboard Empresarial"
-          subtitle="Centro de comando de tu empresa"
-          actions={
-            <div className="flex space-x-2">
-              <Link href="/">
-                <Button variant="outline" size="sm">← Inicio</Button>
-              </Link>
-            </div>
-          }
-        />
+        <MinimalHeader variant="premium" />
 
         <main className="max-w-7xl mx-auto py-8 px-4">
+          {/* Page Header */}
+          <div className="mb-8">
+            <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg shadow-lg">
+              <div className="px-6 py-8 text-white">
+                <h1 className="text-3xl font-bold mb-2">Dashboard Empresarial</h1>
+                <p className="text-indigo-100">Centro de comando de tu empresa</p>
+              </div>
+            </div>
+          </div>
           {/* Company Information */}
           <div className="mb-8">
             <CompanyHeader showFullInfo={false} />

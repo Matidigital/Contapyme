@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Header } from '@/components/layout';
+import { MinimalHeader } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { Users, FileText, Clock, Calendar, BarChart3, Plus, ChevronRight, Settings, FileSpreadsheet } from 'lucide-react';
 
@@ -72,21 +72,19 @@ export default function PayrollPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header 
-        title="Módulo de Remuneraciones"
-        subtitle="Gestiona empleados, contratos y nóminas"
-        showBackButton
-        actions={
-          <Link href="/explore">
-            <Button variant="outline" size="sm">
-              ← Volver a Explorar
-            </Button>
-          </Link>
-        }
-      />
+      <MinimalHeader variant="premium" />
 
-      {/* Main Content */}
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        {/* Page Header */}
+        <div className="mb-8">
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-lg">
+            <div className="px-6 py-8 text-white">
+              <h1 className="text-3xl font-bold mb-2">Módulo de Remuneraciones</h1>
+              <p className="text-blue-100">Gestiona empleados, contratos y nóminas</p>
+            </div>
+          </div>
+        </div>
+
         <div className="px-4 py-6 sm:px-0">
           {/* Navigation Tabs */}
           <div className="border-b border-gray-200 mb-6">

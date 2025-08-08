@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Header } from '@/components/layout'
+import { MinimalHeader } from '@/components/layout'
 
 export default function AccountingPage() {
   // Demo mode - no authentication required
@@ -22,10 +22,7 @@ export default function AccountingPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header 
-        title="Módulo de Contabilidad"
-        subtitle="Administra toda la información financiera de tus empresas desde un solo lugar"
-      />
+      <MinimalHeader variant="premium" />
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
