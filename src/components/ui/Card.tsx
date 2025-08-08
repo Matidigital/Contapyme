@@ -2,10 +2,11 @@ import React from 'react'
 import { cn } from '@/lib/utils'
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: 'default' | 'bordered' | 'elevated' | 'flat'
+  variant?: 'default' | 'bordered' | 'elevated' | 'flat' | 'glass' | 'gradient'
   padding?: 'none' | 'sm' | 'md' | 'lg' | 'xl'
-  rounded?: 'none' | 'sm' | 'md' | 'lg' | 'xl'
+  rounded?: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'
   hover?: boolean
+  shadow?: 'none' | 'sm' | 'md' | 'lg' | 'xl'
 }
 
 interface CardHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -19,19 +20,21 @@ interface CardFooterProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
-  ({ className, variant = 'default', padding = 'md', rounded = 'lg', hover = false, ...props }, ref) => {
-    const baseStyles = "bg-white transition-all duration-200"
+  ({ className, variant = 'default', padding = 'md', rounded = 'xl', hover = false, shadow, ...props }, ref) => {
+    const baseStyles = "transition-all duration-200"
     
     const variants = {
-      default: "border border-gray-200 shadow-sm",
-      bordered: "border-2 border-gray-200",
-      elevated: "shadow-lg border border-gray-100",
-      flat: "border-0"
+      default: "bg-white border border-gray-200 shadow-sm",
+      bordered: "bg-white border-2 border-gray-300",
+      elevated: "bg-white shadow-lg border border-gray-100",
+      flat: "bg-gray-50 border-0",
+      glass: "bg-white/80 backdrop-blur-md border border-white/20 shadow-lg",
+      gradient: "bg-gradient-to-br from-white to-gray-50 border border-gray-200 shadow-sm"
     }
     
     const paddings = {
       none: "p-0",
-      sm: "p-3",
+      sm: "p-4",
       md: "p-6",
       lg: "p-8",
       xl: "p-10"
@@ -39,13 +42,22 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
     
     const roundeds = {
       none: "rounded-none",
-      sm: "rounded-sm",
+      sm: "rounded",
       md: "rounded-md",
       lg: "rounded-lg",
-      xl: "rounded-xl"
+      xl: "rounded-xl",
+      '2xl': "rounded-2xl"
     }
     
-    const hoverStyles = hover ? "hover:shadow-md hover:border-gray-300" : ""
+    const shadows = {
+      none: "",
+      sm: "shadow-sm",
+      md: "shadow-md",
+      lg: "shadow-lg",
+      xl: "shadow-xl"
+    }
+    
+    const hoverStyles = hover ? "hover:shadow-lg hover:-translate-y-0.5" : ""
     
     return (
       <div
@@ -55,6 +67,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
           variants[variant],
           paddings[padding],
           roundeds[rounded],
+          shadow && shadows[shadow],
           hoverStyles,
           className
         )}
@@ -85,7 +98,7 @@ const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HT
     return (
       <h3
         ref={ref}
-        className={cn("text-lg font-semibold leading-none tracking-tight text-gray-900", className)}
+        className={cn("text-xl font-semibold leading-none tracking-tight text-gray-900", className)}
         {...props}
       />
     )
@@ -97,7 +110,7 @@ const CardDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttribu
     return (
       <p
         ref={ref}
-        className={cn("text-sm text-gray-600", className)}
+        className={cn("text-sm text-gray-500 mt-1", className)}
         {...props}
       />
     )
