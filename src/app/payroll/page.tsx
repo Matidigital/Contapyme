@@ -142,7 +142,6 @@ export default function PayrollPage() {
       </div>
 
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-
         {/* Navigation Tabs modernizados y responsive */}
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-2 mb-8 border border-white/20">
           <nav className="flex flex-col sm:flex-row gap-2">
@@ -203,8 +202,8 @@ export default function PayrollPage() {
           </nav>
         </div>
 
-          {/* Tab Content */}
-          {activeTab === 'overview' && (
+        {/* Tab Content */}
+        {activeTab === 'overview' && (
             <>
               {/* Stats Cards modernizadas con efectos glass */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
@@ -357,9 +356,9 @@ export default function PayrollPage() {
                 </div>
               </div>
             </>
-          )}
+        )}
 
-          {activeTab === 'employees' && (
+        {activeTab === 'employees' && (
             <div>
               {/* Header Actions modernizadas */}
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
@@ -406,9 +405,9 @@ export default function PayrollPage() {
                 </div>
               </div>
             </div>
-          )}
+        )}
 
-          {activeTab === 'contracts' && (
+        {activeTab === 'contracts' && (
             <div>
               {/* Header Actions modernizadas */}
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
@@ -436,9 +435,9 @@ export default function PayrollPage() {
                 </Link>
               </div>
             </div>
-          )}
+        )}
 
-          {activeTab === 'libro-remuneraciones' && (
+        {activeTab === 'libro-remuneraciones' && (
             <div>
               {/* Header Actions modernizadas */}
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
@@ -493,10 +492,10 @@ export default function PayrollPage() {
                 </div>
               </div>
             </div>
-          )}
+        )}
 
-          {/* Próximas Funcionalidades modernizadas */}
-          <div className="mt-12">
+        {/* Próximas Funcionalidades modernizadas */}
+        <div className="mt-12">
             <div className="text-center mb-8">
               <h3 className="text-2xl font-bold text-gray-900 mb-2">Funcionalidades del Módulo</h3>
               <p className="text-gray-600">Herramientas disponibles y próximos desarrollos</p>
@@ -555,7 +554,6 @@ export default function PayrollPage() {
                 </div>
               </div>
             </div>
-          </div>
         </div>
       </div>
     </div>
