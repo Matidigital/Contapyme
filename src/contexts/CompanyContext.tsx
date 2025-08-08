@@ -21,7 +21,7 @@ export interface Company {
 
 // Empresa demo con datos realistas chilenos
 export const DEMO_COMPANY: Company = {
-  id: 'demo-company-12345678-9',
+  id: '8033ee69-b420-4d91-ba0e-482f46cd6fce', // ✅ CORREGIDO: Usar UUID de Supabase
   rut: '12.345.678-9',
   razon_social: 'PyME Ejemplo S.A.',
   nombre_fantasia: 'PyME Ejemplo',
