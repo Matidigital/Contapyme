@@ -95,7 +95,7 @@ const MinimalHeader: React.FC<MinimalHeaderProps> = ({
                 <img 
                   src="/images/logo.png" 
                   alt="ContaPymePuq" 
-                  className="h-24 w-auto drop-shadow-sm group-hover:drop-shadow-md transition-all duration-300 group-hover:scale-105" 
+                  className="h-32 w-auto drop-shadow-sm group-hover:drop-shadow-md transition-all duration-300 group-hover:scale-105" 
                 />
                 {/* Glow effect subtle */}
                 <div className="absolute inset-0 bg-primary-500/20 rounded-lg blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10" />
