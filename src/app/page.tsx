@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, IndicatorsTicker } from '@/components/ui'
+import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, IndicatorsTicker, Badge } from '@/components/ui'
+import { MinimalHeader } from '@/components/layout'
 import Preloader from '@/components/ui/Preloader'
 import { useUserIntention, type UserIntention } from '@/hooks/useUserIntention'
 import { TrendingUp, Shield, Zap, Globe, ChevronRight, Play } from 'lucide-react'
@@ -29,26 +30,8 @@ export default function Home() {
         <div className="absolute top-40 left-40 w-80 h-80 bg-cyan-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000" />
       </div>
 
-      {/* Custom Navigation for Homepage */}
-      <nav className="relative z-20 bg-white/80 backdrop-blur-lg border-b border-gray-200 sticky top-0">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-              <img 
-                src="/images/logo.png" 
-                alt="ContaPymePuq" 
-                className="h-24 w-auto drop-shadow-lg" 
-              />
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link href="/design-system">
-                <Button variant="ghost" size="sm">Sistema</Button>
-              </Link>
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            </div>
-          </div>
-        </div>
-      </nav>
+      {/* Header Minimalista */}
+      <MinimalHeader variant="glass" />
 
       {/* Cinta de Indicadores Económicos */}
       <IndicatorsTicker />
@@ -58,9 +41,13 @@ export default function Home() {
         <section className="pt-20 pb-16 px-4">
           <div className="max-w-6xl mx-auto text-center">
             <div className="mb-8">
-              <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-full text-sm font-medium mb-6">
-                <span className="mr-2">🚀</span>
-                Plataforma Empresarial • Certificada • Segura
+              <div className="flex items-center justify-center gap-3 mb-6">
+                <Badge variant="primary" size="md" icon={<Zap className="h-3 w-3" />}>
+                  Sistema Modernizado 2.0
+                </Badge>
+                <Badge variant="success" size="md" dot>
+                  En Línea
+                </Badge>
               </div>
               
               <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
