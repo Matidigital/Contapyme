@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Header } from '@/components/layout';
+import { PayrollHeader } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { FileSpreadsheet, Download, Plus, Calendar, Users, DollarSign, CheckCircle, Clock, AlertCircle, FileText } from 'lucide-react';
 
@@ -236,9 +236,18 @@ export default function LibroRemuneracionesPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Header title="Libro de Remuneraciones" subtitle="Cargando..." />
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <PayrollHeader 
+          title="Libro de Remuneraciones" 
+          subtitle="Cargando libros de remuneraciones..."
+          showBackButton 
+        />
+        <div className="max-w-6xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-center items-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Cargando libros de remuneraciones...</p>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -246,29 +255,28 @@ export default function LibroRemuneracionesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header 
+      <PayrollHeader 
         title="Libro de Remuneraciones" 
         subtitle="Genera y gestiona libros de remuneraciones electrónicos"
         showBackButton
       />
 
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 sm:px-0">
+      <div className="max-w-6xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
           
           {/* Panel de generación */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Plus className="w-5 h-5 mr-2" />
+          <Card className="mb-6 bg-white border border-gray-200">
+            <CardHeader className="border-b border-gray-100">
+              <CardTitle className="flex items-center text-xl font-semibold text-gray-900">
+                <Plus className="w-5 h-5 mr-2 text-blue-600" />
                 Generar Nuevo Libro
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-gray-600">
                 Crea un libro de remuneraciones para un período específico. Incluye exportación CSV y archivo TXT para Previred.
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-6">
               <div className="space-y-4">
-                <div className="flex items-center space-x-4">
+                <div className="flex flex-col sm:flex-row sm:items-end gap-4">
                   <div className="flex-1">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Período
@@ -276,7 +284,7 @@ export default function LibroRemuneracionesPage() {
                     <select
                       value={selectedPeriod}
                       onChange={(e) => setSelectedPeriod(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                     >
                       <option value="">Seleccionar período</option>
                       {generatePeriodOptions().map((option) => (
@@ -286,14 +294,17 @@ export default function LibroRemuneracionesPage() {
                       ))}
                     </select>
                   </div>
-                  <div className="pt-6">
+                  <div className="sm:pt-0">
                     <Button
                       onClick={generateBook}
-                      loading={generatingBook}
                       disabled={!selectedPeriod || generatingBook || (periodAvailability && !periodAvailability.can_generate_book)}
-                      className="px-6"
+                      className="w-full sm:w-auto px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white transition-colors duration-200"
                     >
-                      <FileSpreadsheet className="w-4 w-4 mr-2" />
+                      {generatingBook ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      ) : (
+                        <FileSpreadsheet className="w-4 h-4 mr-2" />
+                      )}
                       {generatingBook ? 'Generando...' : 'Generar Libro'}
                     </Button>
                   </div>
@@ -355,13 +366,18 @@ export default function LibroRemuneracionesPage() {
 
           {/* Lista de libros */}
           <div className="space-y-6">
-            <h2 className="text-lg font-medium text-gray-900">Libros Generados</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">Libros Generados</h2>
+              {books.length > 0 && (
+                <span className="text-sm text-gray-500">{books.length} libro{books.length !== 1 ? 's' : ''}</span>
+              )}
+            </div>
             
             {books.length === 0 ? (
-              <Card>
+              <Card className="bg-white border border-gray-200">
                 <CardContent className="text-center py-12">
                   <FileSpreadsheet className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
                     No hay libros generados
                   </h3>
                   <p className="text-gray-600">
@@ -372,18 +388,18 @@ export default function LibroRemuneracionesPage() {
             ) : (
               <div className="grid grid-cols-1 gap-6">
                 {books.map((book) => (
-                  <Card key={book.id} className="hover:shadow-lg transition-shadow">
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
+                  <Card key={book.id} className="bg-white border border-gray-200 hover:border-gray-300 transition-colors duration-200">
+                    <CardHeader className="border-b border-gray-100">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                         <div>
-                          <CardTitle className="flex items-center">
+                          <CardTitle className="flex items-center text-xl font-semibold text-gray-900">
                             <Calendar className="w-5 h-5 mr-2 text-blue-600" />
                             {formatPeriod(book.period)}
                             <span className="ml-2 text-sm font-normal text-gray-500">
                               (Libro #{book.book_number})
                             </span>
                           </CardTitle>
-                          <CardDescription className="flex items-center mt-2">
+                          <CardDescription className="flex items-center mt-2 text-gray-600">
                             {getStatusIcon(book.status)}
                             <span className="ml-2">{getStatusText(book.status)}</span>
                             <span className="ml-4 text-xs text-gray-500">
@@ -391,72 +407,72 @@ export default function LibroRemuneracionesPage() {
                             </span>
                           </CardDescription>
                         </div>
-                        <div className="flex space-x-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => downloadCSV(book)}
-                            className="flex items-center"
+                            className="flex items-center bg-white border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors duration-200"
                           >
                             <Download className="w-4 h-4 mr-2" />
-                            CSV
+                            Descargar CSV
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => downloadPrevired(book)}
-                            className="flex items-center"
+                            className="flex items-center bg-white border-purple-200 text-purple-700 hover:bg-purple-50 transition-colors duration-200"
                           >
                             <FileText className="w-4 h-4 mr-2" />
-                            Previred
+                            Archivo Previred
                           </Button>
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div className="bg-blue-50 p-4 rounded-lg">
+                    <CardContent className="p-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
                           <div className="flex items-center">
-                            <Users className="w-5 h-5 text-blue-600 mr-2" />
+                            <Users className="w-5 h-5 text-blue-600 mr-3" />
                             <div>
-                              <p className="text-sm text-gray-600">Empleados</p>
-                              <p className="text-lg font-semibold text-blue-700">
+                              <p className="text-sm font-medium text-gray-700">Empleados</p>
+                              <p className="text-xl font-bold text-blue-700">
                                 {book.total_employees}
                               </p>
                             </div>
                           </div>
                         </div>
                         
-                        <div className="bg-green-50 p-4 rounded-lg">
+                        <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
                           <div className="flex items-center">
-                            <DollarSign className="w-5 h-5 text-green-600 mr-2" />
+                            <DollarSign className="w-5 h-5 text-green-600 mr-3" />
                             <div>
-                              <p className="text-sm text-gray-600">Total Haberes</p>
-                              <p className="text-lg font-semibold text-green-700">
+                              <p className="text-sm font-medium text-gray-700">Total Haberes</p>
+                              <p className="text-xl font-bold text-green-700">
                                 {formatCurrency(book.total_haberes)}
                               </p>
                             </div>
                           </div>
                         </div>
                         
-                        <div className="bg-red-50 p-4 rounded-lg">
+                        <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
                           <div className="flex items-center">
-                            <DollarSign className="w-5 h-5 text-red-600 mr-2" />
+                            <DollarSign className="w-5 h-5 text-red-600 mr-3" />
                             <div>
-                              <p className="text-sm text-gray-600">Total Descuentos</p>
-                              <p className="text-lg font-semibold text-red-700">
+                              <p className="text-sm font-medium text-gray-700">Total Descuentos</p>
+                              <p className="text-xl font-bold text-red-700">
                                 {formatCurrency(book.total_descuentos)}
                               </p>
                             </div>
                           </div>
                         </div>
                         
-                        <div className="bg-purple-50 p-4 rounded-lg">
+                        <div className="bg-purple-50 border border-purple-200 p-4 rounded-lg">
                           <div className="flex items-center">
-                            <DollarSign className="w-5 h-5 text-purple-600 mr-2" />
+                            <DollarSign className="w-5 h-5 text-purple-600 mr-3" />
                             <div>
-                              <p className="text-sm text-gray-600">Líquido a Pagar</p>
-                              <p className="text-lg font-semibold text-purple-700">
+                              <p className="text-sm font-medium text-gray-700">Líquido a Pagar</p>
+                              <p className="text-xl font-bold text-purple-700">
                                 {formatCurrency(book.total_liquido)}
                               </p>
                             </div>
