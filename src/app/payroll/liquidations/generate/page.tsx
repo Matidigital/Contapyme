@@ -74,6 +74,8 @@ export default function GenerateLiquidationPage() {
     if (!emp || !emp.employment_contracts?.[0]) return null;
 
     const contract = emp.employment_contracts[0];
+    const payrollConfig = emp.payroll_config?.[0]; // ✅ CORREGIDO: Obtener desde payroll_config
+    
     return {
       id: emp.id,
       rut: emp.rut,
@@ -81,9 +83,9 @@ export default function GenerateLiquidationPage() {
       last_name: emp.last_name,
       base_salary: contract.base_salary,
       contract_type: contract.contract_type as 'indefinido' | 'plazo_fijo' | 'obra_faena',
-      afp_code: emp.afp_code || 'MODELO',
-      health_institution_code: emp.health_institution_code || 'FONASA',
-      family_allowances: emp.family_allowances || 0
+      afp_code: payrollConfig?.afp_code || 'MODELO', // ✅ CORREGIDO: Desde payroll_config
+      health_institution_code: payrollConfig?.health_institution_code || 'FONASA', // ✅ CORREGIDO
+      family_allowances: payrollConfig?.family_allowances || 0 // ✅ CORREGIDO
     } as EmployeeData;
   }, [employees, selectedEmployeeId]);
 
