@@ -648,30 +648,45 @@ export default function LiquidationDetailPage() {
           subtitle={`${liquidation.employee.first_name} ${liquidation.employee.last_name} - ${formatPeriod(liquidation.period_year, liquidation.period_month)}`}
           showBackButton
           actions={
-            <div className="flex items-center space-x-2">
-              {getStatusBadge(liquidation.status)}
+            <div className="w-full space-y-3">
+              {/* Badge de estado - centrado en mobile */}
+              <div className="flex justify-center sm:justify-start">
+                {getStatusBadge(liquidation.status)}
+              </div>
               
-              {/* Botones de workflow contextuales */}
-              {getActionButtons()}
-              
-              {/* Botón Editar (solo para borradores) */}
-              {liquidation.status === 'draft' && (
-                <Button variant="outline" size="sm" onClick={handleEdit}>
-                  <Edit3 className="h-4 w-4 mr-2" />
-                  Editar
+              {/* Botones principales - stack en mobile, inline en desktop */}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+                
+                {/* Botones de workflow - grid 2 columnas en mobile */}
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-2 sm:grid-cols-none">
+                  {getActionButtons()}
+                </div>
+                
+                {/* Botón Editar (solo para borradores) */}
+                {liquidation.status === 'draft' && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleEdit}
+                    className="w-full sm:w-auto text-sm"
+                  >
+                    <Edit3 className="h-4 w-4 mr-2 flex-shrink-0" />
+                    Editar
+                  </Button>
+                )}
+                
+                {/* Botón Descargar PDF (siempre disponible) - más prominente */}
+                <Button 
+                  variant="primary" 
+                  size="sm" 
+                  onClick={handleDownloadPDF}
+                  disabled={downloadingPDF}
+                  className="w-full sm:w-auto text-sm font-medium"
+                >
+                  <Download className="h-4 w-4 mr-2 flex-shrink-0" />
+                  {downloadingPDF ? 'Generando...' : 'Descargar PDF'}
                 </Button>
-              )}
-              
-              {/* Botón Descargar PDF (siempre disponible) */}
-              <Button 
-                variant="primary" 
-                size="sm" 
-                onClick={handleDownloadPDF}
-                disabled={downloadingPDF}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                {downloadingPDF ? 'Generando PDF...' : 'Descargar PDF'}
-              </Button>
+              </div>
             </div>
           }
         />
