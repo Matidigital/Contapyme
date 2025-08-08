@@ -170,6 +170,10 @@ export default function LiquidationDetailPage() {
       if (response.ok && data.success) {
         // Crear un blob con el contenido HTML y abrir en nueva ventana para imprimir/descargar
         const htmlContent = data.data.html;
+        const filename = data.data.filename;
+        
+        console.log('✅ Liquidación HTML recibida. Generando archivo:', filename);
+        
         const newWindow = window.open('', '_blank');
         
         if (newWindow) {
@@ -181,9 +185,20 @@ export default function LiquidationDetailPage() {
             newWindow.print();
           }, 1000);
           
-          console.log('✅ PDF generado exitosamente');
+          console.log('✅ PDF generado exitosamente con formato completo');
         } else {
-          setError('Error: No se pudo abrir ventana para el PDF');
+          // Fallback: crear blob y descargar directamente
+          const blob = new Blob([htmlContent], { type: 'text/html' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = filename.replace('.pdf', '.html');
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          
+          console.log('✅ HTML descargado como fallback');
         }
       } else {
         setError(data.error || 'Error al generar PDF');
@@ -370,7 +385,7 @@ export default function LiquidationDetailPage() {
               <Button 
                 variant="primary" 
                 size="sm" 
-                onClick={handleDownloadDirectPDF}
+                onClick={handleDownloadPDF}
                 disabled={downloadingPDF}
               >
                 <Download className="h-4 w-4 mr-2" />
