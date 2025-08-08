@@ -648,44 +648,66 @@ export default function LiquidationDetailPage() {
           subtitle={`${liquidation.employee.first_name} ${liquidation.employee.last_name} - ${formatPeriod(liquidation.period_year, liquidation.period_month)}`}
           showBackButton
           actions={
-            <div className="w-full space-y-3">
-              {/* Badge de estado - centrado en mobile */}
+            <div className="w-full space-y-4">
+              {/* Badge de estado - moderno y destacado */}
               <div className="flex justify-center sm:justify-start">
-                {getStatusBadge(liquidation.status)}
+                <div className="px-4 py-2 rounded-full bg-green-500/20 border border-green-500/30 backdrop-blur-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                    <span className="text-green-700 font-medium text-sm">Aprobada</span>
+                  </div>
+                </div>
               </div>
               
-              {/* Botones principales - stack en mobile, inline en desktop */}
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+              {/* Botones modernos - glass effect */}
+              <div className="flex flex-wrap gap-3 justify-center sm:justify-start">
                 
-                {/* Botones de workflow - grid 2 columnas en mobile */}
-                <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-2 sm:grid-cols-none">
-                  {getActionButtons()}
-                </div>
+                {/* Botones de workflow contextuales - modernos */}
+                <button
+                  onClick={handleMarkAsPaid}
+                  className="group relative px-4 py-2.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 hover:border-blue-500/40 backdrop-blur-sm transition-all duration-200 flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  <DollarSign className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  <span className="text-sm">Marcar Pagada</span>
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </button>
+
+                <button
+                  onClick={handleCancel}
+                  className="group relative px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/40 backdrop-blur-sm transition-all duration-200 flex items-center gap-2 text-red-600 hover:text-red-700 font-medium"
+                >
+                  <AlertTriangle className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  <span className="text-sm">Cancelar</span>
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-red-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </button>
                 
-                {/* Botón Editar (solo para borradores) */}
+                {/* Botón Editar (solo para borradores) - estilo moderno */}
                 {liquidation.status === 'draft' && (
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <button
                     onClick={handleEdit}
-                    className="w-full sm:w-auto text-sm"
+                    className="group relative px-4 py-2.5 rounded-xl bg-gray-500/10 hover:bg-gray-500/20 border border-gray-500/20 hover:border-gray-500/40 backdrop-blur-sm transition-all duration-200 flex items-center gap-2 text-gray-600 hover:text-gray-700 font-medium"
                   >
-                    <Edit3 className="h-4 w-4 mr-2 flex-shrink-0" />
-                    Editar
-                  </Button>
+                    <Edit3 className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                    <span className="text-sm">Editar</span>
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-gray-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  </button>
                 )}
                 
-                {/* Botón Descargar PDF (siempre disponible) - más prominente */}
-                <Button 
-                  variant="primary" 
-                  size="sm" 
+                {/* Botón Descargar PDF - más prominente y moderno */}
+                <button
                   onClick={handleDownloadPDF}
                   disabled={downloadingPDF}
-                  className="w-full sm:w-auto text-sm font-medium"
+                  className="group relative px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-500/20 to-blue-500/20 hover:from-purple-500/30 hover:to-blue-500/30 border border-purple-500/30 hover:border-purple-500/50 backdrop-blur-sm transition-all duration-200 flex items-center gap-2 text-purple-700 hover:text-purple-800 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Download className="h-4 w-4 mr-2 flex-shrink-0" />
-                  {downloadingPDF ? 'Generando...' : 'Descargar PDF'}
-                </Button>
+                  <Download className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  <span className="text-sm">
+                    {downloadingPDF ? 'Generando...' : 'Descargar PDF'}
+                  </span>
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-purple-500/10 to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  {downloadingPDF && (
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-purple-500/20 to-blue-500/20 animate-pulse"></div>
+                  )}
+                </button>
               </div>
             </div>
           }
