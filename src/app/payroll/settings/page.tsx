@@ -276,36 +276,29 @@ export default function PayrollSettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 overflow-x-hidden">
-      {/* Animated Background Elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-400 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-blob" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-400 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-blob animation-delay-2000" />
-        <div className="absolute top-40 left-40 w-80 h-80 bg-cyan-400 rounded-full mix-blend-multiply filter blur-xl opacity-10 animate-blob animation-delay-4000" />
-      </div>
-
+    <div className="min-h-screen bg-gray-50">
       <PayrollHeader 
         title="Configuración Previsional"
         subtitle="Gestiona AFP, Salud, Topes y Descuentos"
         showBackButton
         actions={
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <Button 
               variant="outline" 
-              size="sm"
+              size="md"
               onClick={handlePreviredUpdate}
               disabled={saving}
-              className="bg-white/80 backdrop-blur-sm border-white/30 hover:bg-white/90 transition-all duration-300"
+              className="bg-white border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors duration-200"
             >
               <Globe className="h-4 w-4 mr-2" />
               {saving ? 'Actualizando...' : 'Actualizar desde Previred'}
             </Button>
             <Button 
               variant="primary" 
-              size="sm"
+              size="md"
               onClick={handleSaveAll}
               disabled={saving || !settings}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg"
+              className="bg-blue-600 hover:bg-blue-700 text-white transition-colors duration-200"
             >
               <Save className="h-4 w-4 mr-2" />
               {saving ? 'Guardando...' : 'Guardar Todo'}
@@ -314,13 +307,13 @@ export default function PayrollSettingsPage() {
         }
       />
 
-      <div className="relative z-10 max-w-6xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         {/* Status Messages */}
         {error && (
-          <Card className="mb-6 border-red-200/50 bg-red-50/80 backdrop-blur-sm shadow-xl">
-            <CardContent className="pt-6">
-              <div className="flex items-center text-red-700">
-                <AlertCircle className="h-5 w-5 mr-3 animate-pulse" />
+          <Card className="mb-6 border-red-200 bg-red-50">
+            <CardContent className="p-4">
+              <div className="flex items-center text-red-800">
+                <AlertCircle className="h-5 w-5 mr-3 text-red-600" />
                 <span className="font-medium">{error}</span>
               </div>
             </CardContent>
@@ -328,26 +321,26 @@ export default function PayrollSettingsPage() {
         )}
 
         {successMessage && (
-          <Card className="mb-6 border-green-200/50 bg-green-50/80 backdrop-blur-sm shadow-xl">
-            <CardContent className="pt-6">
-              <div className="flex items-center text-green-700">
-                <CheckCircle className="h-5 w-5 mr-3 animate-bounce" />
+          <Card className="mb-6 border-green-200 bg-green-50">
+            <CardContent className="p-4">
+              <div className="flex items-center text-green-800">
+                <CheckCircle className="h-5 w-5 mr-3 text-green-600" />
                 <span className="font-medium">{successMessage}</span>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Navigation Tabs - Modernized */}
+        {/* Navigation Tabs - Clean Style */}
         <div className="mb-8">
-          <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-2 border border-white/20 shadow-lg">
-            <nav className="flex flex-wrap gap-2">
+          <div className="bg-white rounded-lg border border-gray-200 p-1">
+            <nav className="flex flex-wrap gap-1">
               <button
                 onClick={() => setActiveTab('afp')}
-                className={`flex items-center px-4 py-2 rounded-xl font-medium text-sm transition-all duration-300 ${
+                className={`flex items-center px-4 py-2 rounded-md font-medium text-sm transition-colors duration-200 ${
                   activeTab === 'afp'
-                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg scale-105'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
                 }`}
               >
                 <Building2 className="h-4 w-4 mr-2" />
@@ -355,10 +348,10 @@ export default function PayrollSettingsPage() {
               </button>
               <button
                 onClick={() => setActiveTab('health')}
-                className={`flex items-center px-4 py-2 rounded-xl font-medium text-sm transition-all duration-300 ${
+                className={`flex items-center px-4 py-2 rounded-md font-medium text-sm transition-colors duration-200 ${
                   activeTab === 'health'
-                    ? 'bg-gradient-to-r from-green-500 to-teal-600 text-white shadow-lg scale-105'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                    ? 'bg-green-600 text-white'
+                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
                 }`}
               >
                 <Heart className="h-4 w-4 mr-2" />
@@ -366,10 +359,10 @@ export default function PayrollSettingsPage() {
               </button>
               <button
                 onClick={() => setActiveTab('limits')}
-                className={`flex items-center px-4 py-2 rounded-xl font-medium text-sm transition-all duration-300 ${
+                className={`flex items-center px-4 py-2 rounded-md font-medium text-sm transition-colors duration-200 ${
                   activeTab === 'limits'
-                    ? 'bg-gradient-to-r from-orange-500 to-red-600 text-white shadow-lg scale-105'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                    ? 'bg-orange-600 text-white'
+                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
                 }`}
               >
                 <Calculator className="h-4 w-4 mr-2" />
@@ -377,10 +370,10 @@ export default function PayrollSettingsPage() {
               </button>
               <button
                 onClick={() => setActiveTab('family')}
-                className={`flex items-center px-4 py-2 rounded-xl font-medium text-sm transition-all duration-300 ${
+                className={`flex items-center px-4 py-2 rounded-md font-medium text-sm transition-colors duration-200 ${
                   activeTab === 'family'
-                    ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg scale-105'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                    ? 'bg-purple-600 text-white'
+                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
                 }`}
               >
                 <Users className="h-4 w-4 mr-2" />
@@ -388,10 +381,10 @@ export default function PayrollSettingsPage() {
               </button>
               <button
                 onClick={() => setActiveTab('company')}
-                className={`flex items-center px-4 py-2 rounded-xl font-medium text-sm transition-all duration-300 ${
+                className={`flex items-center px-4 py-2 rounded-md font-medium text-sm transition-colors duration-200 ${
                   activeTab === 'company'
-                    ? 'bg-gradient-to-r from-indigo-500 to-blue-600 text-white shadow-lg scale-105'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
                 }`}
               >
                 <Settings className="h-4 w-4 mr-2" />
@@ -403,59 +396,59 @@ export default function PayrollSettingsPage() {
 
         {/* Tab Content */}
         {activeTab === 'afp' && settings && (
-          <div className="space-y-8">
-            <Card className="bg-white/70 backdrop-blur-sm border-white/20 shadow-2xl rounded-2xl overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-b border-white/20">
-                <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <div className="space-y-6">
+            <Card className="bg-white border border-gray-200">
+              <CardHeader className="border-b border-gray-100">
+                <CardTitle className="text-xl font-semibold text-gray-900">
                   Configuración AFP
                 </CardTitle>
-                <CardDescription className="text-gray-600 text-lg">
+                <CardDescription className="text-gray-600">
                   Administra las comisiones y porcentajes de las AFP disponibles
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-8">
-                <div className="overflow-x-auto rounded-xl border border-white/20">
-                  <table className="min-w-full">
-                    <thead>
-                      <tr className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-sm">
-                        <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">AFP</th>
-                        <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">Comisión %</th>
-                        <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">SIS %</th>
-                        <th className="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">Estado</th>
+              <CardContent className="p-6">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AFP</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comisión %</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SIS %</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white/50 backdrop-blur-sm">
+                    <tbody className="bg-white divide-y divide-gray-200">
                       {settings.afp_configs?.map((afp, index) => (
-                        <tr key={afp.id} className="border-b border-white/30 hover:bg-white/70 transition-colors duration-200">
-                          <td className="px-6 py-5 whitespace-nowrap">
-                            <div className="font-bold text-gray-900 text-lg">{afp.name}</div>
-                            <div className="text-sm text-blue-600 font-medium bg-blue-50 px-2 py-1 rounded-full inline-block mt-1">{afp.code}</div>
+                        <tr key={afp.id} className="hover:bg-gray-50 transition-colors duration-200">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="font-semibold text-gray-900">{afp.name}</div>
+                            <div className="text-sm text-gray-600 bg-blue-50 px-2 py-1 rounded-md inline-block mt-1">{afp.code}</div>
                           </td>
-                          <td className="px-6 py-5 whitespace-nowrap">
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <input
                                 type="number"
                                 step="0.01"
                                 value={afp.commission_percentage}
                                 onChange={(e) => handleAFPUpdate(index, 'commission_percentage', parseFloat(e.target.value))}
-                                className="w-24 px-3 py-2 text-lg font-bold border-2 border-blue-200 rounded-lg bg-white/80 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                               />
-                              <span className="ml-2 text-lg font-bold text-blue-600">%</span>
+                              <span className="ml-2 text-sm font-medium text-gray-600">%</span>
                             </div>
                           </td>
-                          <td className="px-6 py-5 whitespace-nowrap">
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <input
                                 type="number"
                                 step="0.01"
                                 value={afp.sis_percentage}
                                 onChange={(e) => handleAFPUpdate(index, 'sis_percentage', parseFloat(e.target.value))}
-                                className="w-24 px-3 py-2 text-lg font-bold border-2 border-purple-200 rounded-lg bg-white/80 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200"
+                                className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                               />
-                              <span className="ml-2 text-lg font-bold text-purple-600">%</span>
+                              <span className="ml-2 text-sm font-medium text-gray-600">%</span>
                             </div>
                           </td>
-                          <td className="px-6 py-5 whitespace-nowrap">
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <label className="inline-flex items-center cursor-pointer">
                               <input
                                 type="checkbox"
@@ -470,18 +463,18 @@ export default function PayrollSettingsPage() {
                                   afp.active ? 'translate-x-6' : 'translate-x-1'
                                 }`} />
                               </div>
-                              <span className={`ml-3 text-sm font-bold ${afp.active ? 'text-green-700' : 'text-gray-500'}`}>
-                                {afp.active ? '✅ Activa' : '❌ Inactiva'}
+                              <span className={`ml-3 text-sm font-medium ${afp.active ? 'text-green-700' : 'text-gray-500'}`}>
+                                {afp.active ? 'Activa' : 'Inactiva'}
                               </span>
                             </label>
                           </td>
                         </tr>
                       )) || (
                         <tr>
-                          <td colSpan={4} className="px-6 py-8 text-center text-gray-500 bg-white/50">
+                          <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
                             <div className="flex flex-col items-center">
-                              <Building2 className="h-12 w-12 text-gray-300 mb-2" />
-                              <p className="text-lg font-medium">No hay AFP configuradas</p>
+                              <Building2 className="h-8 w-8 text-gray-400 mb-2" />
+                              <p className="text-sm font-medium">No hay AFP configuradas</p>
                             </div>
                           </td>
                         </tr>
@@ -493,24 +486,20 @@ export default function PayrollSettingsPage() {
             </Card>
 
             {/* Info Card */}
-            <Card className="border-blue-200/50 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 backdrop-blur-sm shadow-xl rounded-2xl">
-              <CardContent className="p-6">
+            <Card className="border-blue-200 bg-blue-50">
+              <CardContent className="p-4">
                 <div className="flex items-start">
-                  <div className="bg-blue-500 p-3 rounded-full mr-4 shadow-lg">
-                    <AlertCircle className="h-6 w-6 text-white" />
-                  </div>
+                  <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
                   <div>
-                    <h4 className="text-lg font-bold text-blue-900 mb-2">
-                      💡 Información Importante
+                    <h4 className="text-sm font-semibold text-blue-900 mb-2">
+                      Información Importante
                     </h4>
-                    <p className="text-blue-800 leading-relaxed">
+                    <p className="text-sm text-blue-800 mb-3">
                       Los porcentajes se actualizan mensualmente según los indicadores oficiales de <strong>Previred</strong>. 
                       El descuento de AFP es del <strong>10%</strong> sobre el sueldo imponible más la <strong>comisión variable</strong> por AFP.
                     </p>
-                    <div className="mt-4 p-3 bg-white/60 rounded-lg border border-blue-200/50">
-                      <p className="text-sm text-blue-700">
-                        🔄 <strong>Auto-actualización:</strong> Usa el botón "Actualizar desde Previred" para obtener las tasas más recientes.
-                      </p>
+                    <div className="text-xs text-blue-700 bg-white rounded-md p-2 border border-blue-200">
+                      <strong>Auto-actualización:</strong> Usa el botón "Actualizar desde Previred" para obtener las tasas más recientes.
                     </div>
                   </div>
                 </div>
@@ -520,17 +509,17 @@ export default function PayrollSettingsPage() {
         )}
 
         {activeTab === 'health' && settings && (
-          <div className="space-y-8">
-            <Card className="bg-white/70 backdrop-blur-sm border-white/20 shadow-2xl rounded-2xl overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-green-500/10 to-teal-500/10 border-b border-white/20">
-                <CardTitle className="text-2xl font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">
+          <div className="space-y-6">
+            <Card className="bg-white border border-gray-200">
+              <CardHeader className="border-b border-gray-100">
+                <CardTitle className="text-xl font-semibold text-gray-900">
                   Instituciones de Salud
                 </CardTitle>
-                <CardDescription className="text-gray-600 text-lg">
+                <CardDescription className="text-gray-600">
                   Administra las instituciones de salud y sus porcentajes de descuento
                 </CardDescription>
               </CardHeader>
-              <CardContent className="p-8">
+              <CardContent className="p-6">
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
