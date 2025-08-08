@@ -8,7 +8,6 @@ import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } fro
 import { 
   ArrowLeft, 
   Download, 
-  Printer, 
   Edit3, 
   DollarSign, 
   TrendingUp, 
@@ -142,9 +141,6 @@ export default function LiquidationDetailPage() {
     );
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
 
   const handleDownloadPDF = async () => {
     if (!liquidation) return;
@@ -304,7 +300,16 @@ export default function LiquidationDetailPage() {
   };
 
   const handleEdit = () => {
-    router.push(`/payroll/liquidations/${liquidationId}/edit`);
+    // TODO: Implementar página de edición completa
+    // Por ahora, mostrar modal de confirmación o redireccionar a generación con datos prellenados
+    const confirmed = confirm('¿Deseas editar esta liquidación?\n\nNota: Esta funcionalidad abrirá la liquidación en modo edición.');
+    if (confirmed) {
+      // Opción 1: Página de edición dedicada (futuro)
+      // router.push(`/payroll/liquidations/${liquidationId}/edit`);
+      
+      // Opción 2: Redirigir a generación con parámetros (implementación inicial)
+      router.push(`/payroll/liquidations/generate?edit=${liquidationId}`);
+    }
   };
 
   if (loading) {
@@ -376,11 +381,7 @@ export default function LiquidationDetailPage() {
               {getStatusBadge(liquidation.status)}
               <Button variant="outline" size="sm" onClick={handleEdit}>
                 <Edit3 className="h-4 w-4 mr-2" />
-                Editar
-              </Button>
-              <Button variant="outline" size="sm" onClick={handlePrint}>
-                <Printer className="h-4 w-4 mr-2" />
-                Imprimir
+                Editar Liquidación
               </Button>
               <Button 
                 variant="primary" 
@@ -687,38 +688,67 @@ export default function LiquidationDetailPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="w-5 h-5" />
-                Información Adicional
+                Información del Sistema
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Estado</label>
-                  <div>{getStatusBadge(liquidation.status)}</div>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Estado Actual</label>
+                  <div className="flex items-center gap-2">
+                    {getStatusBadge(liquidation.status)}
+                    {liquidation.status === 'draft' && (
+                      <span className="text-xs text-gray-500">• Puede editarse</span>
+                    )}
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Fecha de Creación</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Creado</label>
                   <p className="text-gray-900">
                     {new Date(liquidation.created_at).toLocaleDateString('es-CL', {
                       year: 'numeric',
                       month: 'long',
-                      day: 'numeric'
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
                     })}
                   </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">Última Actualización</label>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">Última Modificación</label>
                   <p className="text-gray-900">
                     {new Date(liquidation.updated_at).toLocaleDateString('es-CL', {
                       year: 'numeric',
                       month: 'long',
-                      day: 'numeric'
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
                     })}
                   </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-500 mb-1">ID de Liquidación</label>
-                  <p className="text-gray-900 font-mono text-sm">{liquidation.id}</p>
+                  <label className="block text-sm font-medium text-gray-500 mb-1">ID de Referencia</label>
+                  <p className="text-gray-900 font-mono text-sm bg-gray-50 px-2 py-1 rounded">
+                    {liquidation.id.split('-')[0]}...
+                  </p>
+                </div>
+              </div>
+              
+              {/* Acciones rápidas */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium text-gray-900">Acciones Disponibles</h4>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {liquidation.status === 'draft' 
+                        ? 'Esta liquidación puede editarse y su estado puede cambiarse.'
+                        : 'Liquidación finalizada. Solo disponible consulta y descarga.'
+                      }
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-gray-500">Utiliza Ctrl+P para imprimir</div>
+                  </div>
                 </div>
               </div>
             </CardContent>
