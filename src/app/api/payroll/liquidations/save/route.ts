@@ -20,6 +20,9 @@ export async function POST(request: NextRequest) {
 
     const liquidationData = await request.json();
 
+    // ✅ BYPASS RLS - Service role key permite bypass automático de RLS
+    // No necesitamos configurar el contexto con service role
+
     // Validar que el empleado exista
     const { data: employee, error: employeeError } = await supabase
       .from('employees')

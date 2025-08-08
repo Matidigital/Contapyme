@@ -160,31 +160,51 @@ export default function GenerateLiquidationPage() {
         period_month: formData.period_month,
         days_worked: formData.days_worked,
         
-        // Haberes
+        // Haberes imponibles
         base_salary: result.base_salary || 0,
         overtime_amount: result.overtime_amount || 0,
         bonuses: result.bonuses || 0,
         commissions: result.commissions || 0,
         gratification: result.gratification || 0,
+        total_taxable_income: result.total_taxable_income || 0,
+        
+        // Haberes no imponibles
         food_allowance: result.food_allowance || 0,
         transport_allowance: result.transport_allowance || 0,
         family_allowance: result.family_allowance || 0,
+        other_allowances: 0,
+        total_non_taxable_income: result.total_non_taxable_income || 0,
         
-        // Descuentos legales
-        afp_discount: (result.afp_amount || 0) + (result.afp_commission_amount || 0),
-        health_discount: result.health_amount || 0,
-        unemployment_discount: result.unemployment_amount || 0,
+        // Descuentos previsionales (campos separados como espera la DB)
+        afp_percentage: result.afp_percentage || 10.0,
+        afp_commission_percentage: result.afp_commission_percentage || 0.58,
+        afp_amount: result.afp_amount || 0,
+        afp_commission_amount: result.afp_commission_amount || 0,
+        sis_amount: result.employer_costs?.sis_amount || 0,
         
-        // Descuentos adicionales
+        health_percentage: result.health_percentage || 7.0,
+        health_amount: result.health_amount || 0,
+        
+        unemployment_percentage: result.unemployment_percentage || 0.6,
+        unemployment_amount: result.unemployment_amount || 0,
+        
+        // Impuestos
+        income_tax_amount: result.income_tax_amount || 0,
+        
+        // Otros descuentos
         loan_deductions: formData.loan_deductions || 0,
         advance_payments: formData.advance_payments || 0,
         apv_amount: formData.apv_amount || 0,
         other_deductions: formData.other_deductions || 0,
+        total_other_deductions: result.total_other_deductions || 0,
         
-        // Totales
-        total_haberes: result.total_gross_income || 0,
-        total_descuentos: result.total_deductions || 0,
-        net_salary: result.net_salary || 0
+        // Totales calculados
+        total_gross_income: result.total_gross_income || 0,
+        total_deductions: result.total_deductions || 0,
+        net_salary: result.net_salary || 0,
+        
+        // Configuración usada (snapshot)
+        calculation_config: result.calculation_config || {}
       };
 
       // Guardar en la base de datos usando la nueva API
