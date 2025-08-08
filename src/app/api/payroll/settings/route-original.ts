@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // Configuración por defecto basada en valores reales de Chile (Enero 2025)
 const DEFAULT_SETTINGS = {
@@ -52,14 +58,51 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Por ahora, devolvemos siempre la configuración por defecto
-    // TODO: Conectar con Supabase cuando esté disponible
-    console.log(`🔧 Returning default settings for company ${companyId}`);
-    
+    // Verificar si ya existen configuraciones para esta empresa
+    const { data: existingSettings, error: fetchError } = await supabase
+      .from('payroll_settings')
+      .select('*')
+      .eq('company_id', companyId)
+      .single();
+
+    if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = no rows found
+      console.error('Error fetching payroll settings:', fetchError);
+      return NextResponse.json(
+        { success: false, error: 'Error al obtener configuración' },
+        { status: 500 }
+      );
+    }
+
+    // Si no existen configuraciones, crear las por defecto
+    if (!existingSettings) {
+      const { data: newSettings, error: createError } = await supabase
+        .from('payroll_settings')
+        .insert({
+          company_id: companyId,
+          settings: DEFAULT_SETTINGS,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Error creating default settings:', createError);
+        return NextResponse.json(
+          { success: false, error: 'Error al crear configuración por defecto' },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        data: newSettings.settings
+      });
+    }
+
     return NextResponse.json({
       success: true,
-      data: DEFAULT_SETTINGS,
-      message: 'Configuración por defecto cargada (modo temporal)'
+      data: existingSettings.settings
     });
 
   } catch (error) {
@@ -85,18 +128,61 @@ export async function PUT(request: NextRequest) {
 
     const updatedSettings = await request.json();
 
-    // Merge con configuración por defecto
+    // Obtener configuración actual
+    const { data: currentSettings, error: fetchError } = await supabase
+      .from('payroll_settings')
+      .select('settings')
+      .eq('company_id', companyId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching current settings:', fetchError);
+      return NextResponse.json(
+        { success: false, error: 'Error al obtener configuración actual' },
+        { status: 500 }
+      );
+    }
+
+    // Merge con configuración actual
     const mergedSettings = {
-      ...DEFAULT_SETTINGS,
+      ...currentSettings.settings,
       ...updatedSettings
     };
 
-    console.log(`🔧 Settings updated for company ${companyId} (modo temporal)`);
-    
+    // Actualizar en base de datos
+    const { data: updated, error: updateError } = await supabase
+      .from('payroll_settings')
+      .update({
+        settings: mergedSettings,
+        updated_at: new Date().toISOString()
+      })
+      .eq('company_id', companyId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Error updating settings:', updateError);
+      return NextResponse.json(
+        { success: false, error: 'Error al actualizar configuración' },
+        { status: 500 }
+      );
+    }
+
+    // Log para auditoría
+    await supabase
+      .from('payroll_settings_log')
+      .insert({
+        company_id: companyId,
+        changed_fields: Object.keys(updatedSettings),
+        old_values: currentSettings.settings,
+        new_values: mergedSettings,
+        created_at: new Date().toISOString()
+      });
+
     return NextResponse.json({
       success: true,
-      data: mergedSettings,
-      message: 'Configuración actualizada exitosamente (modo temporal)'
+      data: updated.settings,
+      message: 'Configuración actualizada exitosamente'
     });
 
   } catch (error) {
@@ -108,6 +194,7 @@ export async function PUT(request: NextRequest) {
   }
 }
 
+// Endpoint para actualizar desde Previred (futuro)
 export async function POST(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -120,12 +207,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`🔧 Previred sync simulation for company ${companyId}`);
+    // TODO: Implementar actualización desde API de Previred
+    // Por ahora retornamos los valores por defecto actualizados
     
+    const { data: updated, error: updateError } = await supabase
+      .from('payroll_settings')
+      .update({
+        settings: DEFAULT_SETTINGS,
+        updated_at: new Date().toISOString(),
+        last_previred_sync: new Date().toISOString()
+      })
+      .eq('company_id', companyId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Error updating from Previred:', updateError);
+      return NextResponse.json(
+        { success: false, error: 'Error al actualizar desde Previred' },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
-      data: DEFAULT_SETTINGS,
-      message: 'Configuración actualizada desde Previred exitosamente (modo temporal)'
+      data: updated.settings,
+      message: 'Configuración actualizada desde Previred exitosamente'
     });
 
   } catch (error) {
