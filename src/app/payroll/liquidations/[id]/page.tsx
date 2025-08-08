@@ -704,7 +704,7 @@ export default function LiquidationDetailPage() {
         </div>
       )}
 
-      <div className="max-w-4xl mx-auto py-6 px-4 print:py-0 print:px-0 print:max-w-none">
+      <div className="max-w-6xl mx-auto py-6 px-4 print:py-0 print:px-0 print:max-w-none">
         {/* Header de liquidación para impresión */}
         <div className="hidden print:block mb-8 border-b-2 border-gray-800 pb-4">
           <div className="flex justify-between items-start">
@@ -726,225 +726,47 @@ export default function LiquidationDetailPage() {
           </div>
         </div>
 
-        {/* Información del empleado */}
-        <Card className="mb-6 print:shadow-none print:border print:border-gray-300">
-          <CardHeader className="bg-blue-50 print:bg-gray-50">
-            <CardTitle className="flex items-center gap-2">
-              <User className="w-5 h-5 text-blue-600" />
-              Información del Empleado
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Nombre Completo</label>
-                <p className="text-lg font-medium text-gray-900">
-                  {liquidation.employee.first_name} {liquidation.employee.last_name}
-                </p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">RUT</label>
-                <p className="text-lg font-medium text-gray-900">{liquidation.employee.rut}</p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Período</label>
-                <p className="text-lg font-medium text-gray-900">
-                  {formatPeriod(liquidation.period_year, liquidation.period_month)}
-                </p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Días Trabajados</label>
-                <p className="text-lg font-medium text-gray-900">{liquidation.days_worked} días</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          {/* Haberes */}
-          <Card className="print:shadow-none print:border print:border-gray-300">
-            <CardHeader className="bg-green-50 print:bg-gray-50">
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-green-600" />
-                Haberes
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                {/* Haberes Imponibles */}
-                <div>
-                  <h4 className="font-medium text-gray-700 mb-3 border-b border-gray-200 pb-1">
-                    Haberes Imponibles
-                  </h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span>Sueldo Base</span>
-                      <span className="font-medium">{formatCurrency(liquidation.base_salary)}</span>
+        {/* 🎯 HERO SECTION - Información destacada del empleado y resultado */}
+        <div className="mb-8">
+          <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200 print:bg-white print:border-gray-300">
+            <CardContent className="p-6">
+              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                {/* Información del empleado */}
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                      <User className="w-6 h-6 text-blue-600" />
                     </div>
-                    {liquidation.overtime_amount > 0 && (
-                      <div className="flex justify-between">
-                        <span>Horas Extras</span>
-                        <span className="font-medium">{formatCurrency(liquidation.overtime_amount)}</span>
-                      </div>
-                    )}
-                    {liquidation.bonuses > 0 && (
-                      <div className="flex justify-between">
-                        <span>Bonos</span>
-                        <span className="font-medium">{formatCurrency(liquidation.bonuses)}</span>
-                      </div>
-                    )}
-                    {liquidation.commissions > 0 && (
-                      <div className="flex justify-between">
-                        <span>Comisiones</span>
-                        <span className="font-medium">{formatCurrency(liquidation.commissions)}</span>
-                      </div>
-                    )}
-                    {liquidation.gratification > 0 && (
-                      <div className="flex justify-between">
-                        <span>Gratificación</span>
-                        <span className="font-medium">{formatCurrency(liquidation.gratification)}</span>
-                      </div>
-                    )}
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900">
+                        {liquidation.employee.first_name} {liquidation.employee.last_name}
+                      </h2>
+                      <p className="text-gray-600">RUT: {liquidation.employee.rut}</p>
+                    </div>
                   </div>
-                  <div className="flex justify-between pt-2 mt-2 border-t border-gray-200 font-medium">
-                    <span>Subtotal Imponible</span>
-                    <span>{formatCurrency(liquidation.total_taxable_income)}</span>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm text-gray-600">
+                        {formatPeriod(liquidation.period_year, liquidation.period_month)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-gray-500" />
+                      <span className="text-sm text-gray-600">{liquidation.days_worked} días trabajados</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Haberes No Imponibles */}
-                {(liquidation.food_allowance > 0 || liquidation.transport_allowance > 0 || liquidation.family_allowance > 0) && (
-                  <div>
-                    <h4 className="font-medium text-gray-700 mb-3 border-b border-gray-200 pb-1">
-                      Haberes No Imponibles
-                    </h4>
-                    <div className="space-y-2 text-sm">
-                      {liquidation.food_allowance > 0 && (
-                        <div className="flex justify-between">
-                          <span>Colación</span>
-                          <span className="font-medium">{formatCurrency(liquidation.food_allowance)}</span>
-                        </div>
-                      )}
-                      {liquidation.transport_allowance > 0 && (
-                        <div className="flex justify-between">
-                          <span>Movilización</span>
-                          <span className="font-medium">{formatCurrency(liquidation.transport_allowance)}</span>
-                        </div>
-                      )}
-                      {liquidation.family_allowance > 0 && (
-                        <div className="flex justify-between">
-                          <span>Asignación Familiar</span>
-                          <span className="font-medium">{formatCurrency(liquidation.family_allowance)}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex justify-between pt-2 mt-2 border-t border-gray-200 font-medium">
-                      <span>Subtotal No Imponible</span>
-                      <span>{formatCurrency(liquidation.total_non_taxable_income)}</span>
-                    </div>
+                {/* Resultado destacado */}
+                <div className="lg:text-right">
+                  <div className="text-sm text-gray-600 mb-2">Líquido a Pagar</div>
+                  <div className="text-4xl font-bold text-blue-600 mb-2">
+                    {formatCurrency(liquidation.net_salary)}
                   </div>
-                )}
-
-                {/* Total Haberes */}
-                <div className="bg-green-50 print:bg-gray-50 p-3 rounded-lg">
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold text-green-800 print:text-gray-800">Total Haberes</span>
-                    <span className="text-xl font-bold text-green-800 print:text-gray-800">
-                      {formatCurrency(liquidation.total_gross_income)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Descuentos */}
-          <Card className="print:shadow-none print:border print:border-gray-300">
-            <CardHeader className="bg-red-50 print:bg-gray-50">
-              <CardTitle className="flex items-center gap-2">
-                <TrendingDown className="w-5 h-5 text-red-600" />
-                Descuentos
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                {/* Descuentos Previsionales */}
-                <div>
-                  <h4 className="font-medium text-gray-700 mb-3 border-b border-gray-200 pb-1">
-                    Descuentos Previsionales
-                  </h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span>AFP ({liquidation.afp_percentage}%)</span>
-                      <span className="font-medium">{formatCurrency(liquidation.afp_amount)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Comisión AFP ({liquidation.afp_commission_percentage}%)</span>
-                      <span className="font-medium">{formatCurrency(liquidation.afp_commission_amount)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Salud ({liquidation.health_percentage}%)</span>
-                      <span className="font-medium">{formatCurrency(liquidation.health_amount)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Cesantía ({liquidation.unemployment_percentage}%)</span>
-                      <span className="font-medium">{formatCurrency(liquidation.unemployment_amount)}</span>
-                    </div>
-                    {liquidation.income_tax_amount > 0 && (
-                      <div className="flex justify-between">
-                        <span>Impuesto Segunda Categoría</span>
-                        <span className="font-medium">{formatCurrency(liquidation.income_tax_amount)}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Otros Descuentos */}
-                {liquidation.total_other_deductions > 0 && (
-                  <div>
-                    <h4 className="font-medium text-gray-700 mb-3 border-b border-gray-200 pb-1">
-                      Otros Descuentos
-                    </h4>
-                    <div className="space-y-2 text-sm">
-                      {liquidation.loan_deductions > 0 && (
-                        <div className="flex justify-between">
-                          <span>Préstamos</span>
-                          <span className="font-medium">{formatCurrency(liquidation.loan_deductions)}</span>
-                        </div>
-                      )}
-                      {liquidation.advance_payments > 0 && (
-                        <div className="flex justify-between">
-                          <span>Anticipos</span>
-                          <span className="font-medium">{formatCurrency(liquidation.advance_payments)}</span>
-                        </div>
-                      )}
-                      {liquidation.apv_amount > 0 && (
-                        <div className="flex justify-between">
-                          <span>APV</span>
-                          <span className="font-medium">{formatCurrency(liquidation.apv_amount)}</span>
-                        </div>
-                      )}
-                      {liquidation.other_deductions > 0 && (
-                        <div className="flex justify-between">
-                          <span>Otros</span>
-                          <span className="font-medium">{formatCurrency(liquidation.other_deductions)}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex justify-between pt-2 mt-2 border-t border-gray-200 font-medium">
-                      <span>Subtotal Otros</span>
-                      <span>{formatCurrency(liquidation.total_other_deductions)}</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Total Descuentos */}
-                <div className="bg-red-50 print:bg-gray-50 p-3 rounded-lg">
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold text-red-800 print:text-gray-800">Total Descuentos</span>
-                    <span className="text-xl font-bold text-red-800 print:text-gray-800">
-                      {formatCurrency(liquidation.total_deductions)}
-                    </span>
+                  <div className="text-xs text-gray-500">
+                    Estado: {getStatusBadge(liquidation.status)}
                   </div>
                 </div>
               </div>
@@ -952,37 +774,245 @@ export default function LiquidationDetailPage() {
           </Card>
         </div>
 
-        {/* Resumen Final */}
-        <Card className="mb-6 print:shadow-none print:border-2 print:border-gray-800">
-          <CardContent className="pt-6">
-            <div className="bg-gradient-to-r from-blue-50 to-green-50 print:bg-gray-100 p-6 rounded-lg">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-                <div>
-                  <div className="flex items-center justify-center mb-2">
-                    <TrendingUp className="h-6 w-6 text-green-600 mr-2" />
-                    <span className="font-medium text-gray-700">Total Haberes</span>
+        {/* 📊 MÉTRICAS PRINCIPALES */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card className="border-green-200 bg-green-50/50 print:bg-white">
+            <CardContent className="p-6 text-center">
+              <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-green-100 flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="text-2xl font-bold text-green-700">
+                {formatCurrency(liquidation.total_gross_income)}
+              </div>
+              <div className="text-sm text-gray-600 mt-1">Total Haberes</div>
+              <div className="text-xs text-gray-500 mt-2">
+                Imponible: {formatCurrency(liquidation.total_taxable_income)}
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="border-red-200 bg-red-50/50 print:bg-white">
+            <CardContent className="p-6 text-center">
+              <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-red-100 flex items-center justify-center">
+                <TrendingDown className="w-6 h-6 text-red-600" />
+              </div>
+              <div className="text-2xl font-bold text-red-700">
+                {formatCurrency(liquidation.total_deductions)}
+              </div>
+              <div className="text-sm text-gray-600 mt-1">Total Descuentos</div>
+              <div className="text-xs text-gray-500 mt-2">
+                Previsionales + Otros
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="border-blue-200 bg-blue-50/50 print:bg-white">
+            <CardContent className="p-6 text-center">
+              <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-blue-100 flex items-center justify-center">
+                <DollarSign className="w-6 h-6 text-blue-600" />
+              </div>
+              <div className="text-2xl font-bold text-blue-700">
+                {formatCurrency(liquidation.net_salary)}
+              </div>
+              <div className="text-sm text-gray-600 mt-1">Líquido Final</div>
+              <div className="text-xs text-gray-500 mt-2">
+                Para pagar al empleado
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* 📋 DESGLOSE DETALLADO MEJORADO */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* 💰 HABERES */}
+          <Card className="border-green-200 print:shadow-none print:border print:border-gray-300">
+            <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200">
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-green-600" />
+                  <span>Haberes</span>
+                </div>
+                <span className="text-lg font-bold text-green-700">
+                  {formatCurrency(liquidation.total_gross_income)}
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {/* Haberes Imponibles */}
+              <div className="p-4 border-b border-gray-100">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold text-gray-700 flex items-center gap-2">
+                    <Calculator className="w-4 h-4" />
+                    Haberes Imponibles
+                  </h4>
+                  <span className="text-sm font-medium text-green-700">
+                    {formatCurrency(liquidation.total_taxable_income)}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Sueldo Base</span>
+                    <span className="font-medium">{formatCurrency(liquidation.base_salary)}</span>
                   </div>
-                  <p className="text-2xl font-bold text-green-600 print:text-gray-800">
+                  {liquidation.overtime_amount > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Horas Extras</span>
+                      <span className="font-medium">{formatCurrency(liquidation.overtime_amount)}</span>
+                    </div>
+                  )}
+                  {liquidation.bonuses > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Bonos</span>
+                      <span className="font-medium">{formatCurrency(liquidation.bonuses)}</span>
+                    </div>
+                  )}
+                  {liquidation.commissions > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Comisiones</span>
+                      <span className="font-medium">{formatCurrency(liquidation.commissions)}</span>
+                    </div>
+                  )}
+                  {liquidation.gratification > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Gratificación</span>
+                      <span className="font-medium">{formatCurrency(liquidation.gratification)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Haberes No Imponibles */}
+              {(liquidation.food_allowance > 0 || liquidation.transport_allowance > 0 || liquidation.family_allowance > 0) && (
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-gray-700 flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      Haberes No Imponibles
+                    </h4>
+                    <span className="text-sm font-medium text-green-700">
+                      {formatCurrency(liquidation.total_non_taxable_income)}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {liquidation.food_allowance > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Colación</span>
+                        <span className="font-medium">{formatCurrency(liquidation.food_allowance)}</span>
+                      </div>
+                    )}
+                    {liquidation.transport_allowance > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Movilización</span>
+                        <span className="font-medium">{formatCurrency(liquidation.transport_allowance)}</span>
+                      </div>
+                    )}
+                    {liquidation.family_allowance > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Asignación Familiar</span>
+                        <span className="font-medium">{formatCurrency(liquidation.family_allowance)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* 💸 DESCUENTOS */}
+          <Card className="border-red-200 print:shadow-none print:border print:border-gray-300">
+            <CardHeader className="bg-gradient-to-r from-red-50 to-rose-50 border-b border-red-200">
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <TrendingDown className="w-5 h-5 text-red-600" />
+                  <span>Descuentos</span>
+                </div>
+                <span className="text-lg font-bold text-red-700">
+                  {formatCurrency(liquidation.total_deductions)}
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {/* Descuentos Previsionales */}
+              <div className="p-4 border-b border-gray-100">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold text-gray-700 flex items-center gap-2">
+                    <Building className="w-4 h-4" />
+                    Descuentos Previsionales
+                  </h4>
+                  <span className="text-sm font-medium text-red-700">
+                    {formatCurrency(liquidation.afp_deduction + liquidation.afp_sis_commission + liquidation.health_deduction + liquidation.unemployment_insurance)}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">AFP (10%)</span>
+                    <span className="font-medium">{formatCurrency(liquidation.afp_deduction)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Comisión AFP (1.27%)</span>
+                    <span className="font-medium">{formatCurrency(liquidation.afp_sis_commission)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Salud (7%)</span>
+                    <span className="font-medium">{formatCurrency(liquidation.health_deduction)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Cesantía (0.6%)</span>
+                    <span className="font-medium">{formatCurrency(liquidation.unemployment_insurance)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Otros Descuentos */}
+              {(liquidation.other_deductions > 0) && (
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-gray-700 flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      Otros Descuentos
+                    </h4>
+                    <span className="text-sm font-medium text-red-700">
+                      {formatCurrency(liquidation.other_deductions)}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Otros descuentos</span>
+                      <span className="font-medium">{formatCurrency(liquidation.other_deductions)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* 🎯 RESUMEN FINAL DESTACADO */}
+        <Card className="bg-gradient-to-r from-blue-50 via-purple-50 to-blue-50 border-2 border-blue-300 mb-8">
+          <CardContent className="p-6">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-gray-700 mb-4">Resumen Final</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="text-center">
+                  <div className="text-sm text-gray-600 mb-1">Total Haberes</div>
+                  <div className="text-2xl font-bold text-green-600">
                     {formatCurrency(liquidation.total_gross_income)}
-                  </p>
-                </div>
-                <div>
-                  <div className="flex items-center justify-center mb-2">
-                    <TrendingDown className="h-6 w-6 text-red-600 mr-2" />
-                    <span className="font-medium text-gray-700">Total Descuentos</span>
                   </div>
-                  <p className="text-2xl font-bold text-red-600 print:text-gray-800">
+                </div>
+                <div className="text-center">
+                  <div className="text-sm text-gray-600 mb-1">Total Descuentos</div>
+                  <div className="text-2xl font-bold text-red-600">
                     {formatCurrency(liquidation.total_deductions)}
-                  </p>
-                </div>
-                <div className="md:border-l-2 md:border-blue-300 print:border-gray-400">
-                  <div className="flex items-center justify-center mb-2">
-                    <DollarSign className="h-6 w-6 text-blue-600 mr-2" />
-                    <span className="font-medium text-gray-700">Líquido a Pagar</span>
                   </div>
-                  <p className="text-3xl font-bold text-blue-600 print:text-gray-900">
+                </div>
+                <div className="text-center border-l border-blue-300 md:pl-6">
+                  <div className="text-sm text-gray-600 mb-1">Líquido a Pagar</div>
+                  <div className="text-3xl font-bold text-blue-600">
                     {formatCurrency(liquidation.net_salary)}
-                  </p>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Para transferir al empleado
+                  </div>
                 </div>
               </div>
             </div>
