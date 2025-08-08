@@ -287,6 +287,22 @@ export default function LiquidationDetailPage() {
     }).format(amount);
   };
 
+  // Función para limpiar caracteres con encoding incorrecto
+  const cleanText = (text: string) => {
+    if (!text) return '';
+    return text
+      .replace(/Ã¡/g, 'á')  // á
+      .replace(/Ã©/g, 'é')  // é
+      .replace(/Ã­/g, 'í')  // í
+      .replace(/Ã³/g, 'ó')  // ó
+      .replace(/Ãº/g, 'ú')  // ú
+      .replace(/Ã±/g, 'ñ')  // ñ
+      .replace(/Ã/g, 'Á')   // Á
+      .replace(/�/g, 'é')   // Reemplazar símbolos raros comunes
+      .replace(/Ã/g, 'ñ')   // Otro patrón común para ñ
+      .trim();
+  };
+
   const formatPeriod = (year: number, month: number) => {
     const monthNames = [
       'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -645,7 +661,7 @@ export default function LiquidationDetailPage() {
       <div className="print:hidden">
         <PayrollHeader 
           title="Liquidación de Sueldo"
-          subtitle={`${liquidation.employee.first_name} ${liquidation.employee.last_name} - ${formatPeriod(liquidation.period_year, liquidation.period_month)}`}
+          subtitle={`${cleanText(liquidation.employee.first_name)} ${cleanText(liquidation.employee.last_name)} - ${formatPeriod(liquidation.period_year, liquidation.period_month)}`}
           showBackButton
           actions={
             <div className="w-full space-y-4">
@@ -776,7 +792,7 @@ export default function LiquidationDetailPage() {
                     </div>
                     <div>
                       <h2 className="text-xl font-bold text-gray-900">
-                        {liquidation.employee.first_name} {liquidation.employee.last_name}
+                        {cleanText(liquidation.employee.first_name)} {cleanText(liquidation.employee.last_name)}
                       </h2>
                       <p className="text-gray-600">RUT: {liquidation.employee.rut}</p>
                     </div>

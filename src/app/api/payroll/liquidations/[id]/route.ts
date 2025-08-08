@@ -126,6 +126,10 @@ export async function GET(
     return NextResponse.json({
       success: true,
       data: formattedLiquidation
+    }, {
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8'
+      }
     });
 
   } catch (error) {
