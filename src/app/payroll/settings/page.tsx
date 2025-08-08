@@ -81,50 +81,8 @@ export default function PayrollSettingsPage() {
     };
   }, []);
 
-  // 🔧 OPTIMIZACIÓN: Función de debounce segura y reutilizable
-  const debouncedUpdate = useCallback((
-    timeoutKey: keyof typeof timeouts.current,
-    updateData: Partial<PayrollSettings>,
-    delay = 1000
-  ) => {
-    // Limpiar timeout anterior si existe
-    if (timeouts.current[timeoutKey]) {
-      clearTimeout(timeouts.current[timeoutKey]!);
-    }
-
-    // Crear nuevo timeout
-    timeouts.current[timeoutKey] = setTimeout(async () => {
-      try {
-        setSaving(true);
-        setError(null);
-        setSuccessMessage(null);
-
-        const response = await fetch(`/api/payroll/settings?company_id=${companyId}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updateData),
-        });
-
-        const data = await response.json();
-
-        if (response.ok && data.success) {
-          setSettings(data.data);
-          // ✅ Mensaje de éxito más sutil para auto-save
-          console.log('✅ Auto-guardado exitoso');
-        } else {
-          setError(data.error || 'Error al guardar automáticamente');
-        }
-      } catch (err) {
-        setError('Error de conexión al auto-guardar');
-        console.error('Error in auto-save:', err);
-      } finally {
-        setSaving(false);
-        timeouts.current[timeoutKey] = null;
-      }
-    }, delay);
-  }, [companyId]);
+  // 🔧 OPTIMIZACIÓN: Eliminado auto-guardado - Solo guardado manual
+  // Ya no se usa debounce automático, solo actualización de estado local
 
   const fetchSettings = async () => {
     try {
@@ -177,77 +135,62 @@ export default function PayrollSettingsPage() {
     }
   };
 
-  // 🔧 OPTIMIZACIÓN: Manejo AFP con debounce mejorado
+  // 🔧 OPTIMIZACIÓN: Manejo AFP - Solo actualización local
   const handleAFPUpdate = useCallback((index: number, field: keyof AFPConfig, value: any) => {
     if (!settings) return;
     
     const updatedAFPs = [...settings.afp_configs];
     updatedAFPs[index] = { ...updatedAFPs[index], [field]: value };
     
-    // Actualizar estado local inmediatamente para UX responsiva
+    // Solo actualizar estado local - guardado manual
     const updatedSettings = { ...settings, afp_configs: updatedAFPs };
     setSettings(updatedSettings);
-    
-    // Usar debounce optimizado
-    debouncedUpdate('afp', { afp_configs: updatedAFPs });
-  }, [settings, debouncedUpdate]);
+  }, [settings]);
 
-  // 🔧 OPTIMIZACIÓN: Manejo Health con debounce mejorado
+  // 🔧 OPTIMIZACIÓN: Manejo Health - Solo actualización local
   const handleHealthUpdate = useCallback((index: number, field: keyof HealthConfig, value: any) => {
     if (!settings) return;
     
     const updatedHealth = [...settings.health_configs];
     updatedHealth[index] = { ...updatedHealth[index], [field]: value };
     
-    // Actualizar estado local inmediatamente para UX responsiva
+    // Solo actualizar estado local - guardado manual
     const updatedSettings = { ...settings, health_configs: updatedHealth };
     setSettings(updatedSettings);
-    
-    // Usar debounce optimizado
-    debouncedUpdate('health', { health_configs: updatedHealth });
-  }, [settings, debouncedUpdate]);
+  }, [settings]);
 
-  // 🔧 OPTIMIZACIÓN: Manejo Family Allowance con debounce mejorado
+  // 🔧 OPTIMIZACIÓN: Manejo Family Allowance - Solo actualización local
   const handleFamilyAllowanceUpdate = useCallback((field: string, value: number) => {
     if (!settings) return;
     
     const updatedAllowances = { ...settings.family_allowances, [field]: value };
     
-    // Actualizar estado local inmediatamente para UX responsiva
+    // Solo actualizar estado local - guardado manual
     const updatedSettings = { ...settings, family_allowances: updatedAllowances };
     setSettings(updatedSettings);
-    
-    // Usar debounce optimizado
-    debouncedUpdate('family', { family_allowances: updatedAllowances });
-  }, [settings, debouncedUpdate]);
+  }, [settings]);
 
-  // 🔧 OPTIMIZACIÓN: Manejo Company Info con debounce mejorado
+  // 🔧 OPTIMIZACIÓN: Manejo Company Info - Solo actualización local
   const handleCompanyInfoUpdate = useCallback((field: string, value: string) => {
     if (!settings) return;
     
     const updatedCompanyInfo = { ...settings.company_info, [field]: value };
     
-    // Actualizar estado local inmediatamente para UX responsiva
+    // Solo actualizar estado local - guardado manual
     const updatedSettings = { ...settings, company_info: updatedCompanyInfo };
     setSettings(updatedSettings);
-    
-    // Usar debounce optimizado
-    debouncedUpdate('company', { company_info: updatedCompanyInfo });
-  }, [settings, debouncedUpdate]);
+  }, [settings]);
 
-  // 🔧 OPTIMIZACIÓN: Manejo Income Limits con debounce mejorado
+  // 🔧 OPTIMIZACIÓN: Manejo Income Limits - Solo actualización local
   const handleIncomeLimit = useCallback((field: string, value: number) => {
     if (!settings) return;
     
     const updatedLimits = { ...settings.income_limits, [field]: value };
     
-    // Actualizar estado local inmediatamente para UX responsiva
+    // Solo actualizar estado local - guardado manual
     const updatedSettings = { ...settings, income_limits: updatedLimits };
     setSettings(updatedSettings);
-    
-    // Usar debounce optimizado
-    debouncedUpdate('limits', { income_limits: updatedLimits });
-  }, [settings, debouncedUpdate]);
+  }, [settings]);
 
   // ✅ NUEVO: Función para actualizar desde Previred
   const handlePreviredUpdate = async () => {
@@ -534,6 +477,119 @@ export default function PayrollSettingsPage() {
                     <p className="text-sm text-blue-700">
                       Los porcentajes se actualizan mensualmente según los indicadores oficiales de Previred. 
                       El descuento de AFP es del 10% sobre el sueldo imponible más la comisión variable por AFP.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {activeTab === 'health' && settings && (
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Instituciones de Salud</CardTitle>
+                <CardDescription>
+                  Administra las instituciones de salud y sus porcentajes de descuento
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Institución</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan %</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {settings.health_configs?.map((health, index) => (
+                        <tr key={health.id}>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="font-medium text-gray-900">{health.name}</div>
+                            <div className="text-sm text-gray-500">{health.code}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={health.plan_percentage}
+                              onChange={(e) => handleHealthUpdate(index, 'plan_percentage', parseFloat(e.target.value))}
+                              className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <span className="ml-1 text-sm text-gray-500">%</span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <label className="inline-flex items-center">
+                              <input
+                                type="checkbox"
+                                checked={health.active}
+                                onChange={(e) => handleHealthUpdate(index, 'active', e.target.checked)}
+                                className="form-checkbox h-4 w-4 text-blue-600"
+                              />
+                              <span className="ml-2 text-sm text-gray-700">
+                                {health.active ? 'Activa' : 'Inactiva'}
+                              </span>
+                            </label>
+                          </td>
+                        </tr>
+                      )) || (
+                        <tr>
+                          <td colSpan={3} className="px-6 py-4 text-center text-gray-500">
+                            No hay instituciones de salud configuradas
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Info Card */}
+            <Card className="border-green-200 bg-green-50">
+              <CardContent className="pt-6">
+                <div className="flex items-start">
+                  <AlertCircle className="h-5 w-5 text-green-600 mt-0.5 mr-3" />
+                  <div>
+                    <h4 className="text-sm font-medium text-green-800 mb-1">
+                      Sistema de Salud Chileno
+                    </h4>
+                    <p className="text-sm text-green-700">
+                      El descuento base es 7% del sueldo imponible. Las ISAPRE pueden cobrar un plan adicional.
+                      FONASA no cobra adicional (solo el 7% legal).
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Instituciones Comunes */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Instituciones Más Comunes en Chile</CardTitle>
+                <CardDescription>
+                  Referencia de las principales instituciones de salud
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-blue-900 mb-2">FONASA (Público)</h4>
+                    <p className="text-sm text-blue-800">
+                      • Solo 7% legal (sin adicional)<br/>
+                      • Más del 80% de la población<br/>
+                      • Código: FONASA
+                    </p>
+                  </div>
+                  <div className="bg-purple-50 p-4 rounded-lg">
+                    <h4 className="font-medium text-purple-900 mb-2">ISAPRE (Privadas)</h4>
+                    <p className="text-sm text-purple-800">
+                      • 7% + plan adicional<br/>
+                      • Principales: Colmena, Banmédica, Cruz Blanca<br/>
+                      • Planes desde 7.5% a 12%+
                     </p>
                   </div>
                 </div>
