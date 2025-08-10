@@ -1,132 +1,238 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Header } from '@/components/layout';
-import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
-import { FileText, Calendar, BarChart3, Download, Trash2, Filter, Search, Building2, TrendingUp, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Header } from '@/components/layout/Header';
+import { 
+  Upload, 
+  FileText, 
+  Users, 
+  TrendingUp, 
+  AlertCircle, 
+  CheckCircle,
+  Download,
+  Filter,
+  Search,
+  Calendar,
+  DollarSign,
+  Building2
+} from 'lucide-react';
 
-interface RCVLedger {
+interface RCVRecord {
   id: string;
-  company_id: string;
-  period_start: string;
-  period_end: string;
-  period_identifier: string;
-  total_transactions: number;
-  sum_transactions: number;
-  subtract_transactions: number;
-  total_exempt_amount: number;
-  total_net_amount: number;
-  total_calculated_amount: number;
-  unique_suppliers?: number;
-  unique_customers?: number;
-  confidence_score: number;
-  processing_method: string;
-  file_name: string;
-  file_size: number;
+  record_type: 'purchase' | 'sale';
+  document_type: string;
+  document_number?: string;
+  document_date: string;
+  entity_rut: string;
+  entity_name: string;
+  entity_business_name?: string;
+  net_amount: number;
+  tax_amount: number;
+  total_amount: number;
+  status: 'pending' | 'processed' | 'error';
   created_at: string;
-  updated_at: string;
-  documents?: any[];
 }
 
-interface RCVData {
-  ledgers: RCVLedger[];
-  documents: any[];
-  summary: {
-    total_ledgers: number;
-    total_transactions: number;
-    total_amount: number;
-  };
+interface EntitySummary {
+  entity_rut: string;
+  entity_name: string;
+  entity_business_name?: string;
+  purchase_count: number;
+  sale_count: number;
+  total_purchases: number;
+  total_sales: number;
+  total_transactions: number;
+  suggested_entity_type: 'supplier' | 'customer' | 'both';
+  entity_exists: boolean;
+  first_transaction: string;
+  last_transaction: string;
+}
+
+interface ImportBatch {
+  id: string;
+  batch_id: string;
+  file_name: string;
+  total_records: number;
+  processed_records: number;
+  success_records: number;
+  error_records: number;
+  status: 'processing' | 'completed' | 'failed' | 'partial';
+  created_at: string;
+  total_amount: number;
+}
+
+interface RCVStatistics {
+  total_records: number;
+  total_purchases: number;
+  total_sales: number;
+  unique_entities: number;
+  total_net_amount: number;
+  total_tax_amount: number;
+  total_amount: number;
+  pending_records: number;
+  processed_records: number;
 }
 
 export default function RCVHistoryPage() {
-  const [purchaseData, setPurchaseData] = useState<RCVData | null>(null);
-  const [salesData, setSalesData] = useState<RCVData | null>(null);
-  const [activeTab, setActiveTab] = useState<'purchase' | 'sales'>('purchase');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedPeriod, setSelectedPeriod] = useState<string>('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedLedger, setSelectedLedger] = useState<RCVLedger | null>(null);
-  const [showDocuments, setShowDocuments] = useState(false);
+  const [activeTab, setActiveTab] = useState<'records' | 'entities' | 'import'>('records');
+  const [records, setRecords] = useState<RCVRecord[]>([]);
+  const [entities, setEntities] = useState<EntitySummary[]>([]);
+  const [importBatches, setImportBatches] = useState<ImportBatch[]>([]);
+  const [statistics, setStatistics] = useState<RCVStatistics | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [filters, setFilters] = useState({
+    record_type: '',
+    status: '',
+    search: '',
+    start_date: '',
+    end_date: ''
+  });
 
-  const companyId = '8033ee69-b420-4d91-ba0e-482f46cd6fce'; // TODO: Get from auth
+  // ID de compañía demo - en producción vendría del contexto/auth
+  const companyId = '8033ee69-b420-4d91-ba0e-482f46cd6fce';
 
-  const loadRCVData = async (type: 'purchase' | 'sales') => {
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      setError(null);
-
-      const url = `/api/rcv/${type}?company_id=${companyId}${selectedPeriod ? `&period=${selectedPeriod}` : ''}`;
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      
-      if (result.success) {
-        if (type === 'purchase') {
-          setPurchaseData(result.data);
-        } else {
-          setSalesData(result.data);
-        }
-      } else {
-        throw new Error(result.error || 'Error al cargar datos RCV');
-      }
+      await Promise.all([
+        loadRecords(),
+        loadEntities(),
+        loadImportBatches()
+      ]);
     } catch (error) {
-      console.error('Error cargando RCV:', error);
-      setError(error instanceof Error ? error.message : 'Error de conexión');
+      console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadRCVData('purchase');
-    loadRCVData('sales');
-  }, [selectedPeriod]);
-
-  const handleDeleteLedger = async (ledgerId: string, type: 'purchase' | 'sales') => {
-    if (!confirm('¿Estás seguro de eliminar este registro RCV? Esta acción no se puede deshacer.')) {
-      return;
-    }
-
+  const loadRecords = async () => {
     try {
-      const response = await fetch(`/api/rcv/${type}?ledger_id=${ledgerId}`, {
-        method: 'DELETE',
+      const params = new URLSearchParams({
+        company_id: companyId,
+        limit: '50',
+        ...filters
       });
 
-      if (!response.ok) {
-        throw new Error('Error al eliminar registro');
+      const response = await fetch(`/api/accounting/rcv/records?${params}`);
+      const result = await response.json();
+
+      if (result.success) {
+        setRecords(result.data.records);
+        setStatistics(result.data.statistics);
       }
+    } catch (error) {
+      console.error('Error loading records:', error);
+    }
+  };
+
+  const loadEntities = async () => {
+    try {
+      const response = await fetch(`/api/accounting/rcv/entities-summary?company_id=${companyId}`);
+      const result = await response.json();
+
+      if (result.success) {
+        setEntities(result.data.entities);
+      }
+    } catch (error) {
+      console.error('Error loading entities:', error);
+    }
+  };
+
+  const loadImportBatches = async () => {
+    try {
+      const response = await fetch(`/api/accounting/rcv/import?company_id=${companyId}`);
+      const result = await response.json();
+
+      if (result.success) {
+        setImportBatches(result.data);
+      }
+    } catch (error) {
+      console.error('Error loading import batches:', error);
+    }
+  };
+
+  const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const recordType = 'purchase'; // Default, podría ser seleccionable
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('company_id', companyId);
+    formData.append('record_type', recordType);
+
+    setLoading(true);
+    try {
+      const response = await fetch('/api/accounting/rcv/import', {
+        method: 'POST',
+        body: formData
+      });
 
       const result = await response.json();
       
       if (result.success) {
-        // Recargar datos
-        await loadRCVData(type);
-        setSelectedLedger(null);
-        setShowDocuments(false);
+        alert(`Importación exitosa: ${result.data.records_imported} registros procesados`);
+        await loadData();
       } else {
-        throw new Error(result.error || 'Error al eliminar');
+        alert(`Error en importación: ${result.error}`);
       }
     } catch (error) {
-      console.error('Error eliminando RCV:', error);
-      alert('Error al eliminar el registro: ' + (error instanceof Error ? error.message : 'Error desconocido'));
+      console.error('Error importing file:', error);
+      alert('Error al importar archivo');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleViewDocuments = (ledger: RCVLedger) => {
-    setSelectedLedger(ledger);
-    setShowDocuments(true);
+  const createMissingEntities = async () => {
+    const missingEntities = entities.filter(e => !e.entity_exists);
+    if (missingEntities.length === 0) {
+      alert('No hay entidades faltantes para crear');
+      return;
+    }
+
+    const entityRuts = missingEntities.map(e => e.entity_rut);
+    
+    setLoading(true);
+    try {
+      const response = await fetch('/api/accounting/rcv/entities-summary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          company_id: companyId,
+          entity_ruts: entityRuts
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        alert(`${result.data.total_created} entidades creadas exitosamente`);
+        await loadEntities();
+      } else {
+        alert(`Error creando entidades: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error creating entities:', error);
+      alert('Error al crear entidades');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-CL', {
       style: 'currency',
-      currency: 'CLP',
-      minimumFractionDigits: 0
+      currency: 'CLP'
     }).format(amount);
   };
 
@@ -134,372 +240,440 @@ export default function RCVHistoryPage() {
     return new Date(dateStr).toLocaleDateString('es-CL');
   };
 
-  const formatPeriod = (periodId: string) => {
-    const [year, month] = periodId.split('-');
-    const monthNames = [
-      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-    ];
-    return `${monthNames[parseInt(month) - 1]} ${year}`;
-  };
-
-  const getCurrentData = (): RCVData | null => {
-    return activeTab === 'purchase' ? purchaseData : salesData;
-  };
-
-  const filteredLedgers = getCurrentData()?.ledgers?.filter(ledger => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      ledger.file_name.toLowerCase().includes(searchLower) ||
-      ledger.period_identifier.includes(searchLower) ||
-      formatPeriod(ledger.period_identifier).toLowerCase().includes(searchLower)
-    );
-  }) || [];
-
-  // Obtener períodos únicos para el filtro
-  const uniquePeriods = Array.from(
-    new Set([
-      ...(purchaseData?.ledgers?.map(l => l.period_identifier) || []),
-      ...(salesData?.ledgers?.map(l => l.period_identifier) || [])
-    ])
-  ).sort().reverse();
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Header 
-        title="Historial RCV Guardado"
-        subtitle="Visualiza y gestiona tus registros de compras y ventas almacenados en base de datos"
-        showBackButton={true}
-        backHref="/accounting"
-        actions={
-          <Button variant="outline" size="sm" onClick={() => window.open('/accounting/rcv-analysis', '_blank')}>
-            📄 Analizar Nuevo RCV
-          </Button>
-        }
+        title="Historial RCV"
+        subtitle="Registro de Compras y Ventas con generación automática de entidades"
+        showBackButton
       />
 
-      <div className="max-w-7xl mx-auto py-8 px-4 space-y-8">
-        
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Compras</p>
-                  <p className="text-2xl font-bold text-blue-600">
-                    {purchaseData?.summary.total_ledgers || 0}
-                  </p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Estadísticas principales */}
+        {statistics && (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <Card className="bg-white/80 backdrop-blur-sm border border-white/20">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Total Registros</p>
+                    <p className="text-3xl font-bold text-gray-900">{statistics.total_records}</p>
+                  </div>
+                  <FileText className="h-12 w-12 text-blue-500" />
                 </div>
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <BarChart3 className="w-6 h-6 text-blue-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Ventas</p>
-                  <p className="text-2xl font-bold text-green-600">
-                    {salesData?.summary.total_ledgers || 0}
-                  </p>
+            <Card className="bg-white/80 backdrop-blur-sm border border-white/20">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Entidades Únicas</p>
+                    <p className="text-3xl font-bold text-gray-900">{statistics.unique_entities}</p>
+                  </div>
+                  <Users className="h-12 w-12 text-green-500" />
                 </div>
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-green-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Transacciones</p>
-                  <p className="text-2xl font-bold text-purple-600">
-                    {((purchaseData?.summary.total_transactions || 0) + (salesData?.summary.total_transactions || 0)).toLocaleString()}
-                  </p>
+            <Card className="bg-white/80 backdrop-blur-sm border border-white/20">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Monto Total</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {formatCurrency(statistics.total_amount)}
+                    </p>
+                  </div>
+                  <DollarSign className="h-12 w-12 text-purple-500" />
                 </div>
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <FileText className="w-6 h-6 text-purple-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Valor Total</p>
-                  <p className="text-2xl font-bold text-orange-600">
-                    {formatCurrency((purchaseData?.summary.total_amount || 0) + (salesData?.summary.total_amount || 0))}
-                  </p>
+            <Card className="bg-white/80 backdrop-blur-sm border border-white/20">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Procesados</p>
+                    <p className="text-3xl font-bold text-green-600">{statistics.processed_records}</p>
+                  </div>
+                  <CheckCircle className="h-12 w-12 text-green-500" />
                 </div>
-                <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                  <Building2 className="w-6 h-6 text-orange-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Navegación por pestañas */}
+        <div className="bg-white rounded-lg shadow-sm mb-8">
+          <div className="border-b border-gray-200">
+            <nav className="flex space-x-8 px-6">
+              <button
+                onClick={() => setActiveTab('records')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'records'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Registros RCV
+              </button>
+              <button
+                onClick={() => setActiveTab('entities')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'entities'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Entidades Detectadas
+              </button>
+              <button
+                onClick={() => setActiveTab('import')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'import'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Importar Archivo
+              </button>
+            </nav>
+          </div>
         </div>
 
-        {/* Main Content */}
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-              <div>
-                <CardTitle className="flex items-center space-x-2">
-                  <FileText className="w-5 h-5 text-blue-600" />
-                  <span>Registros RCV Almacenados</span>
-                </CardTitle>
-                <CardDescription>
-                  Historial completo de tus registros de compras y ventas procesados y almacenados
-                </CardDescription>
-              </div>
-              
-              {/* Filtros */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="flex items-center space-x-2">
-                  <Filter className="w-4 h-4 text-gray-500" />
-                  <select
-                    value={selectedPeriod}
-                    onChange={(e) => setSelectedPeriod(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Todos los períodos</option>
-                    {uniquePeriods.map(period => (
-                      <option key={period} value={period}>
-                        {formatPeriod(period)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="relative">
-                  <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 transform -translate-y-1/2" />
-                  <input
-                    type="text"
-                    placeholder="Buscar por archivo o período..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Tabs */}
-            <div className="flex space-x-1 bg-gray-100 rounded-lg p-1 mt-4">
-              <button
-                onClick={() => setActiveTab('purchase')}
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === 'purchase' 
-                    ? 'bg-white text-blue-600 shadow-sm' 
-                    : 'text-gray-600 hover:text-blue-600'
-                }`}
-              >
-                📈 Compras ({purchaseData?.ledgers?.length || 0})
-              </button>
-              <button
-                onClick={() => setActiveTab('sales')}
-                className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                  activeTab === 'sales' 
-                    ? 'bg-white text-green-600 shadow-sm' 
-                    : 'text-gray-600 hover:text-green-600'
-                }`}
-              >
-                💰 Ventas ({salesData?.ledgers?.length || 0})
-              </button>
-            </div>
-          </CardHeader>
-
-          <CardContent>
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                <span className="ml-3 text-gray-600">Cargando datos RCV...</span>
-              </div>
-            ) : error ? (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <div className="flex items-center space-x-2">
-                  <AlertCircle className="w-5 h-5 text-red-600" />
-                  <p className="text-red-800">{error}</p>
-                </div>
-              </div>
-            ) : filteredLedgers.length === 0 ? (
-              <div className="text-center py-12">
-                <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  No hay registros RCV {activeTab === 'purchase' ? 'de compras' : 'de ventas'} guardados
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  {searchTerm || selectedPeriod 
-                    ? 'No se encontraron registros que coincidan con los filtros aplicados' 
-                    : 'Comienza subiendo tu primer archivo RCV para ver los datos almacenados aquí'}
-                </p>
+        {/* Contenido de pestañas */}
+        {activeTab === 'records' && (
+          <Card className="bg-white/90 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Registros RCV
+                </span>
                 <Button 
-                  variant="primary" 
-                  onClick={() => window.open('/accounting/rcv-analysis', '_blank')}
+                  onClick={loadRecords}
+                  variant="outline"
+                  size="sm"
+                  disabled={loading}
                 >
-                  📄 Analizar RCV
+                  Actualizar
                 </Button>
-              </div>
-            ) : (
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
               <div className="space-y-4">
-                {filteredLedgers.map((ledger) => (
-                  <div
-                    key={ledger.id}
-                    className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-3">
-                          <div className={`w-3 h-3 rounded-full ${
-                            activeTab === 'purchase' ? 'bg-blue-500' : 'bg-green-500'
-                          }`}></div>
-                          <h4 className="text-lg font-semibold text-gray-900">
-                            {formatPeriod(ledger.period_identifier)}
-                          </h4>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            ledger.confidence_score >= 90 
-                              ? 'bg-green-100 text-green-800'
-                              : ledger.confidence_score >= 70 
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-red-100 text-red-800'
-                          }`}>
-                            {ledger.confidence_score}% confianza
-                          </span>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                          <div>
-                            <p className="text-sm text-gray-600">Transacciones</p>
-                            <p className="text-lg font-semibold text-gray-900">
-                              {ledger.total_transactions.toLocaleString()}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-600">
-                              {activeTab === 'purchase' ? 'Proveedores' : 'Clientes'}
-                            </p>
-                            <p className="text-lg font-semibold text-gray-900">
-                              {(ledger.unique_suppliers || ledger.unique_customers || 0).toLocaleString()}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-600">Monto Neto</p>
-                            <p className="text-lg font-semibold text-gray-900">
-                              {formatCurrency(ledger.total_net_amount)}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-600">Monto Total</p>
-                            <p className={`text-lg font-semibold ${
-                              ledger.total_calculated_amount >= 0 ? 'text-gray-900' : 'text-red-600'
-                            }`}>
-                              {formatCurrency(ledger.total_calculated_amount)}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2 text-sm text-gray-600">
-                          <span>📄 {ledger.file_name}</span>
-                          <span>•</span>
-                          <span>📅 {formatDate(ledger.created_at)}</span>
-                          <span>•</span>
-                          <span>📊 {ledger.processing_method}</span>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewDocuments(ledger)}
-                        >
-                          <FileText className="w-4 h-4 mr-1" />
-                          Ver Documentos ({ledger.documents?.length || ledger.total_transactions})
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteLedger(ledger.id, activeTab)}
-                        >
-                          <Trash2 className="w-4 h-4 mr-1" />
-                          Eliminar
-                        </Button>
-                      </div>
-                    </div>
+                {records.length === 0 ? (
+                  <div className="text-center py-12">
+                    <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No hay registros RCV</h3>
+                    <p className="text-gray-500">Importa un archivo CSV para comenzar</p>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Modal de documentos */}
-        {showDocuments && selectedLedger && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[80vh] overflow-hidden">
-              <div className="p-6 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Documentos - {formatPeriod(selectedLedger.period_identifier)}
-                  </h3>
-                  <button
-                    onClick={() => {
-                      setShowDocuments(false);
-                      setSelectedLedger(null);
-                    }}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    ✕
-                  </button>
-                </div>
-                <p className="text-sm text-gray-600 mt-1">
-                  {selectedLedger.total_transactions.toLocaleString()} transacciones • {selectedLedger.file_name}
-                </p>
-              </div>
-              
-              <div className="p-6 overflow-y-auto max-h-[60vh]">
-                <div className="mb-4 p-4 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-blue-800">
-                    <strong>📊 Resumen:</strong> Esta funcionalidad permite visualizar los documentos individuales que conforman cada registro RCV. 
-                    Los detalles específicos de cada documento se cargan dinámicamente desde la base de datos cuando sea necesario.
-                  </p>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-8 text-center">
-                  <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h4 className="text-lg font-medium text-gray-900 mb-2">Vista de documentos en desarrollo</h4>
-                  <p className="text-gray-600">
-                    Los documentos individuales están almacenados en la base de datos.
-                    <br />Esta vista detallada se implementará según necesidades específicas del usuario.
-                  </p>
-                </div>
-              </div>
-              
-              <div className="p-6 border-t border-gray-200 bg-gray-50">
-                <div className="flex justify-between items-center">
-                  <div className="text-sm text-gray-600">
-                    💾 Datos almacenados en Supabase • Consulta en tiempo real
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            Tipo
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            Fecha
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            Entidad
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            RUT
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            Monto Total
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            Estado
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {records.map((record) => (
+                          <tr key={record.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                record.record_type === 'purchase' 
+                                  ? 'bg-red-100 text-red-800' 
+                                  : 'bg-green-100 text-green-800'
+                              }`}>
+                                {record.record_type === 'purchase' ? 'Compra' : 'Venta'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {formatDate(record.document_date)}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-900">
+                              <div className="font-medium">{record.entity_name}</div>
+                              {record.entity_business_name && (
+                                <div className="text-xs text-gray-500">{record.entity_business_name}</div>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
+                              {record.entity_rut}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                              {formatCurrency(record.total_amount)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                record.status === 'processed' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : record.status === 'error'
+                                  ? 'bg-red-100 text-red-800'
+                                  : 'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {record.status === 'processed' ? 'Procesado' : 
+                                 record.status === 'error' ? 'Error' : 'Pendiente'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                  <Button
-                    variant="secondary"
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {activeTab === 'entities' && (
+          <Card className="bg-white/90 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5" />
+                  Entidades Detectadas
+                </span>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={createMissingEntities}
+                    variant="primary"
                     size="sm"
-                    onClick={() => {
-                      setShowDocuments(false);
-                      setSelectedLedger(null);
-                    }}
+                    disabled={loading || entities.filter(e => !e.entity_exists).length === 0}
                   >
-                    Cerrar
+                    Crear Faltantes ({entities.filter(e => !e.entity_exists).length})
+                  </Button>
+                  <Button 
+                    onClick={loadEntities}
+                    variant="outline"
+                    size="sm"
+                    disabled={loading}
+                  >
+                    Actualizar
                   </Button>
                 </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {entities.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No hay entidades detectadas</h3>
+                    <p className="text-gray-500">Importa registros RCV para detectar entidades automáticamente</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            Entidad
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            RUT
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            Tipo Sugerido
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            Transacciones
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            Monto Total
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            Estado
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {entities.map((entity) => (
+                          <tr key={entity.entity_rut} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 text-sm text-gray-900">
+                              <div className="font-medium">{entity.entity_name}</div>
+                              {entity.entity_business_name && (
+                                <div className="text-xs text-gray-500">{entity.entity_business_name}</div>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
+                              {entity.entity_rut}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                entity.suggested_entity_type === 'supplier' 
+                                  ? 'bg-orange-100 text-orange-800'
+                                  : entity.suggested_entity_type === 'customer'
+                                  ? 'bg-blue-100 text-blue-800' 
+                                  : 'bg-purple-100 text-purple-800'
+                              }`}>
+                                {entity.suggested_entity_type === 'supplier' ? 'Proveedor' :
+                                 entity.suggested_entity_type === 'customer' ? 'Cliente' : 'Ambos'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              <div>{entity.total_transactions} total</div>
+                              <div className="text-xs text-gray-500">
+                                {entity.purchase_count} compras, {entity.sale_count} ventas
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                              {formatCurrency(entity.total_purchases + entity.total_sales)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                entity.entity_exists 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {entity.entity_exists ? 'Configurada' : 'Pendiente'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
-            </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {activeTab === 'import' && (
+          <div className="space-y-6">
+            {/* Importar nuevo archivo */}
+            <Card className="bg-white/90 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Upload className="h-5 w-5" />
+                  Importar Archivo RCV
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                    <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      Importar archivo CSV de RCV
+                    </h3>
+                    <p className="text-gray-500 mb-4">
+                      Sube un archivo CSV con datos de compras o ventas para generar entidades automáticamente
+                    </p>
+                    <input
+                      type="file"
+                      accept=".csv"
+                      onChange={handleFileImport}
+                      className="hidden"
+                      id="file-upload"
+                      disabled={loading}
+                    />
+                    <label htmlFor="file-upload">
+                      <Button variant="primary" disabled={loading} className="cursor-pointer">
+                        {loading ? 'Procesando...' : 'Seleccionar Archivo'}
+                      </Button>
+                    </label>
+                  </div>
+                  
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 className="font-medium text-blue-900 mb-2">Formato esperado del CSV:</h4>
+                    <ul className="text-sm text-blue-800 space-y-1">
+                      <li>• <strong>RUT:</strong> RUT del proveedor/cliente (formato XX.XXX.XXX-X)</li>
+                      <li>• <strong>Nombre/Razón Social:</strong> Nombre de la entidad</li>
+                      <li>• <strong>Tipo Doc:</strong> Tipo de documento (Factura, Boleta, etc.)</li>
+                      <li>• <strong>Fecha:</strong> Fecha del documento (DD/MM/YYYY o YYYY-MM-DD)</li>
+                      <li>• <strong>Neto:</strong> Monto neto</li>
+                      <li>• <strong>IVA:</strong> Monto IVA</li>
+                      <li>• <strong>Total:</strong> Monto total</li>
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Historial de importaciones */}
+            <Card className="bg-white/90 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Historial de Importaciones
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {importBatches.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-500">No hay importaciones previas</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {importBatches.map((batch) => (
+                        <div 
+                          key={batch.id}
+                          className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3">
+                              <FileText className="h-5 w-5 text-gray-400" />
+                              <div>
+                                <div className="font-medium text-gray-900">{batch.file_name}</div>
+                                <div className="text-sm text-gray-500">
+                                  {formatDate(batch.created_at)} • {batch.total_records} registros
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-4">
+                            <div className="text-right">
+                              <div className="text-sm font-medium text-gray-900">
+                                {formatCurrency(batch.total_amount)}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {batch.success_records}/{batch.total_records} procesados
+                              </div>
+                            </div>
+                            
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              batch.status === 'completed' 
+                                ? 'bg-green-100 text-green-800' 
+                                : batch.status === 'failed'
+                                ? 'bg-red-100 text-red-800'
+                                : batch.status === 'partial'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {batch.status === 'completed' ? 'Completado' : 
+                               batch.status === 'failed' ? 'Falló' :
+                               batch.status === 'partial' ? 'Parcial' : 'Procesando'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
       </div>
