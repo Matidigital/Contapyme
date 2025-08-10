@@ -87,7 +87,8 @@ export async function POST(request: NextRequest) {
         payroll_config (
           afp_code,
           health_institution_code,
-          family_allowances
+          family_allowances,
+          legal_gratification_type
         )
       `)
       .eq('id', employee_id)
@@ -156,7 +157,8 @@ export async function POST(request: NextRequest) {
       contract_type: activeContract.contract_type,
       afp_code: payrollConfig.afp_code || 'HABITAT',
       health_institution_code: payrollConfig.health_institution_code || 'FONASA',
-      family_allowances: payrollConfig.family_allowances || 0
+      family_allowances: payrollConfig.family_allowances || 0,
+      legal_gratification_type: payrollConfig.legal_gratification_type || 'none'
     };
 
     const periodData = {
@@ -198,6 +200,7 @@ export async function POST(request: NextRequest) {
           bonuses: liquidationResult.bonuses,
           commissions: liquidationResult.commissions,
           gratification: liquidationResult.gratification,
+          legal_gratification_art50: liquidationResult.legal_gratification_art50,
           total_taxable_income: liquidationResult.total_taxable_income,
           
           // Haberes No Imponibles
@@ -310,7 +313,8 @@ export async function PUT(request: NextRequest) {
           payroll_config (
             afp_code,
             health_institution_code,
-            family_allowances
+            family_allowances,
+            legal_gratification_type
           )
         )
       `)
@@ -339,7 +343,8 @@ export async function PUT(request: NextRequest) {
       contract_type: contract.contract_type,
       afp_code: payrollConfig.afp_code || 'HABITAT',
       health_institution_code: payrollConfig.health_institution_code || 'FONASA',
-      family_allowances: payrollConfig.family_allowances || 0
+      family_allowances: payrollConfig.family_allowances || 0,
+      legal_gratification_type: payrollConfig.legal_gratification_type || 'none'
     };
 
     const periodData = {
@@ -390,6 +395,7 @@ export async function PUT(request: NextRequest) {
         bonuses: liquidationResult.bonuses,
         commissions: liquidationResult.commissions,
         gratification: liquidationResult.gratification,
+        legal_gratification_art50: liquidationResult.legal_gratification_art50,
         total_taxable_income: liquidationResult.total_taxable_income,
         
         food_allowance: liquidationResult.food_allowance,

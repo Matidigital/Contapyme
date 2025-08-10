@@ -46,6 +46,9 @@ interface EmployeeFormData {
   weeklyHours: string;
   healthInsurance: string;
   pensionFund: string;
+  
+  // Gratificación Legal (Art. 50)
+  hasLegalGratification: boolean;
 }
 
 export default function NewEmployeePage() {
@@ -97,13 +100,18 @@ export default function NewEmployeePage() {
     weeklyHours: '45',
     healthInsurance: '',
     pensionFund: '',
+    
+    // Gratificación Legal (Art. 50)
+    hasLegalGratification: false,
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
+    
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     }));
     // Clear error when user starts typing
     if (errors[name]) {
@@ -215,7 +223,7 @@ export default function NewEmployeePage() {
           afp_code: afpCode,
           health_institution_code: healthCode,
           family_allowances: 0,
-          legal_gratification_type: 'none',
+          legal_gratification_type: formData.hasLegalGratification ? 'article_50' : 'none',
           has_unemployment_insurance: true
         }
       };
@@ -942,6 +950,53 @@ export default function NewEmployeePage() {
                   </CardContent>
                 </Card>
 
+                {/* Gratificación Legal Art. 50 */}
+                <Card className="border-green-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center text-green-800">
+                      <DollarSign className="w-5 h-5 mr-2" />
+                      Gratificación Legal (Artículo 50)
+                    </CardTitle>
+                    <CardDescription className="text-green-700">
+                      El empleador puede optar por pagar el 25% de las remuneraciones mensuales como gratificación
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-start space-x-3">
+                        <input
+                          type="checkbox"
+                          id="hasLegalGratification"
+                          name="hasLegalGratification"
+                          checked={formData.hasLegalGratification}
+                          onChange={handleInputChange}
+                          className="mt-1 h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                        />
+                        <div className="flex-1">
+                          <label htmlFor="hasLegalGratification" className="block text-sm font-medium text-green-900 cursor-pointer">
+                            Aplicar Gratificación del Art. 50
+                          </label>
+                          <p className="mt-1 text-sm text-green-700">
+                            Se pagará el 25% del sueldo base mensual con tope de 4.75 ingresos mínimos mensuales ({new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0 }).format(4.75 * 380000)})
+                          </p>
+                          {formData.hasLegalGratification && (
+                            <div className="mt-3 p-3 bg-white border border-green-300 rounded-md">
+                              <p className="text-sm text-green-800 font-medium">
+                                ✅ Gratificación activada
+                              </p>
+                              {formData.baseSalary && (
+                                <p className="text-sm text-green-700 mt-1">
+                                  Gratificación mensual estimada: {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0 }).format(Math.min(parseFloat(formData.baseSalary) * 0.25, 4.75 * 380000))}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 <Card>
                   <CardHeader>
                     <CardTitle>Otros Descuentos y Beneficios</CardTitle>
@@ -995,29 +1050,50 @@ export default function NewEmployeePage() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <div className="text-center p-3 bg-white rounded-lg border">
-                          <p className="text-sm text-gray-600">Sueldo Bruto</p>
-                          <p className="text-lg font-semibold text-green-700">
-                            {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0 }).format(parseFloat(formData.baseSalary) * 1.25)}
-                          </p>
-                          <p className="text-xs text-gray-500">Incluye gratificación</p>
-                        </div>
-                        <div className="text-center p-3 bg-white rounded-lg border">
-                          <p className="text-sm text-gray-600">Descuentos</p>
-                          <p className="text-lg font-semibold text-red-600">
-                            -{new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0 }).format(parseFloat(formData.baseSalary) * 0.20)}
-                          </p>
-                          <p className="text-xs text-gray-500">AFP + Salud + Imp. único</p>
-                        </div>
-                        <div className="text-center p-3 bg-white rounded-lg border">
-                          <p className="text-sm text-gray-600">Líquido a Pagar</p>
-                          <p className="text-lg font-semibold text-blue-700">
-                            {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0 }).format(parseFloat(formData.baseSalary) * 1.05)}
-                          </p>
-                          <p className="text-xs text-gray-500">Estimación</p>
-                        </div>
-                      </div>
+                      {(() => {
+                        const baseSalary = parseFloat(formData.baseSalary);
+                        const minimumWage = 380000; // Ingreso mínimo 2025
+                        const maxGratification = 4.75 * minimumWage; // Tope Art. 50
+                        
+                        const gratificationAmount = formData.hasLegalGratification 
+                          ? Math.min(baseSalary * 0.25, maxGratification)
+                          : 0;
+                        
+                        const totalGross = baseSalary + gratificationAmount;
+                        const totalDeductions = totalGross * 0.20; // Estimación aproximada
+                        const netSalary = totalGross - totalDeductions;
+                        
+                        return (
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div className="text-center p-3 bg-white rounded-lg border">
+                              <p className="text-sm text-gray-600">Sueldo Bruto</p>
+                              <p className="text-lg font-semibold text-green-700">
+                                {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0 }).format(totalGross)}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {formData.hasLegalGratification 
+                                  ? `Incluye gratificación Art. 50: ${new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0 }).format(gratificationAmount)}`
+                                  : 'Solo sueldo base'
+                                }
+                              </p>
+                            </div>
+                            <div className="text-center p-3 bg-white rounded-lg border">
+                              <p className="text-sm text-gray-600">Descuentos</p>
+                              <p className="text-lg font-semibold text-red-600">
+                                -{new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0 }).format(totalDeductions)}
+                              </p>
+                              <p className="text-xs text-gray-500">AFP + Salud + Imp. único</p>
+                            </div>
+                            <div className="text-center p-3 bg-white rounded-lg border">
+                              <p className="text-sm text-gray-600">Líquido a Pagar</p>
+                              <p className="text-lg font-semibold text-blue-700">
+                                {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0 }).format(netSalary)}
+                              </p>
+                              <p className="text-xs text-gray-500">Estimación</p>
+                            </div>
+                          </div>
+                        );
+                      })()} 
                       
                       <div className="bg-white p-4 rounded-lg border">
                         <h4 className="font-medium text-gray-900 mb-3">Desglose de Descuentos Estimados:</h4>

@@ -27,6 +27,7 @@ export interface EmployeeData {
   afp_code: string;
   health_institution_code: string;
   family_allowances: number;
+  legal_gratification_type?: 'article_50' | 'none';
 }
 
 export interface PayrollPeriod {
@@ -82,6 +83,7 @@ export interface LiquidationResult {
   bonuses: number;
   commissions: number;
   gratification: number;
+  legal_gratification_art50: number;
   total_taxable_income: number;
   
   // Haberes No Imponibles
@@ -160,7 +162,8 @@ export class PayrollCalculator {
     // 2. Calcular haberes imponibles
     const taxableIncome = this.calculateTaxableIncome(
       proportionalBaseSalary,
-      additionalIncome
+      additionalIncome,
+      employee
     );
 
     // 3. Aplicar tope imponible
@@ -199,12 +202,17 @@ export class PayrollCalculator {
     // 9. Calcular otros descuentos
     const otherDeductions = this.calculateOtherDeductions(additionalDeductions);
 
-    // 10. Calcular totales
+    // 10. Calcular gratificación Art. 50 individual para el resultado
+    const article50Gratification = (employee.legal_gratification_type === 'article_50') 
+      ? this.calculateArticle50Gratification(employee.base_salary)
+      : 0;
+
+    // 11. Calcular totales
     const totalGrossIncome = taxableIncome + nonTaxableIncome;
     const totalDeductions = previsionalDeductions.total + incomeTax + otherDeductions;
     const netSalary = totalGrossIncome - totalDeductions;
 
-    // 10. Validar límite de descuentos (45% máximo)
+    // 12. Validar límite de descuentos (45% máximo)
     this.validateDeductionLimit(totalGrossIncome, totalDeductions);
 
     return {
@@ -217,6 +225,7 @@ export class PayrollCalculator {
       bonuses: additionalIncome.bonuses || 0,
       commissions: additionalIncome.commissions || 0,
       gratification: additionalIncome.gratification || 0,
+      legal_gratification_art50: article50Gratification,
       total_taxable_income: taxableIncome,
       
       // Haberes No Imponibles
@@ -275,13 +284,22 @@ export class PayrollCalculator {
    */
   private calculateTaxableIncome(
     baseSalary: number,
-    additional: AdditionalIncome
+    additional: AdditionalIncome,
+    employee?: EmployeeData
   ): number {
-    return baseSalary + 
+    let totalIncome = baseSalary + 
            (additional.overtime_amount || 0) + 
            (additional.bonuses || 0) + 
            (additional.commissions || 0) + 
            (additional.gratification || 0);
+
+    // Agregar gratificación legal Art. 50 si aplica
+    if (employee && employee.legal_gratification_type === 'article_50') {
+      const article50Gratification = this.calculateArticle50Gratification(employee.base_salary);
+      totalIncome += article50Gratification;
+    }
+
+    return totalIncome;
   }
 
   /**
@@ -296,6 +314,26 @@ export class PayrollCalculator {
     }
     
     return { adjustedTaxableIncome: taxableIncome, topeExceeded: false };
+  }
+
+  /**
+   * Calcula gratificación legal Art. 50
+   * 25% del sueldo base con tope de 4.75 ingresos mínimos mensuales
+   */
+  private calculateArticle50Gratification(baseSalary: number): number {
+    const gratificationBase = baseSalary * 0.25; // 25% del sueldo base
+    const maxGratification = this.settings.income_limits.minimum_wage * 4.75; // 4.75 sueldos mínimos
+    
+    const finalGratification = Math.min(gratificationBase, maxGratification);
+    
+    // Agregar información a warnings para transparencia
+    if (gratificationBase > maxGratification) {
+      this.warnings.push(`ℹ️ Gratificación Art. 50 limitada a 4.75 sueldos mínimos: ${PayrollCalculator.formatCurrency(maxGratification)}`);
+    } else {
+      this.warnings.push(`ℹ️ Gratificación Art. 50: 25% del sueldo base = ${PayrollCalculator.formatCurrency(finalGratification)}`);
+    }
+    
+    return Math.round(finalGratification);
   }
 
   /**
