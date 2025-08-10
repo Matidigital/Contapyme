@@ -548,6 +548,13 @@ export default function JournalBookPage() {
         actions={
           <div className="flex gap-2">
             <Button 
+              onClick={() => window.open('/accounting/journal-book/integration', '_blank')}
+              variant="outline"
+              className="bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700"
+            >
+              🔄 Integración Módulos
+            </Button>
+            <Button 
               onClick={generatePayrollEntries}
               variant="outline"
               disabled={submitting || !selectedPeriod}
