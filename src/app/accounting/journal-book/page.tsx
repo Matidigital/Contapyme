@@ -7,6 +7,8 @@ import { Header } from '@/components/layout/Header';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { useChartOfAccountsCache } from '@/hooks/useChartOfAccountsCache';
 import { Account } from '@/types';
+import { RUTEntityDetector } from '@/components/accounting/RUTEntityDetector';
+import { IntelligentSuggestions } from '@/components/accounting/IntelligentSuggestions';
 
 interface JournalEntryLine {
   id: string;
@@ -295,6 +297,7 @@ export default function JournalBookPage() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
+  const [detectedEntities, setDetectedEntities] = useState([]);
 
   // Validador memoizado para las líneas del asiento
   const entryValidation = useMemo(() => {
@@ -400,6 +403,7 @@ export default function JournalBookPage() {
         { account_code: '', account_name: '', debit_amount: 0, credit_amount: 0, description: '' }
       ]
     });
+    setDetectedEntities([]);
   }, []);
 
   // Agregar nueva línea de asiento
@@ -819,6 +823,53 @@ export default function JournalBookPage() {
                   />
                 </div>
 
+                {/* Detector automático de entidades RCV */}
+                <RUTEntityDetector 
+                  description={newEntry.description}
+                  documentNumber={newEntry.document_number}
+                  onEntityFound={(entity) => {
+                    console.log('🎯 Entidad RCV detectada:', entity);
+                    setDetectedEntities(prev => {
+                      // Evitar duplicados
+                      if (prev.find(e => e.id === entity.id)) return prev;
+                      return [...prev, entity];
+                    });
+                  }}
+                  onSuggestionApplied={(accountCode, accountName, entity) => {
+                    console.log('✨ Aplicando sugerencia de cuenta:', { accountCode, accountName, entity });
+                    
+                    // Buscar la primera línea vacía o crear nueva línea para aplicar la cuenta
+                    const emptyLineIndex = newEntry.entry_lines.findIndex(line => 
+                      !line.account_code && line.debit_amount === 0 && line.credit_amount === 0
+                    );
+                    
+                    if (emptyLineIndex >= 0) {
+                      // Aplicar en línea vacía existente
+                      updateEntryLine(emptyLineIndex, 'account_code', accountCode);
+                      updateEntryLine(emptyLineIndex, 'account_name', accountName);
+                      updateEntryLine(emptyLineIndex, 'description', `${entity.entity_type === 'supplier' ? 'Compra a' : 'Venta a'} ${entity.entity_name}`);
+                    } else {
+                      // Agregar nueva línea con la cuenta sugerida
+                      setNewEntry(prev => ({
+                        ...prev,
+                        entry_lines: [
+                          ...prev.entry_lines,
+                          {
+                            account_code: accountCode,
+                            account_name: accountName,
+                            debit_amount: 0,
+                            credit_amount: 0,
+                            description: `${entity.entity_type === 'supplier' ? 'Compra a' : 'Venta a'} ${entity.entity_name}`
+                          }
+                        ]
+                      }));
+                    }
+                    
+                    setMessage(`✅ Cuenta aplicada: ${accountCode} - ${accountName}`);
+                    setTimeout(() => setMessage(''), 3000);
+                  }}
+                />
+
                 {/* Líneas de asiento */}
                 <div>
                   <div className="flex justify-between items-center mb-3">
@@ -991,7 +1042,48 @@ export default function JournalBookPage() {
                   </div>
                 </div>
 
-
+                {/* Sugerencias Inteligentes */}
+                <IntelligentSuggestions
+                  entryLines={newEntry.entry_lines}
+                  description={newEntry.description}
+                  document={newEntry.document_number}
+                  detectedEntities={detectedEntities}
+                  onApplySuggestion={(accountCode, accountName, amount, type, suggestedDescription) => {
+                    console.log('🤖 Aplicando sugerencia inteligente:', { accountCode, accountName, amount, type });
+                    
+                    // Buscar línea vacía o crear nueva
+                    const emptyLineIndex = newEntry.entry_lines.findIndex(line => 
+                      !line.account_code && line.debit_amount === 0 && line.credit_amount === 0
+                    );
+                    
+                    if (emptyLineIndex >= 0) {
+                      // Aplicar en línea existente
+                      updateEntryLine(emptyLineIndex, 'account_code', accountCode);
+                      updateEntryLine(emptyLineIndex, 'account_name', accountName);
+                      updateEntryLine(emptyLineIndex, type === 'debit' ? 'debit_amount' : 'credit_amount', amount);
+                      if (suggestedDescription) {
+                        updateEntryLine(emptyLineIndex, 'description', suggestedDescription);
+                      }
+                    } else {
+                      // Crear nueva línea
+                      const newLine = {
+                        account_code: accountCode,
+                        account_name: accountName,
+                        debit_amount: type === 'debit' ? amount : 0,
+                        credit_amount: type === 'credit' ? amount : 0,
+                        description: suggestedDescription || 'Sugerencia automática'
+                      };
+                      
+                      setNewEntry(prev => ({
+                        ...prev,
+                        entry_lines: [...prev.entry_lines, newLine]
+                      }));
+                    }
+                    
+                    setMessage(`🤖 Sugerencia aplicada: ${accountCode} - ${accountName}`);
+                    setTimeout(() => setMessage(''), 4000);
+                  }}
+                />
 
                 <div className="flex gap-3 pt-4">
                   <Button 
