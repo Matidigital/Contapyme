@@ -93,6 +93,8 @@ export async function POST(request: NextRequest) {
   try {
     const body: RCVEntity = await request.json();
     
+    console.log('📧 POST /api/accounting/rcv-entities - Body received:', body);
+    
     // Validaciones básicas
     const { 
       company_id, 
@@ -106,8 +108,43 @@ export async function POST(request: NextRequest) {
     if (!company_id || !entity_name || !entity_rut || !entity_type || !account_code || !account_name) {
       return NextResponse.json({
         success: false,
-        error: 'Campos requeridos: company_id, entity_name, entity_rut, entity_type, account_code, account_name'
+        error: 'Campos requeridos: company_id, entity_name, entity_rut, entity_type, account_code, account_name',
+        debug: {
+          received: {
+            company_id: !!company_id,
+            entity_name: !!entity_name,
+            entity_rut: !!entity_rut,
+            entity_type: !!entity_type,
+            account_code: !!account_code,
+            account_name: !!account_name
+          }
+        }
       }, { status: 400 });
+    }
+
+    // Verificar que la tabla companies existe
+    const { data: companyCheck, error: companyError } = await supabase
+      .from('companies')
+      .select('id')
+      .eq('id', company_id)
+      .single();
+
+    if (companyError) {
+      console.error('❌ Company check error:', companyError);
+      return NextResponse.json({
+        success: false,
+        error: '⚠️ Tabla "companies" no configurada en Supabase. Ver CONFIGURAR_SUPABASE.md',
+        details: 'La base de datos necesita ser configurada antes de usar esta funcionalidad.',
+        setup_guide: 'Ejecutar: CREATE TABLE companies ... (ver archivo CONFIGURAR_SUPABASE.md)'
+      }, { status: 500 });
+    }
+
+    if (!companyCheck) {
+      return NextResponse.json({
+        success: false,
+        error: `Company con ID ${company_id} no existe. Crear primero en tabla companies.`,
+        suggestion: 'Ejecutar: INSERT INTO companies (id, company_name) VALUES (...) en Supabase'
+      }, { status: 404 });
     }
 
     // Validar formato RUT básico
@@ -157,10 +194,30 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Error creating RCV entity:', error);
+      console.error('❌ Error creating RCV entity:', error);
+      
+      // Mensajes de error más específicos
+      if (error.code === '42P01') {
+        return NextResponse.json({
+          success: false,
+          error: '⚠️ Tabla "rcv_entities" no existe en Supabase',
+          details: 'Necesitas ejecutar la migración 20250810140000_rcv_entities.sql',
+          setup_guide: 'Ver archivo CONFIGURAR_SUPABASE.md para instrucciones completas'
+        }, { status: 500 });
+      }
+      
+      if (error.code === '23505') {
+        return NextResponse.json({
+          success: false,
+          error: `Ya existe una entidad con RUT ${entity_rut} en esta empresa`
+        }, { status: 409 });
+      }
+      
       return NextResponse.json({
         success: false,
-        error: 'Error al crear entidad RCV'
+        error: 'Error al crear entidad RCV',
+        details: error.message,
+        code: error.code
       }, { status: 500 });
     }
 

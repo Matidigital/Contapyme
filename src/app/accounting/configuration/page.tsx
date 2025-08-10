@@ -87,6 +87,8 @@ export default function ConfigurationPage() {
   const [loadingEntities, setLoadingEntities] = useState(true);
   const [entitySearchTerm, setEntitySearchTerm] = useState('');
   const [entityTypeFilter, setEntityTypeFilter] = useState('all');
+  const [systemDiagnostics, setSystemDiagnostics] = useState(null);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
 
   const companyId = '8033ee69-b420-4d91-ba0e-482f46cd6fce'; // TODO: Get from auth
 
@@ -94,6 +96,7 @@ export default function ConfigurationPage() {
   useEffect(() => {
     loadCentralizedConfigs();
     loadRCVEntities();
+    loadSystemDiagnostics();
   }, []);
 
   const loadCentralizedConfigs = async () => {
@@ -198,8 +201,16 @@ export default function ConfigurationPage() {
         await loadRCVEntities();
         setShowEntityForm(false);
         setEditingEntity(null);
+        alert(`✅ Entidad "${entity.entity_name}" creada exitosamente`);
       } else {
-        alert(`Error: ${result.error}`);
+        // Mostrar mensaje de error más específico
+        if (result.error?.includes('Tabla') && result.error?.includes('no existe')) {
+          alert(`❌ ${result.error}\n\n💡 Solución: Ve al botón "🔍 Diagnóstico" para ver los pasos de configuración.`);
+          setShowDiagnostics(true);
+          await loadSystemDiagnostics();
+        } else {
+          alert(`❌ Error: ${result.error}`);
+        }
       }
     } catch (error) {
       console.error('Error saving RCV entity:', error);
@@ -225,6 +236,18 @@ export default function ConfigurationPage() {
     } catch (error) {
       console.error('Error deleting RCV entity:', error);
       alert('Error eliminando entidad');
+    }
+  };
+
+  const loadSystemDiagnostics = async () => {
+    try {
+      const response = await fetch('/api/accounting/rcv-entities/diagnostics');
+      const data = await response.json();
+      if (data.success) {
+        setSystemDiagnostics(data.data);
+      }
+    } catch (error) {
+      console.error('Error loading diagnostics:', error);
     }
   };
 
@@ -712,21 +735,85 @@ export default function ConfigurationPage() {
                   {rcvEntities.length} entidades
                 </span>
               </div>
-              <Button
-                variant="primary"
-                size="sm"
-                leftIcon={<Plus className="w-4 h-4" />}
-                onClick={() => setShowEntityForm(true)}
-                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
-              >
-                Nueva Entidad
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={() => setShowDiagnostics(!showDiagnostics)}
+                  variant="outline"
+                  size="sm"
+                  className="border-yellow-200 hover:bg-yellow-50 text-yellow-700"
+                >
+                  🔍 {showDiagnostics ? 'Ocultar' : 'Diagnóstico'}
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  leftIcon={<Plus className="w-4 h-4" />}
+                  onClick={() => setShowEntityForm(true)}
+                  className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+                >
+                  Nueva Entidad
+                </Button>
+              </div>
             </CardTitle>
             <CardDescription>
               Base de datos de proveedores y clientes con cuentas contables asociadas para integración automática del RCV
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {/* Panel de Diagnóstico */}
+            {showDiagnostics && systemDiagnostics && (
+              <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium text-yellow-800 flex items-center space-x-2">
+                    <span>🔍 Diagnóstico del Sistema</span>
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      systemDiagnostics.summary.ready 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {systemDiagnostics.summary.status}
+                    </span>
+                  </h4>
+                  <button
+                    onClick={() => setShowDiagnostics(false)}
+                    className="text-yellow-600 hover:text-yellow-800"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                
+                {systemDiagnostics.summary.issues.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-sm text-yellow-800">
+                      <strong>Problemas detectados:</strong>
+                    </div>
+                    {systemDiagnostics.summary.issues.map((issue, index) => (
+                      <div key={index} className="text-sm text-red-700 bg-red-50 p-2 rounded border border-red-200">
+                        {issue}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {systemDiagnostics.summary.next_steps.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    <div className="text-sm font-medium text-yellow-800">
+                      Pasos a seguir:
+                    </div>
+                    {systemDiagnostics.summary.next_steps.map((step, index) => (
+                      <div key={index} className="text-sm text-blue-700 bg-blue-50 p-2 rounded border border-blue-200">
+                        {step}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="mt-3 text-xs text-gray-600">
+                  Ver archivo <strong>CONFIGURAR_SUPABASE.md</strong> para instrucciones completas
+                </div>
+              </div>
+            )}
+
             {/* Filtros y búsqueda para entidades */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
               <div className="flex items-center space-x-4">
