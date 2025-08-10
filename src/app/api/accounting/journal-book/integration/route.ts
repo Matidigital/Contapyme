@@ -367,28 +367,19 @@ async function processIntegrationTransaction(
 }
 
 /**
- * Crea asiento contable automático basado en configuración
+ * Crea asiento contable automático basado en configuración centralizada
  */
 async function createAutomaticJournalEntry(companyId: string, transaction: any) {
   try {
-    console.log('🔄 Creating automatic journal entry for:', transaction);
+    console.log('🔄 Creating automatic journal entry using centralized config for:', transaction);
 
-    // Obtener configuración de integración
-    const { data: configData } = await supabase
-      .from('integration_config')
-      .select('config')
-      .eq('company_id', companyId)
-      .single();
-
-    const config = configData?.config || await getDefaultIntegrationConfig();
-
-    // Preparar datos del asiento según el tipo de transacción
+    // Preparar datos del asiento según el tipo de transacción usando configuración centralizada
     let journalData = null;
 
     if (transaction.type === 'rcv') {
-      journalData = await createRCVJournalEntry(transaction, config);
+      journalData = await createRCVJournalEntry(transaction, companyId);
     } else if (transaction.type === 'fixed_asset') {
-      journalData = await createFixedAssetJournalEntry(transaction, config);
+      journalData = await createFixedAssetJournalEntry(transaction, companyId);
     }
 
     if (!journalData) {
@@ -421,8 +412,9 @@ async function createAutomaticJournalEntry(companyId: string, transaction: any) 
         p_processing_type: 'manual',
         p_details: {
           processed_at: new Date().toISOString(),
-          integration_type: 'automatic',
-          transaction_data: transaction.data
+          integration_type: 'automatic_centralized',
+          transaction_data: transaction.data,
+          account_config_used: true
         }
       });
 
@@ -438,18 +430,19 @@ async function createAutomaticJournalEntry(companyId: string, transaction: any) 
 }
 
 /**
- * Crea asiento contable para RCV (Compras o Ventas)
+ * Crea asiento contable para RCV (Compras o Ventas) usando configuración centralizada
  */
-async function createRCVJournalEntry(transaction: any, config: any) {
+async function createRCVJournalEntry(transaction: any, companyId: string) {
   const { subtype, data } = transaction;
   const isRCVSales = subtype === 'sales';
-  const configKey = isRCVSales ? 'rcv_sales' : 'rcv_purchases';
   
-  if (!config[configKey] || !config[configKey].enabled) {
-    throw new Error(`Integración ${configKey} no está habilitada`);
+  // Obtener configuración centralizada
+  const accountConfig = await getCentralizedAccountConfig(companyId, 'rcv', subtype);
+  
+  if (!accountConfig) {
+    throw new Error(`No se encontró configuración para RCV ${subtype}`);
   }
 
-  const accounts = config[configKey].accounts;
   const totalAmount = data.total_amount || 0;
   const netAmount = Math.round(totalAmount / 1.19); // Monto neto sin IVA
   const ivaAmount = totalAmount - netAmount; // IVA
@@ -459,66 +452,64 @@ async function createRCVJournalEntry(transaction: any, config: any) {
   if (isRCVSales) {
     // RCV Ventas: Cliente al debe, Ventas e IVA al haber
     lines.push({
-      account_code: accounts.debit_client_account,
-      account_name: 'Clientes',
+      account_code: accountConfig.asset_account_code,
+      account_name: accountConfig.asset_account_name,
       line_number: 1,
       debit_amount: totalAmount,
       credit_amount: 0,
-      line_description: `Clientes por ventas RCV ${data.period}`
+      line_description: `${accountConfig.asset_account_name} por ventas RCV ${data.period}`
     });
 
     lines.push({
-      account_code: accounts.credit_sales_account,
-      account_name: 'Ventas',
+      account_code: accountConfig.revenue_account_code,
+      account_name: accountConfig.revenue_account_name,
       line_number: 2,
       debit_amount: 0,
       credit_amount: netAmount,
-      line_description: `Ventas RCV ${data.period}`
+      line_description: `${accountConfig.revenue_account_name} RCV ${data.period}`
     });
 
     lines.push({
-      account_code: accounts.credit_iva_account,
-      account_name: 'IVA Débito Fiscal',
+      account_code: accountConfig.tax_account_code,
+      account_name: accountConfig.tax_account_name,
       line_number: 3,
       debit_amount: 0,
       credit_amount: ivaAmount,
-      line_description: `IVA Ventas RCV ${data.period}`
+      line_description: `${accountConfig.tax_account_name} RCV ${data.period}`
     });
   } else {
     // RCV Compras: Gastos e IVA al debe, Proveedores al haber
     lines.push({
-      account_code: accounts.debit_expense_account,
-      account_name: 'Gastos Generales',
+      account_code: accountConfig.revenue_account_code,
+      account_name: accountConfig.revenue_account_name,
       line_number: 1,
       debit_amount: netAmount,
       credit_amount: 0,
-      line_description: `Gastos por compras RCV ${data.period}`
+      line_description: `${accountConfig.revenue_account_name} por compras RCV ${data.period}`
     });
 
     lines.push({
-      account_code: accounts.debit_iva_account,
-      account_name: 'IVA Crédito Fiscal',
+      account_code: accountConfig.tax_account_code,
+      account_name: accountConfig.tax_account_name,
       line_number: 2,
       debit_amount: ivaAmount,
       credit_amount: 0,
-      line_description: `IVA Compras RCV ${data.period}`
+      line_description: `${accountConfig.tax_account_name} RCV ${data.period}`
     });
 
     lines.push({
-      account_code: accounts.credit_supplier_account,
-      account_name: 'Proveedores',
+      account_code: accountConfig.asset_account_code,
+      account_name: accountConfig.asset_account_name,
       line_number: 3,
       debit_amount: 0,
       credit_amount: totalAmount,
-      line_description: `Proveedores por compras RCV ${data.period}`
+      line_description: `${accountConfig.asset_account_name} por compras RCV ${data.period}`
     });
   }
 
   return {
     entry_date: new Date().toISOString().split('T')[0],
-    description: config[configKey].description_template
-      .replace('{period}', data.period)
-      .replace('{file_name}', data.file_name || ''),
+    description: `RCV ${isRCVSales ? 'Ventas' : 'Compras'} ${data.period} - ${data.file_name || ''}`,
     reference: data.file_name || `RCV-${subtype}-${data.period}`,
     entry_type: subtype.toLowerCase(),
     lines
@@ -526,30 +517,32 @@ async function createRCVJournalEntry(transaction: any, config: any) {
 }
 
 /**
- * Crea asiento contable para Activos Fijos
+ * Crea asiento contable para Activos Fijos usando configuración centralizada
  */
-async function createFixedAssetJournalEntry(transaction: any, config: any) {
+async function createFixedAssetJournalEntry(transaction: any, companyId: string) {
   const { data } = transaction;
   
-  if (!config.fixed_assets || !config.fixed_assets.enabled) {
-    throw new Error('Integración fixed_assets no está habilitada');
+  // Obtener configuración centralizada
+  const accountConfig = await getCentralizedAccountConfig(companyId, 'fixed_assets', 'acquisition');
+  
+  if (!accountConfig) {
+    throw new Error('No se encontró configuración para Activos Fijos');
   }
 
-  const accounts = config.fixed_assets.accounts;
   const purchaseValue = data.purchase_value || 0;
 
   const lines = [
     {
-      account_code: data.account_code,
-      account_name: data.name,
+      account_code: data.account_code || accountConfig.asset_account_code,
+      account_name: data.name || accountConfig.asset_account_name,
       line_number: 1,
       debit_amount: purchaseValue,
       credit_amount: 0,
       line_description: `Adquisición activo fijo: ${data.name}`
     },
     {
-      account_code: accounts.credit_cash_account,
-      account_name: 'Caja/Bancos',
+      account_code: accountConfig.revenue_account_code,
+      account_name: accountConfig.revenue_account_name,
       line_number: 2,
       debit_amount: 0,
       credit_amount: purchaseValue,
@@ -559,8 +552,7 @@ async function createFixedAssetJournalEntry(transaction: any, config: any) {
 
   return {
     entry_date: data.purchase_date,
-    description: config.fixed_assets.description_template
-      .replace('{asset_name}', data.name),
+    description: `Adquisición Activo Fijo: ${data.name}`,
     reference: `AF-${data.id}`,
     entry_type: 'fixed_asset',
     lines
@@ -568,35 +560,65 @@ async function createFixedAssetJournalEntry(transaction: any, config: any) {
 }
 
 /**
+ * Obtiene configuración centralizada de cuentas para asientos automáticos
+ */
+async function getCentralizedAccountConfig(companyId: string, moduleType: string, transactionType: string) {
+  try {
+    // Intentar obtener configuración centralizada
+    const { data } = await supabase
+      .rpc('get_centralized_account_config', {
+        p_company_id: companyId,
+        p_module_name: moduleType,
+        p_transaction_type: transactionType
+      });
+
+    if (data && data.length > 0) {
+      return data[0];
+    }
+
+    // Si no hay configuración centralizada, usar valores por defecto
+    return getDefaultAccountConfig(moduleType, transactionType);
+
+  } catch (error) {
+    console.error('Error getting centralized config:', error);
+    return getDefaultAccountConfig(moduleType, transactionType);
+  }
+}
+
+/**
  * Obtiene configuración por defecto para asientos automáticos
  */
-async function getDefaultIntegrationConfig() {
-  return {
-    rcv_sales: {
-      enabled: true,
-      accounts: {
-        debit_client_account: '1105001',
-        credit_sales_account: '4101001',
-        credit_iva_account: '2104001'
+async function getDefaultAccountConfig(moduleType: string, transactionType: string) {
+  const defaultConfigs = {
+    rcv: {
+      sales: {
+        tax_account_code: '2104001',
+        tax_account_name: 'IVA Débito Fiscal',
+        revenue_account_code: '4101001',
+        revenue_account_name: 'Ventas',
+        asset_account_code: '1105001',
+        asset_account_name: 'Clientes'
       },
-      description_template: 'Venta según RCV {period} - {file_name}'
-    },
-    rcv_purchases: {
-      enabled: true,
-      accounts: {
-        debit_expense_account: '5101001',
-        debit_iva_account: '1104001',
-        credit_supplier_account: '2101001'
-      },
-      description_template: 'Compra según RCV {period} - {file_name}'
+      purchases: {
+        tax_account_code: '1104001',
+        tax_account_name: 'IVA Crédito Fiscal',
+        revenue_account_code: '5101001',
+        revenue_account_name: 'Gastos Generales',
+        asset_account_code: '2101001',
+        asset_account_name: 'Proveedores'
+      }
     },
     fixed_assets: {
-      enabled: true,
-      accounts: {
-        credit_cash_account: '1101001',
-        credit_supplier_account: '2101001'
-      },
-      description_template: 'Adquisición Activo Fijo: {asset_name}'
+      acquisition: {
+        tax_account_code: '1104001',
+        tax_account_name: 'IVA Crédito Fiscal',
+        revenue_account_code: '1101001',
+        revenue_account_name: 'Caja y Bancos',
+        asset_account_code: '1201001',
+        asset_account_name: 'Activos Fijos'
+      }
     }
   };
+
+  return defaultConfigs[moduleType]?.[transactionType] || null;
 }

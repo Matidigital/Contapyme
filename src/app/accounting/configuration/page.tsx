@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   Settings, 
@@ -14,7 +14,11 @@ import {
   ChevronDown,
   Search,
   Save,
-  X
+  X,
+  Target,
+  DollarSign,
+  TrendingUp,
+  Building2
 } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { Header } from '@/components/layout';
@@ -23,12 +27,125 @@ import { planDeCuentasChilenoFinal } from '@/lib/data/planDeCuentasChilenoFinal'
 import { Account } from '@/types';
 
 
+// Interfaces para configuración centralizada
+interface CentralizedAccountConfig {
+  id: string;
+  module_name: string;
+  transaction_type: string;
+  display_name: string;
+  tax_account_code: string;
+  tax_account_name: string;
+  revenue_account_code: string;
+  revenue_account_name: string;
+  asset_account_code: string;
+  asset_account_name: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export default function ConfigurationPage() {
   const [accounts, setAccounts] = useState<Account[]>(planDeCuentasChilenoFinal);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['1', '1.1', '1.2', '2', '2.1', '2.2', '2.3', '3', '3.1', '3.2', '4', '4.1', '4.2']));
   const [searchTerm, setSearchTerm] = useState('');
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  
+  // Estados para configuración centralizada
+  const [centralizedConfigs, setCentralizedConfigs] = useState<CentralizedAccountConfig[]>([]);
+  const [editingConfig, setEditingConfig] = useState<CentralizedAccountConfig | null>(null);
+  const [showConfigForm, setShowConfigForm] = useState(false);
+  const [loadingConfigs, setLoadingConfigs] = useState(true);
+
+  const companyId = '8033ee69-b420-4d91-ba0e-482f46cd6fce'; // TODO: Get from auth
+
+  // Cargar configuraciones centralizadas
+  useEffect(() => {
+    loadCentralizedConfigs();
+  }, []);
+
+  const loadCentralizedConfigs = async () => {
+    try {
+      setLoadingConfigs(true);
+      const response = await fetch(`/api/accounting/configuration/centralized?company_id=${companyId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setCentralizedConfigs(data.data);
+      }
+    } catch (error) {
+      console.error('Error loading centralized configs:', error);
+    } finally {
+      setLoadingConfigs(false);
+    }
+  };
+
+  const saveCentralizedConfig = async (config: Partial<CentralizedAccountConfig>) => {
+    try {
+      const response = await fetch('/api/accounting/configuration/centralized', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          company_id: companyId,
+          ...config
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        await loadCentralizedConfigs();
+        setShowConfigForm(false);
+        setEditingConfig(null);
+      } else {
+        alert(`Error: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error saving centralized config:', error);
+      alert('Error guardando configuración');
+    }
+  };
+
+  const deleteCentralizedConfig = async (configId: string) => {
+    if (!confirm('¿Estás seguro de eliminar esta configuración?')) return;
+
+    try {
+      const response = await fetch(`/api/accounting/configuration/centralized/${configId}`, {
+        method: 'DELETE'
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        await loadCentralizedConfigs();
+      } else {
+        alert(`Error: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error deleting centralized config:', error);
+      alert('Error eliminando configuración');
+    }
+  };
+
+  // Filtrar cuentas imputables (nivel 4) para los selectores
+  const getDetailAccounts = () => {
+    const flattenAccounts = (accounts: Account[]): Account[] => {
+      let result: Account[] = [];
+      accounts.forEach(account => {
+        if (account.is_detail) {
+          result.push(account);
+        }
+        if (account.children) {
+          result = result.concat(flattenAccounts(account.children));
+        }
+      });
+      return result;
+    };
+    
+    return flattenAccounts(accounts).sort((a, b) => a.code.localeCompare(b.code));
+  };
 
   // Toggle expand/collapse
   const toggleExpand = (accountId: string) => {
@@ -300,6 +417,177 @@ export default function ConfigurationPage() {
             </CardContent>
         </Card>
 
+        {/* Panel de Configuración Centralizada de Cuentas */}
+        <Card className="bg-white/90 backdrop-blur-sm border-2 border-purple-100 hover:border-purple-200 transition-colors">
+          <CardHeader className="bg-gradient-to-r from-purple-50 to-indigo-50">
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-lg flex items-center justify-center">
+                  <Target className="w-4 h-4 text-white" />
+                </div>
+                <span>Configuración Centralizada de Cuentas</span>
+                <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
+                  {centralizedConfigs.length} configuraciones
+                </span>
+              </div>
+              <Button
+                variant="primary"
+                size="sm"
+                leftIcon={<Plus className="w-4 h-4" />}
+                onClick={() => setShowConfigForm(true)}
+                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+              >
+                Nueva Configuración
+              </Button>
+            </CardTitle>
+            <CardDescription>
+              Centraliza la configuración de cuentas contables por módulo para asientos automáticos
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingConfigs ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                <span className="ml-3 text-gray-600">Cargando configuraciones...</span>
+              </div>
+            ) : centralizedConfigs.length === 0 ? (
+              <div className="text-center py-8">
+                <Target className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No hay configuraciones</h3>
+                <p className="text-gray-600 mb-4">
+                  Crea tu primera configuración centralizada para automatizar asientos contables
+                </p>
+                <Button
+                  variant="primary"
+                  onClick={() => setShowConfigForm(true)}
+                  className="bg-gradient-to-r from-purple-600 to-indigo-600"
+                >
+                  Crear Configuración
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {centralizedConfigs.map((config) => (
+                  <div
+                    key={config.id}
+                    className="border-2 border-purple-100 rounded-xl p-6 hover:border-purple-200 hover:shadow-lg transition-all duration-200"
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-lg flex items-center justify-center">
+                          {config.module_name === 'rcv' && <FileText className="w-5 h-5 text-white" />}
+                          {config.module_name === 'fixed_assets' && <Building2 className="w-5 h-5 text-white" />}
+                          {config.module_name === 'payroll' && <DollarSign className="w-5 h-5 text-white" />}
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{config.display_name}</h3>
+                          <p className="text-sm text-gray-600">
+                            {config.module_name.toUpperCase()} - {config.transaction_type}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => {
+                            setEditingConfig(config);
+                            setShowConfigForm(true);
+                          }}
+                          className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => deleteCentralizedConfig(config.id)}
+                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                        <div className="flex items-center space-x-2">
+                          <TrendingUp className="w-4 h-4 text-green-600" />
+                          <span className="text-sm font-medium text-green-800">Cuenta de Impuesto</span>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-mono text-green-700">{config.tax_account_code}</p>
+                          <p className="text-xs text-green-600">{config.tax_account_name}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex items-center space-x-2">
+                          <DollarSign className="w-4 h-4 text-blue-600" />
+                          <span className="text-sm font-medium text-blue-800">Cuenta de Utilidad</span>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-mono text-blue-700">{config.revenue_account_code}</p>
+                          <p className="text-xs text-blue-600">{config.revenue_account_name}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
+                        <div className="flex items-center space-x-2">
+                          <Building2 className="w-4 h-4 text-orange-600" />
+                          <span className="text-sm font-medium text-orange-800">Cuenta de Activo</span>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-mono text-orange-700">{config.asset_account_code}</p>
+                          <p className="text-xs text-orange-600">{config.asset_account_name}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-gray-200">
+                      <div className="flex items-center justify-between">
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          config.is_active 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {config.is_active ? '✅ Activo' : '❌ Inactivo'}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {config.created_at && new Date(config.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Información sobre configuración centralizada */}
+            <div className="mt-6 space-y-4">
+              <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                <h4 className="font-medium text-purple-900 mb-2">💡 ¿Cómo funciona la Configuración Centralizada?</h4>
+                <div className="text-sm text-purple-800 space-y-1">
+                  <p>• <strong>Cuenta de Impuesto:</strong> Se utiliza para registrar IVA y otros impuestos</p>
+                  <p>• <strong>Cuenta de Utilidad:</strong> Registra ingresos por ventas o reducciones por compras</p>
+                  <p>• <strong>Cuenta de Activo:</strong> Para clientes en ventas o inventario en compras</p>
+                  <p>• <strong>Asientos Automáticos:</strong> El sistema usa estas cuentas al procesar transacciones de cada módulo</p>
+                </div>
+              </div>
+
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 className="font-medium text-blue-900 mb-2 flex items-center space-x-2">
+                  <Target className="w-4 h-4" />
+                  <span>🔗 Integración con Libro Diario</span>
+                </h4>
+                <div className="text-sm text-blue-800 space-y-1">
+                  <p>✅ <strong>Automatización Completa:</strong> Estas configuraciones se usan automáticamente en:</p>
+                  <p className="ml-4">• <strong>Integración RCV:</strong> Al procesar registros de compra y venta</p>
+                  <p className="ml-4">• <strong>Integración Activos Fijos:</strong> Al contabilizar adquisiciones</p>
+                  <p className="ml-4">• <strong>Libro Diario:</strong> Para generar asientos contables automáticos</p>
+                  <p className="mt-3">🎯 <strong>Sin configuración adicional:</strong> Una vez creada, la integración usa estas cuentas automáticamente.</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Other Configuration Options Modernizadas */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card className="bg-white/90 backdrop-blur-sm border-2 border-green-100 hover:border-green-200 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer">
@@ -361,6 +649,263 @@ export default function ConfigurationPage() {
           animation-delay: 4s;
         }
       `}</style>
+      {/* Modal de Configuración Centralizada */}
+      {showConfigForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold flex items-center space-x-2">
+                <Target className="w-6 h-6 text-purple-600" />
+                <span>{editingConfig ? 'Editar Configuración' : 'Nueva Configuración Centralizada'}</span>
+              </h3>
+              <button
+                onClick={() => {
+                  setShowConfigForm(false);
+                  setEditingConfig(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target as HTMLFormElement);
+                
+                const config = {
+                  id: editingConfig?.id,
+                  module_name: formData.get('module_name') as string,
+                  transaction_type: formData.get('transaction_type') as string,
+                  display_name: formData.get('display_name') as string,
+                  tax_account_code: formData.get('tax_account_code') as string,
+                  tax_account_name: formData.get('tax_account_name') as string,
+                  revenue_account_code: formData.get('revenue_account_code') as string,
+                  revenue_account_name: formData.get('revenue_account_name') as string,
+                  asset_account_code: formData.get('asset_account_code') as string,
+                  asset_account_name: formData.get('asset_account_name') as string,
+                  is_active: (formData.get('is_active') as string) === 'true'
+                };
+
+                saveCentralizedConfig(config);
+              }}
+              className="space-y-6"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Módulo *
+                  </label>
+                  <select
+                    name="module_name"
+                    required
+                    defaultValue={editingConfig?.module_name || ''}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="">Seleccionar módulo...</option>
+                    <option value="rcv">📄 RCV (Registro de Compra y Venta)</option>
+                    <option value="fixed_assets">🏢 Activos Fijos</option>
+                    <option value="payroll">💰 Remuneraciones</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tipo de Transacción *
+                  </label>
+                  <select
+                    name="transaction_type"
+                    required
+                    defaultValue={editingConfig?.transaction_type || ''}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="">Seleccionar tipo...</option>
+                    <option value="sales">Ventas</option>
+                    <option value="purchases">Compras</option>
+                    <option value="acquisition">Adquisición</option>
+                    <option value="depreciation">Depreciación</option>
+                    <option value="salary">Sueldos</option>
+                    <option value="benefits">Beneficios</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nombre Descriptivo *
+                </label>
+                <input
+                  type="text"
+                  name="display_name"
+                  required
+                  defaultValue={editingConfig?.display_name || ''}
+                  placeholder="ej: RCV Ventas IVA 19%"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+
+              {/* Selector de Cuenta de Impuesto */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <label className="block text-sm font-medium text-green-800 mb-2 flex items-center space-x-2">
+                  <TrendingUp className="w-4 h-4" />
+                  <span>Cuenta de Impuesto (IVA, etc.) *</span>
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <select
+                    name="tax_account_code"
+                    required
+                    defaultValue={editingConfig?.tax_account_code || ''}
+                    onChange={(e) => {
+                      const selectedAccount = getDetailAccounts().find(acc => acc.code === e.target.value);
+                      const nameInput = document.querySelector('[name="tax_account_name"]') as HTMLInputElement;
+                      if (nameInput && selectedAccount) {
+                        nameInput.value = selectedAccount.name;
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value="">Seleccionar cuenta...</option>
+                    {getDetailAccounts()
+                      .filter(acc => acc.account_type === 'liability' || acc.account_type === 'asset')
+                      .map((account) => (
+                      <option key={account.id} value={account.code}>
+                        {account.code} - {account.name}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    name="tax_account_name"
+                    required
+                    defaultValue={editingConfig?.tax_account_name || ''}
+                    placeholder="Nombre de la cuenta"
+                    className="w-full px-3 py-2 border border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    readOnly
+                  />
+                </div>
+              </div>
+
+              {/* Selector de Cuenta de Utilidad */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <label className="block text-sm font-medium text-blue-800 mb-2 flex items-center space-x-2">
+                  <DollarSign className="w-4 h-4" />
+                  <span>Cuenta de Utilidad/Ingresos *</span>
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <select
+                    name="revenue_account_code"
+                    required
+                    defaultValue={editingConfig?.revenue_account_code || ''}
+                    onChange={(e) => {
+                      const selectedAccount = getDetailAccounts().find(acc => acc.code === e.target.value);
+                      const nameInput = document.querySelector('[name="revenue_account_name"]') as HTMLInputElement;
+                      if (nameInput && selectedAccount) {
+                        nameInput.value = selectedAccount.name;
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Seleccionar cuenta...</option>
+                    {getDetailAccounts()
+                      .filter(acc => acc.account_type === 'income' || acc.account_type === 'expense')
+                      .map((account) => (
+                      <option key={account.id} value={account.code}>
+                        {account.code} - {account.name}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    name="revenue_account_name"
+                    required
+                    defaultValue={editingConfig?.revenue_account_name || ''}
+                    placeholder="Nombre de la cuenta"
+                    className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    readOnly
+                  />
+                </div>
+              </div>
+
+              {/* Selector de Cuenta de Activo */}
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                <label className="block text-sm font-medium text-orange-800 mb-2 flex items-center space-x-2">
+                  <Building2 className="w-4 h-4" />
+                  <span>Cuenta de Activo (Clientes, Inventario, etc.) *</span>
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <select
+                    name="asset_account_code"
+                    required
+                    defaultValue={editingConfig?.asset_account_code || ''}
+                    onChange={(e) => {
+                      const selectedAccount = getDetailAccounts().find(acc => acc.code === e.target.value);
+                      const nameInput = document.querySelector('[name="asset_account_name"]') as HTMLInputElement;
+                      if (nameInput && selectedAccount) {
+                        nameInput.value = selectedAccount.name;
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  >
+                    <option value="">Seleccionar cuenta...</option>
+                    {getDetailAccounts()
+                      .filter(acc => acc.account_type === 'asset')
+                      .map((account) => (
+                      <option key={account.id} value={account.code}>
+                        {account.code} - {account.name}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    name="asset_account_name"
+                    required
+                    defaultValue={editingConfig?.asset_account_name || ''}
+                    placeholder="Nombre de la cuenta"
+                    className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    readOnly
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  name="is_active"
+                  id="is_active"
+                  value="true"
+                  defaultChecked={editingConfig?.is_active ?? true}
+                  className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 mr-3"
+                />
+                <label htmlFor="is_active" className="text-sm text-gray-700">
+                  Configuración activa (se usará para asientos automáticos)
+                </label>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-6">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowConfigForm(false);
+                    setEditingConfig(null);
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  className="bg-gradient-to-r from-purple-600 to-indigo-600"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {editingConfig ? 'Actualizar' : 'Crear'} Configuración
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     
     {/* Modal de Edición */}
       {editingAccount && (
