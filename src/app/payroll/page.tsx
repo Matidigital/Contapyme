@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { MinimalHeader } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
-import { Users, FileText, Clock, Calendar, BarChart3, Plus, ChevronRight, Settings, FileSpreadsheet, DollarSign, Activity, TrendingUp, ArrowRight } from 'lucide-react';
+import { Users, FileText, Clock, Calendar, BarChart3, Plus, ChevronRight, Settings, FileSpreadsheet, DollarSign, Activity, TrendingUp, ArrowRight, Database } from 'lucide-react';
 
 interface PayrollStats {
   totalEmployees: number;
@@ -335,6 +335,23 @@ export default function PayrollPage() {
                         <div className="flex-1 min-w-0">
                           <h4 className="font-bold text-gray-900 mb-1">Libros</h4>
                           <p className="text-sm text-gray-600 truncate">Libro de remuneraciones</p>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                  
+                  <Link href="/payroll/generar-datos-demo" className="group">
+                    <div className="p-4 sm:p-6 bg-gradient-to-br from-orange-50/80 to-orange-100/80 rounded-xl border border-orange-200/50 hover:border-orange-300 transition-all duration-200 group-hover:shadow-md group-hover:scale-105">
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 bg-orange-500/10 rounded-xl flex items-center justify-center group-hover:bg-orange-500/20 transition-colors">
+                          <Database className="h-5 w-5 text-orange-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-gray-900 mb-1">
+                            Datos Demo
+                            <span className="ml-2 px-2 py-0.5 bg-orange-500 text-white text-xs rounded-full font-medium">NUEVO</span>
+                          </h4>
+                          <p className="text-sm text-gray-600 truncate">Generar empleados de ejemplo</p>
                         </div>
                       </div>
                     </div>
