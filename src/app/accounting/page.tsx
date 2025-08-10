@@ -437,7 +437,7 @@ export default function AccountingPage() {
           </div>
 
           {/* Features Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
             <Link href="/accounting/configuration" className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow">
               <div className="w-12 h-12 bg-indigo-100 rounded-lg mb-4 flex items-center justify-center">
                 <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -460,6 +460,21 @@ export default function AccountingPage() {
               <div className="mt-2">
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                   Nuevo
+                </span>
+              </div>
+            </Link>
+
+            <Link href="/accounting/rcv-history" className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow border-2 border-emerald-200">
+              <div className="w-12 h-12 bg-emerald-100 rounded-lg mb-4 flex items-center justify-center">
+                <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">Historial RCV</h3>
+              <p className="text-sm text-gray-600">Base de datos completa con generación automática de entidades</p>
+              <div className="mt-2">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                  Automático
                 </span>
               </div>
             </Link>
