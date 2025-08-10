@@ -146,6 +146,37 @@ export default function LibroRemuneracionesPage() {
     }
   };
 
+  const downloadExcel = async (book: PayrollBook) => {
+    try {
+      const [year, month] = book.period.split('-');
+      const response = await fetch(
+        `/api/payroll/libro-remuneraciones/excel?company_id=${companyId}&year=${year}&month=${month}`
+      );
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const monthNames = [
+          'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+          'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+        ];
+        a.download = `Libro_Remuneraciones_${monthNames[parseInt(month) - 1]}_${year}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        const errorData = await response.json();
+        alert(`Error descargando Excel: ${errorData.error}`);
+      }
+    } catch (error) {
+      console.error('Error descargando Excel:', error);
+      alert('Error descargando archivo Excel');
+    }
+  };
+
   const downloadPrevired = async (book: PayrollBook) => {
     try {
       const response = await fetch(`/api/payroll/previred?company_id=${companyId}&period=${book.period}`);
@@ -409,6 +440,15 @@ export default function LibroRemuneracionesPage() {
                           </CardDescription>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => downloadExcel(book)}
+                            className="flex items-center bg-white border-green-200 text-green-700 hover:bg-green-50 transition-colors duration-200"
+                          >
+                            <FileSpreadsheet className="w-4 h-4 mr-2" />
+                            Descargar Excel
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"

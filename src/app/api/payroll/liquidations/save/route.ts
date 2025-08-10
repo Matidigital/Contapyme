@@ -135,6 +135,15 @@ export async function POST(request: NextRequest) {
       savedLiquidation = created;
     }
 
+    // ✅ ACTUALIZAR AUTOMÁTICAMENTE EL LIBRO DE REMUNERACIONES
+    try {
+      await updatePayrollBook(companyId, liquidationData.period_year, liquidationData.period_month);
+      console.log('✅ Libro de remuneraciones actualizado automáticamente');
+    } catch (bookError) {
+      console.error('⚠️ Error actualizando libro de remuneraciones:', bookError);
+      // No fallar la liquidación por esto - es proceso secundario
+    }
+
     return NextResponse.json({
       success: true,
       data: savedLiquidation,
@@ -149,6 +158,178 @@ export async function POST(request: NextRequest) {
       { success: false, error: 'Error interno del servidor' },
       { status: 500 }
     );
+  }
+}
+
+// ✅ FUNCIÓN PARA ACTUALIZAR EL LIBRO DE REMUNERACIONES AUTOMÁTICAMENTE
+async function updatePayrollBook(companyId: string, year: number, month: number) {
+  try {
+    console.log(`🔍 Actualizando libro de remuneraciones para ${companyId} - ${year}/${month}`);
+    
+    const period = `${year}-${String(month).padStart(2, '0')}`;
+    
+    // ✅ OBTENER TODAS LAS LIQUIDACIONES DEL PERÍODO
+    const { data: liquidations, error: liquidationsError } = await supabase
+      .from('payroll_liquidations')
+      .select(`
+        *,
+        employees (
+          rut,
+          first_name,
+          last_name,
+          middle_name,
+          employment_contracts!inner (
+            position,
+            department,
+            weekly_hours,
+            status
+          )
+        )
+      `)
+      .eq('company_id', companyId)
+      .eq('period_year', year)
+      .eq('period_month', month)
+      .eq('employees.employment_contracts.status', 'active');
+
+    if (liquidationsError || !liquidations || liquidations.length === 0) {
+      console.log('⚠️ No hay liquidaciones para actualizar el libro');
+      return;
+    }
+
+    // ✅ OBTENER INFORMACIÓN DE LA EMPRESA
+    const { data: company } = await supabase
+      .from('companies')
+      .select('name, rut')
+      .eq('id', companyId)
+      .single();
+
+    // ✅ VERIFICAR SI YA EXISTE UN LIBRO PARA ESTE PERÍODO
+    const { data: existingBook } = await supabase
+      .from('payroll_books')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('period', period)
+      .single();
+
+    // ✅ CALCULAR TOTALES REALES
+    const totalEmployees = liquidations.length;
+    const totalHaberes = liquidations.reduce((sum, liq) => sum + (liq.total_gross_income || 0), 0);
+    const totalDescuentos = liquidations.reduce((sum, liq) => sum + (liq.total_deductions || 0), 0);
+    const totalLiquido = liquidations.reduce((sum, liq) => sum + (liq.net_salary || 0), 0);
+
+    let bookId;
+
+    if (existingBook) {
+      // ✅ ACTUALIZAR LIBRO EXISTENTE
+      const { error: updateError } = await supabase
+        .from('payroll_books')
+        .update({
+          total_employees: totalEmployees,
+          total_haberes: totalHaberes,
+          total_descuentos: totalDescuentos,
+          total_liquido: totalLiquido,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingBook.id);
+
+      if (updateError) {
+        console.error('❌ Error actualizando libro existente:', updateError);
+        throw updateError;
+      }
+
+      bookId = existingBook.id;
+      
+      // ✅ ELIMINAR DETALLES EXISTENTES PARA RE-CREAR
+      await supabase
+        .from('payroll_book_details')
+        .delete()
+        .eq('payroll_book_id', bookId);
+
+    } else {
+      // ✅ CREAR NUEVO LIBRO
+      const { data: lastBook } = await supabase
+        .from('payroll_books')
+        .select('book_number')
+        .eq('company_id', companyId)
+        .order('book_number', { ascending: false })
+        .limit(1);
+
+      const bookNumber = (lastBook && lastBook[0]?.book_number || 0) + 1;
+
+      const { data: newBook, error: bookError } = await supabase
+        .from('payroll_books')
+        .insert({
+          company_id: companyId,
+          period,
+          book_number: bookNumber,
+          company_name: company?.name || 'Empresa Demo',
+          company_rut: company?.rut || '12.345.678-9',
+          generated_by: companyId,
+          status: 'draft',
+          total_employees: totalEmployees,
+          total_haberes: totalHaberes,
+          total_descuentos: totalDescuentos,
+          total_liquido: totalLiquido
+        })
+        .select('id')
+        .single();
+
+      if (bookError) {
+        console.error('❌ Error creando nuevo libro:', bookError);
+        throw bookError;
+      }
+
+      bookId = newBook.id;
+    }
+
+    // ✅ CREAR DETALLES ACTUALIZADOS
+    const bookDetails = liquidations.map(liquidation => {
+      const employee = liquidation.employees;
+      const contract = employee?.employment_contracts?.[0];
+      
+      return {
+        payroll_book_id: bookId,
+        employee_id: liquidation.employee_id,
+        employee_rut: employee?.rut || 'N/A',
+        apellido_paterno: employee?.last_name || '',
+        apellido_materno: employee?.middle_name || '',
+        nombres: employee?.first_name || '',
+        cargo: contract?.position || '',
+        area: contract?.department || '',
+        centro_costo: 'GENERAL',
+        dias_trabajados: liquidation.days_worked || 30,
+        horas_semanales: contract?.weekly_hours || 45,
+        horas_no_trabajadas: 0,
+        base_imp_prevision: liquidation.total_gross_income || 0,
+        base_imp_cesantia: liquidation.total_gross_income || 0,
+        sueldo_base: liquidation.base_salary || 0,
+        colacion: liquidation.food_allowance || 0,
+        movilizacion: liquidation.transport_allowance || 0,
+        asignacion_familiar: liquidation.family_allowance || 0,
+        total_haberes: liquidation.total_gross_income || 0,
+        prevision_afp: liquidation.afp_amount || 0,
+        salud: liquidation.health_amount || 0,
+        cesantia: liquidation.unemployment_amount || 0,
+        impuesto_unico: liquidation.income_tax_amount || 0,
+        total_descuentos: liquidation.total_deductions || 0,
+        sueldo_liquido: liquidation.net_salary || 0
+      };
+    });
+
+    const { error: detailsError } = await supabase
+      .from('payroll_book_details')
+      .insert(bookDetails);
+
+    if (detailsError) {
+      console.error('❌ Error creando detalles del libro:', detailsError);
+      throw detailsError;
+    }
+
+    console.log(`✅ Libro de remuneraciones actualizado exitosamente: ${totalEmployees} empleados`);
+    
+  } catch (error) {
+    console.error('❌ Error en updatePayrollBook:', error);
+    throw error;
   }
 }
 
