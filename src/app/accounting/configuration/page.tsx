@@ -18,7 +18,11 @@ import {
   Target,
   DollarSign,
   TrendingUp,
-  Building2
+  Building2,
+  Users,
+  UserCheck,
+  Building,
+  Shield
 } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { Header } from '@/components/layout';
@@ -44,6 +48,25 @@ interface CentralizedAccountConfig {
   updated_at?: string;
 }
 
+// Interface para entidades RCV
+interface RCVEntity {
+  id?: string;
+  company_id: string;
+  entity_name: string;
+  entity_rut: string;
+  entity_business_name?: string;
+  entity_type: 'supplier' | 'customer' | 'both';
+  account_code: string;
+  account_name: string;
+  account_type?: string;
+  default_tax_rate?: number;
+  is_tax_exempt?: boolean;
+  is_active?: boolean;
+  notes?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export default function ConfigurationPage() {
   const [accounts, setAccounts] = useState<Account[]>(planDeCuentasChilenoFinal);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['1', '1.1', '1.2', '2', '2.1', '2.2', '2.3', '3', '3.1', '3.2', '4', '4.1', '4.2']));
@@ -57,11 +80,20 @@ export default function ConfigurationPage() {
   const [showConfigForm, setShowConfigForm] = useState(false);
   const [loadingConfigs, setLoadingConfigs] = useState(true);
 
+  // Estados para entidades RCV
+  const [rcvEntities, setRcvEntities] = useState<RCVEntity[]>([]);
+  const [editingEntity, setEditingEntity] = useState<RCVEntity | null>(null);
+  const [showEntityForm, setShowEntityForm] = useState(false);
+  const [loadingEntities, setLoadingEntities] = useState(true);
+  const [entitySearchTerm, setEntitySearchTerm] = useState('');
+  const [entityTypeFilter, setEntityTypeFilter] = useState('all');
+
   const companyId = '8033ee69-b420-4d91-ba0e-482f46cd6fce'; // TODO: Get from auth
 
-  // Cargar configuraciones centralizadas
+  // Cargar configuraciones centralizadas y entidades RCV
   useEffect(() => {
     loadCentralizedConfigs();
+    loadRCVEntities();
   }, []);
 
   const loadCentralizedConfigs = async () => {
@@ -128,6 +160,85 @@ export default function ConfigurationPage() {
       alert('Error eliminando configuración');
     }
   };
+
+  // Funciones para entidades RCV
+  const loadRCVEntities = async () => {
+    try {
+      setLoadingEntities(true);
+      const response = await fetch(`/api/accounting/rcv-entities?company_id=${companyId}&entity_type=${entityTypeFilter}&search=${entitySearchTerm}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setRcvEntities(data.data);
+      }
+    } catch (error) {
+      console.error('Error loading RCV entities:', error);
+    } finally {
+      setLoadingEntities(false);
+    }
+  };
+
+  const saveRCVEntity = async (entity: Partial<RCVEntity>) => {
+    try {
+      const method = entity.id ? 'PUT' : 'POST';
+      const response = await fetch('/api/accounting/rcv-entities', {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          company_id: companyId,
+          ...entity
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        await loadRCVEntities();
+        setShowEntityForm(false);
+        setEditingEntity(null);
+      } else {
+        alert(`Error: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error saving RCV entity:', error);
+      alert('Error guardando entidad');
+    }
+  };
+
+  const deleteRCVEntity = async (entityId: string) => {
+    if (!confirm('¿Estás seguro de eliminar esta entidad? Esto puede afectar integraciones automáticas del RCV.')) return;
+
+    try {
+      const response = await fetch(`/api/accounting/rcv-entities/${entityId}?company_id=${companyId}`, {
+        method: 'DELETE'
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        await loadRCVEntities();
+      } else {
+        alert(`Error: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Error deleting RCV entity:', error);
+      alert('Error eliminando entidad');
+    }
+  };
+
+  // Recargar entidades cuando cambian los filtros
+  useEffect(() => {
+    if (entitySearchTerm || entityTypeFilter !== 'all') {
+      const timeoutId = setTimeout(() => {
+        loadRCVEntities();
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    } else {
+      loadRCVEntities();
+    }
+  }, [entitySearchTerm, entityTypeFilter]);
 
   // Filtrar cuentas imputables (nivel 4) para los selectores
   const getDetailAccounts = () => {
@@ -588,6 +699,208 @@ export default function ConfigurationPage() {
           </CardContent>
         </Card>
 
+        {/* Sección de Entidades RCV */}
+        <Card className="bg-white/90 backdrop-blur-sm border-2 border-emerald-100 hover:border-emerald-200 transition-colors">
+          <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50">
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center">
+                  <Users className="w-4 h-4 text-white" />
+                </div>
+                <span>Entidades Registradas RCV</span>
+                <span className="bg-emerald-100 text-emerald-800 px-2 py-1 rounded-full text-xs font-medium">
+                  {rcvEntities.length} entidades
+                </span>
+              </div>
+              <Button
+                variant="primary"
+                size="sm"
+                leftIcon={<Plus className="w-4 h-4" />}
+                onClick={() => setShowEntityForm(true)}
+                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
+              >
+                Nueva Entidad
+              </Button>
+            </CardTitle>
+            <CardDescription>
+              Base de datos de proveedores y clientes con cuentas contables asociadas para integración automática del RCV
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {/* Filtros y búsqueda para entidades */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+              <div className="flex items-center space-x-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre o RUT..."
+                    className="pl-10 pr-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-300 transition-all duration-300"
+                    value={entitySearchTerm}
+                    onChange={(e) => setEntitySearchTerm(e.target.value)}
+                  />
+                </div>
+                <select
+                  value={entityTypeFilter}
+                  onChange={(e) => setEntityTypeFilter(e.target.value)}
+                  className="px-3 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-300"
+                >
+                  <option value="all">Todos los tipos</option>
+                  <option value="supplier">🏢 Proveedores</option>
+                  <option value="customer">👤 Clientes</option>
+                  <option value="both">🔄 Ambos</option>
+                </select>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600">Total: {rcvEntities.length}</span>
+                <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+                <span className="text-sm text-emerald-600">Base de datos activa</span>
+              </div>
+            </div>
+
+            {loadingEntities ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                <span className="ml-3 text-gray-600">Cargando entidades...</span>
+              </div>
+            ) : rcvEntities.length === 0 ? (
+              <div className="text-center py-8">
+                <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No hay entidades registradas</h3>
+                <p className="text-gray-600 mb-4">
+                  Registra proveedores y clientes con sus cuentas contables para automatizar la integración del RCV
+                </p>
+                <Button
+                  variant="primary"
+                  onClick={() => setShowEntityForm(true)}
+                  className="bg-gradient-to-r from-emerald-600 to-teal-600"
+                >
+                  Registrar Primera Entidad
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                {rcvEntities.map((entity) => (
+                  <div
+                    key={entity.id}
+                    className="border-2 border-emerald-100 rounded-xl p-4 hover:border-emerald-200 hover:shadow-lg transition-all duration-200"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-8 h-8 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center">
+                          {entity.entity_type === 'supplier' && <Building className="w-4 h-4 text-white" />}
+                          {entity.entity_type === 'customer' && <UserCheck className="w-4 h-4 text-white" />}
+                          {entity.entity_type === 'both' && <Users className="w-4 h-4 text-white" />}
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900 text-sm">{entity.entity_name}</h3>
+                          <p className="text-xs text-gray-600">{entity.entity_rut}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <button
+                          onClick={() => {
+                            setEditingEntity(entity);
+                            setShowEntityForm(true);
+                          }}
+                          className="p-1 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-colors"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={() => deleteRCVEntity(entity.id!)}
+                          className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-500">Tipo:</span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          entity.entity_type === 'supplier' 
+                            ? 'bg-blue-100 text-blue-800' 
+                            : entity.entity_type === 'customer'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-purple-100 text-purple-800'
+                        }`}>
+                          {entity.entity_type === 'supplier' && '🏢 Proveedor'}
+                          {entity.entity_type === 'customer' && '👤 Cliente'}
+                          {entity.entity_type === 'both' && '🔄 Ambos'}
+                        </span>
+                      </div>
+                      
+                      <div className="bg-gray-50 rounded-lg p-2">
+                        <div className="text-xs text-gray-500 mb-1">Cuenta Asociada:</div>
+                        <div className="font-mono text-xs text-gray-800">{entity.account_code}</div>
+                        <div className="text-xs text-gray-600">{entity.account_name}</div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-500">IVA:</span>
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          entity.is_tax_exempt 
+                            ? 'bg-red-100 text-red-800' 
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {entity.is_tax_exempt ? 'Exento' : `${entity.default_tax_rate}%`}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs pt-2 border-t border-gray-200">
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          entity.is_active 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {entity.is_active ? '✅ Activo' : '❌ Inactivo'}
+                        </span>
+                        {entity.created_at && (
+                          <span className="text-gray-400">
+                            {new Date(entity.created_at).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Información sobre entidades RCV */}
+            <div className="mt-6 space-y-4">
+              <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+                <h4 className="font-medium text-emerald-900 mb-2 flex items-center space-x-2">
+                  <Users className="w-4 h-4" />
+                  <span>🎯 ¿Para qué sirven las Entidades RCV?</span>
+                </h4>
+                <div className="text-sm text-emerald-800 space-y-1">
+                  <p>• <strong>Integración Automática:</strong> Al procesar el RCV, el sistema busca automáticamente la cuenta contable asociada</p>
+                  <p>• <strong>Consistencia:</strong> Evita errores manuales y garantiza que cada proveedor/cliente use siempre la misma cuenta</p>
+                  <p>• <strong>Eficiencia:</strong> Acelera la generación de asientos contables desde registros RCV</p>
+                  <p>• <strong>Configuración por Entidad:</strong> Permite configurar IVA exento o tasas especiales por proveedor/cliente</p>
+                </div>
+              </div>
+
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 className="font-medium text-blue-900 mb-2 flex items-center space-x-2">
+                  <Shield className="w-4 h-4" />
+                  <span>🔄 Flujo de Integración RCV → Libro Diario</span>
+                </h4>
+                <div className="text-sm text-blue-800 space-y-1">
+                  <p>1. <strong>Upload RCV:</strong> Se sube archivo CSV con registros de compra/venta</p>
+                  <p>2. <strong>Búsqueda Automática:</strong> Sistema busca cada RUT en esta base de datos</p>
+                  <p>3. <strong>Asiento Automático:</strong> Si encuentra la entidad, usa su cuenta contable configurada</p>
+                  <p>4. <strong>Validación:</strong> Si no encuentra el RUT, solicita configuración manual</p>
+                  <p className="mt-3 font-medium">🎯 <strong>Resultado:</strong> Integración 100% automática para entidades registradas</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Other Configuration Options Modernizadas */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card className="bg-white/90 backdrop-blur-sm border-2 border-green-100 hover:border-green-200 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer">
@@ -962,6 +1275,233 @@ export default function ConfigurationPage() {
                   leftIcon={<Save className="w-4 h-4" />}
                 >
                   Guardar
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Entidad RCV */}
+      {showEntityForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold flex items-center space-x-2">
+                <Users className="w-6 h-6 text-emerald-600" />
+                <span>{editingEntity ? 'Editar Entidad RCV' : 'Nueva Entidad RCV'}</span>
+              </h3>
+              <button
+                onClick={() => {
+                  setShowEntityForm(false);
+                  setEditingEntity(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target as HTMLFormElement);
+                
+                const entity = {
+                  id: editingEntity?.id,
+                  entity_name: formData.get('entity_name') as string,
+                  entity_rut: formData.get('entity_rut') as string,
+                  entity_business_name: formData.get('entity_business_name') as string,
+                  entity_type: formData.get('entity_type') as 'supplier' | 'customer' | 'both',
+                  account_code: formData.get('account_code') as string,
+                  account_name: formData.get('account_name') as string,
+                  default_tax_rate: parseFloat(formData.get('default_tax_rate') as string) || 19.0,
+                  is_tax_exempt: (formData.get('is_tax_exempt') as string) === 'true',
+                  is_active: (formData.get('is_active') as string) === 'true',
+                  notes: formData.get('notes') as string
+                };
+
+                saveRCVEntity(entity);
+              }}
+              className="space-y-6"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nombre de la Entidad *
+                  </label>
+                  <input
+                    type="text"
+                    name="entity_name"
+                    required
+                    defaultValue={editingEntity?.entity_name || ''}
+                    placeholder="ej: Empresa ABC Ltda."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    RUT *
+                  </label>
+                  <input
+                    type="text"
+                    name="entity_rut"
+                    required
+                    defaultValue={editingEntity?.entity_rut || ''}
+                    placeholder="XX.XXX.XXX-X"
+                    pattern="^[0-9]{1,2}\.[0-9]{3}\.[0-9]{3}-[0-9K]$"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Razón Social (Opcional)
+                </label>
+                <input
+                  type="text"
+                  name="entity_business_name"
+                  defaultValue={editingEntity?.entity_business_name || ''}
+                  placeholder="ej: Empresa ABC Limitada"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tipo de Entidad *
+                </label>
+                <select
+                  name="entity_type"
+                  required
+                  defaultValue={editingEntity?.entity_type || ''}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="">Seleccionar tipo...</option>
+                  <option value="supplier">🏢 Proveedor</option>
+                  <option value="customer">👤 Cliente</option>
+                  <option value="both">🔄 Ambos (Proveedor y Cliente)</option>
+                </select>
+              </div>
+
+              {/* Selector de Cuenta Contable */}
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                <label className="block text-sm font-medium text-emerald-800 mb-2 flex items-center space-x-2">
+                  <Building2 className="w-4 h-4" />
+                  <span>Cuenta Contable Asociada *</span>
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <select
+                    name="account_code"
+                    required
+                    defaultValue={editingEntity?.account_code || ''}
+                    onChange={(e) => {
+                      const selectedAccount = getDetailAccounts().find(acc => acc.code === e.target.value);
+                      const nameInput = document.querySelector('[name="account_name"]') as HTMLInputElement;
+                      if (nameInput && selectedAccount) {
+                        nameInput.value = selectedAccount.name;
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="">Seleccionar cuenta...</option>
+                    {getDetailAccounts().map((account) => (
+                      <option key={account.id} value={account.code}>
+                        {account.code} - {account.name}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    name="account_name"
+                    required
+                    defaultValue={editingEntity?.account_name || ''}
+                    placeholder="Nombre de la cuenta"
+                    className="w-full px-3 py-2 border border-emerald-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    readOnly
+                  />
+                </div>
+              </div>
+
+              {/* Configuración de IVA */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Tasa de IVA por Defecto (%)
+                  </label>
+                  <input
+                    type="number"
+                    name="default_tax_rate"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    defaultValue={editingEntity?.default_tax_rate || 19.0}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    name="is_tax_exempt"
+                    id="is_tax_exempt"
+                    value="true"
+                    defaultChecked={editingEntity?.is_tax_exempt || false}
+                    className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 mr-3"
+                  />
+                  <label htmlFor="is_tax_exempt" className="text-sm text-gray-700">
+                    Entidad exenta de IVA
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Notas (Opcional)
+                </label>
+                <textarea
+                  name="notes"
+                  rows={3}
+                  defaultValue={editingEntity?.notes || ''}
+                  placeholder="Notas adicionales sobre esta entidad..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  name="is_active"
+                  id="is_active_entity"
+                  value="true"
+                  defaultChecked={editingEntity?.is_active ?? true}
+                  className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 mr-3"
+                />
+                <label htmlFor="is_active_entity" className="text-sm text-gray-700">
+                  Entidad activa (disponible para integración automática)
+                </label>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-6">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowEntityForm(false);
+                    setEditingEntity(null);
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  className="bg-gradient-to-r from-emerald-600 to-teal-600"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {editingEntity ? 'Actualizar' : 'Crear'} Entidad
                 </Button>
               </div>
             </form>
