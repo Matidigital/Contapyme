@@ -142,11 +142,11 @@ export default function PayrollSettingsPage() {
   const validateHealthConfig = (health: HealthConfig, index: number): string[] => {
     const errors: string[] = [];
     
-    if (!health.institution_name || health.institution_name.trim() === '') {
+    if (!health.name || health.name.trim() === '') {
       errors.push(`Salud ${index + 1}: Nombre de institución es obligatorio`);
     }
     
-    if (health.percentage < 7 || health.percentage > 15) {
+    if (health.plan_percentage < 7 || health.plan_percentage > 15) {
       errors.push(`Salud ${index + 1}: Porcentaje debe estar entre 7% y 15%`);
     }
     
