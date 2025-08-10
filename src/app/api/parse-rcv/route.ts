@@ -7,6 +7,9 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
+    const companyId = formData.get('company_id') as string;
+    const rcvType = formData.get('rcv_type') as string; // 'purchase' o 'sales'
+    const storeInDB = formData.get('store_in_db') as string; // 'true' o 'false'
     
     if (!file) {
       console.error('❌ No se recibió archivo');
@@ -42,10 +45,46 @@ export async function POST(request: NextRequest) {
     console.log('✅ Archivo RCV procesado exitosamente');
     console.log(`📊 Transacciones: ${result.totalTransacciones}, Proveedores: ${result.proveedoresPrincipales.length}`);
     
+    let storeResult = null;
+    
+    // ✅ ALMACENAR EN BASE DE DATOS SI SE SOLICITA
+    if (storeInDB === 'true' && companyId && rcvType) {
+      try {
+        console.log('💾 Almacenando RCV en base de datos...');
+        
+        const storeResponse = await fetch(`${request.nextUrl.origin}/api/rcv/store`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            company_id: companyId,
+            rcv_data: result,
+            file_metadata: {
+              file_name: file.name,
+              file_size: file.size
+            },
+            rcv_type: rcvType
+          })
+        });
+
+        if (storeResponse.ok) {
+          storeResult = await storeResponse.json();
+          console.log('✅ RCV almacenado en base de datos:', storeResult.data);
+        } else {
+          console.warn('⚠️ Error almacenando RCV en base de datos');
+        }
+      } catch (storeError) {
+        console.error('❌ Error almacenando RCV:', storeError);
+        // No fallar el procesamiento por error de almacenamiento
+      }
+    }
+    
     return NextResponse.json({
       success: true,
       data: result,
-      message: `RCV procesado: ${result.totalTransacciones} transacciones de ${result.proveedoresPrincipales.length} proveedores`
+      storage: storeResult,
+      message: `RCV procesado: ${result.totalTransacciones} transacciones de ${result.proveedoresPrincipales.length} ${rcvType === 'purchase' ? 'proveedores' : 'clientes'}${storeResult ? ' (almacenado en BD)' : ''}`
     });
     
   } catch (error) {

@@ -39,7 +39,12 @@ export default function RCVAnalysisPage() {
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [showDetailed, setShowDetailed] = useState(false);
+  const [rcvType, setRcvType] = useState<'purchase' | 'sales'>('purchase');
+  const [storeInDB, setStoreInDB] = useState(true);
+  const [storageResult, setStorageResult] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const companyId = '8033ee69-b420-4d91-ba0e-482f46cd6fce'; // TODO: Get from auth
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -87,6 +92,7 @@ export default function RCVAnalysisPage() {
     setResult(null);
     setError(null);
     setShowDetailed(false);
+    setStorageResult(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -98,12 +104,21 @@ export default function RCVAnalysisPage() {
     setUploading(true);
     setResult(null);
     setError(null);
+    setStorageResult(null);
 
     try {
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('company_id', companyId);
+      formData.append('rcv_type', rcvType);
+      formData.append('store_in_db', storeInDB.toString());
 
-      console.log('🚀 Iniciando análisis RCV:', file.name);
+      console.log('🚀 Iniciando análisis RCV:', {
+        fileName: file.name,
+        rcvType,
+        storeInDB,
+        companyId
+      });
 
       const response = await fetch('/api/parse-rcv', {
         method: 'POST',
@@ -115,7 +130,11 @@ export default function RCVAnalysisPage() {
 
       if (data.success && data.data) {
         setResult(data.data);
+        setStorageResult(data.storage);
         console.log('✅ RCV analizado:', data.data);
+        if (data.storage) {
+          console.log('💾 RCV almacenado en BD:', data.storage);
+        }
       } else {
         setError(data.error || 'Error al procesar el archivo RCV');
         console.error('❌ Error en análisis RCV:', data.error);
@@ -199,8 +218,8 @@ export default function RCVAnalysisPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header 
-        title="Análisis RCV - Proveedores"
-        subtitle="Analiza tu Registro de Compras y Ventas para identificar proveedores principales"
+        title="Análisis RCV Avanzado"
+        subtitle="Procesa y almacena tu Registro de Compras y Ventas con análisis automático de proveedores y clientes"
         showBackButton={true}
         backHref="/accounting"
         actions={
@@ -219,7 +238,7 @@ export default function RCVAnalysisPage() {
               <span>Cargar Archivo RCV</span>
             </CardTitle>
             <CardDescription>
-              Sube tu archivo CSV del Registro de Compras y Ventas del SII
+              Sube tu archivo CSV del Registro de Compras y Ventas del SII. Los datos se pueden almacenar automáticamente para consultas futuras y reportes históricos.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -262,7 +281,7 @@ export default function RCVAnalysisPage() {
                 </p>
               </div>
             ) : (
-              <div className="bg-gray-50 rounded-lg p-4">
+              <div className="bg-gray-50 rounded-lg p-4 space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -283,8 +302,62 @@ export default function RCVAnalysisPage() {
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
+
+                {/* ✅ CONFIGURACIÓN DE ANÁLISIS */}
+                <div className="border-t pt-4">
+                  <h4 className="font-medium text-gray-900 mb-3">Configuración del Análisis</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    {/* Tipo de RCV */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Tipo de RCV
+                      </label>
+                      <select
+                        value={rcvType}
+                        onChange={(e) => setRcvType(e.target.value as 'purchase' | 'sales')}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="purchase">📈 Registro de Compras</option>
+                        <option value="sales">💰 Registro de Ventas</option>
+                      </select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {rcvType === 'purchase' 
+                          ? 'Análisis de proveedores y compras'
+                          : 'Análisis de clientes y ventas'
+                        }
+                      </p>
+                    </div>
+
+                    {/* Almacenar en BD */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Almacenamiento
+                      </label>
+                      <div className="flex items-center space-x-3">
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={storeInDB}
+                            onChange={(e) => setStoreInDB(e.target.checked)}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="ml-2 text-sm text-gray-700">
+                            💾 Guardar en base de datos
+                          </span>
+                        </label>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {storeInDB 
+                          ? 'Se almacenarán todos los documentos para consultas futuras'
+                          : 'Solo análisis temporal, no se guardará información'
+                        }
+                      </p>
+                    </div>
+                  </div>
+                </div>
                 
-                <div className="mt-4 flex space-x-3">
+                <div className="flex space-x-3">
                   <Button
                     variant="primary"
                     onClick={handleAnalysis}
@@ -292,7 +365,7 @@ export default function RCVAnalysisPage() {
                     disabled={uploading}
                     fullWidth
                   >
-                    {uploading ? 'Analizando RCV...' : 'Iniciar Análisis'}
+                    {uploading ? 'Analizando RCV...' : `Analizar ${rcvType === 'purchase' ? 'Compras' : 'Ventas'}`}
                   </Button>
                 </div>
               </div>
@@ -303,6 +376,24 @@ export default function RCVAnalysisPage() {
                 <div className="flex items-center space-x-2">
                   <AlertCircle className="w-5 h-5 text-red-600" />
                   <p className="text-red-800">{error}</p>
+                </div>
+              </div>
+            )}
+
+            {storageResult && storageResult.success && (
+              <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <div>
+                    <p className="text-green-800 font-medium">
+                      ✅ RCV almacenado exitosamente en base de datos
+                    </p>
+                    <p className="text-green-700 text-sm">
+                      📊 {storageResult.data.total_transactions} transacciones • 
+                      📅 Período: {storageResult.data.period_identifier} • 
+                      🎯 Tipo: {storageResult.data.rcv_type === 'purchase' ? 'Compras' : 'Ventas'}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
