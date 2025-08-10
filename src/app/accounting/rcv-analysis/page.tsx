@@ -223,9 +223,14 @@ export default function RCVAnalysisPage() {
         showBackButton={true}
         backHref="/accounting"
         actions={
-          <Button variant="outline" size="sm" onClick={() => window.open('/accounting/f29-analysis', '_blank')}>
-            📊 Análisis F29
-          </Button>
+          <div className="flex space-x-2">
+            <Button variant="outline" size="sm" onClick={() => window.open('/accounting/rcv-history', '_blank')}>
+              📋 Ver Historial RCV
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => window.open('/accounting/f29-analysis', '_blank')}>
+              📊 Análisis F29
+            </Button>
+          </div>
         }
       />
 
