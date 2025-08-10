@@ -142,13 +142,17 @@ export function useLivePayrollCalculation(data: LiveCalculationData): LiveCalcul
 
   // Recalcular con debounce cuando cambian los datos
   useEffect(() => {
-    const timeoutId = setTimeout(async () => {
-      if (validationResult.isValid) {
-        await calculateLiquidation();
-      } else {
-        setResult(null);
-        setIsCalculating(false);
-      }
+    const timeoutId = setTimeout(() => {
+      const runCalculation = async () => {
+        if (validationResult.isValid) {
+          await calculateLiquidation();
+        } else {
+          setResult(null);
+          setIsCalculating(false);
+        }
+      };
+      
+      runCalculation().catch(console.error);
     }, 300); // Debounce de 300ms
 
     return () => clearTimeout(timeoutId);
