@@ -53,21 +53,8 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
       .trim();
   };
 
-  // Calcular gratificación legal según configuración del empleado
-  const calculateLegalGratification = () => {
-    const baseSalary = liquidationData.base_salary || 0;
-    const gratificationType = liquidationData.legal_gratification_type || 'none';
-    
-    if (gratificationType === 'none') return 0;
-    
-    const annualPercentage = gratificationType === 'code_47' ? 0.25 : // 25% código 47
-                            gratificationType === 'code_50' ? 0.30 : // 30% código 50
-                            0;
-    
-    return Math.round(baseSalary * annualPercentage / 12); // Anual dividido en 12 meses
-  };
-
-  const legalGratification = calculateLegalGratification();
+  // ✅ NUEVO: Usar gratificación Art. 50 calculada desde el resultado
+  const legalGratificationArt50 = liquidationData.legal_gratification_art50 || 0;
   
   // Convertir número a palabras (simplificado)
   const numberToWords = (num: number): string => {
@@ -96,7 +83,7 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
   };
 
   const totalImponible = (liquidationData.base_salary || 0) + 
-                      legalGratification + 
+                      legalGratificationArt50 + 
                       (liquidationData.bonuses || 0) + 
                       (liquidationData.overtime_amount || 0) + 
                       (liquidationData.commissions || 0);
@@ -398,18 +385,27 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
           </tr>
         )}
 
-        {/* Gratificación Legal */}
-        {legalGratification > 0 && (
+        {/* Gratificación Legal Art. 50 */}
+        {legalGratificationArt50 > 0 && (
           <tr>
             <td style={{ 
               padding: '8px', 
               fontSize: '11px',
               borderRight: '2px solid #000',
-              borderBottom: '1px solid #ccc'
+              borderBottom: '1px solid #ccc',
+              backgroundColor: '#f8f4ff'
             }}>
-              GRATIFICACIÓN LEGAL: <span style={{ float: 'right', fontWeight: 'bold' }}>
-                ${legalGratification.toLocaleString('es-CL')}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>
+                  🏆 GRATIFICACIÓN ART. 50 (25%)
+                </span>
+                <span style={{ fontWeight: 'bold', color: '#7c3aed' }}>
+                  ${legalGratificationArt50.toLocaleString('es-CL')}
+                </span>
+              </div>
+              <div style={{ fontSize: '9px', color: '#6b46c1', marginTop: '2px' }}>
+                (Tope: 4.75 sueldos mínimos ÷ 12 meses)
+              </div>
             </td>
             <td style={{ 
               padding: '8px', 

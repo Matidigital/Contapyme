@@ -12,6 +12,7 @@ import {
   calculateFamilyAllowance,
   calculateIncomeTax
 } from './chileanPayrollConfig';
+import { getCurrentMinimumWage, calculateGratificationCap } from './economicIndicators';
 
 // Re-exportar valores para compatibilidad
 export const CHILE_TAX_VALUES = CHILEAN_OFFICIAL_VALUES;
@@ -144,13 +145,14 @@ export class PayrollCalculator {
 
   /**
    * Calcula liquidación completa de un empleado
+   * ✅ ACTUALIZADO: Usa indicadores económicos dinámicos
    */
-  calculateLiquidation(
+  async calculateLiquidation(
     employee: EmployeeData,
     period: PayrollPeriod,
     additionalIncome: AdditionalIncome = {},
     additionalDeductions: AdditionalDeductions = {}
-  ): LiquidationResult {
+  ): Promise<LiquidationResult> {
     this.warnings = [];
 
     // 1. Calcular sueldo base proporcional
@@ -160,7 +162,7 @@ export class PayrollCalculator {
     );
 
     // 2. Calcular haberes imponibles
-    const taxableIncome = this.calculateTaxableIncome(
+    const taxableIncome = await this.calculateTaxableIncome(
       proportionalBaseSalary,
       additionalIncome,
       employee
@@ -204,7 +206,7 @@ export class PayrollCalculator {
 
     // 10. Calcular gratificación Art. 50 individual para el resultado
     const article50Gratification = (employee.legal_gratification_type === 'article_50') 
-      ? this.calculateArticle50Gratification(employee.base_salary)
+      ? await this.calculateArticle50Gratification(employee.base_salary)
       : 0;
 
     // 11. Calcular totales
@@ -281,12 +283,13 @@ export class PayrollCalculator {
 
   /**
    * Calcula total de haberes imponibles
+   * ✅ ACTUALIZADO: Maneja gratificación Art. 50 con indicadores dinámicos
    */
-  private calculateTaxableIncome(
+  private async calculateTaxableIncome(
     baseSalary: number,
     additional: AdditionalIncome,
     employee?: EmployeeData
-  ): number {
+  ): Promise<number> {
     let totalIncome = baseSalary + 
            (additional.overtime_amount || 0) + 
            (additional.bonuses || 0) + 
@@ -295,7 +298,7 @@ export class PayrollCalculator {
 
     // Agregar gratificación legal Art. 50 si aplica
     if (employee && employee.legal_gratification_type === 'article_50') {
-      const article50Gratification = this.calculateArticle50Gratification(employee.base_salary);
+      const article50Gratification = await this.calculateArticle50Gratification(employee.base_salary);
       totalIncome += article50Gratification;
     }
 
@@ -318,17 +321,23 @@ export class PayrollCalculator {
 
   /**
    * Calcula gratificación legal Art. 50
-   * 25% del sueldo base con tope de 4.75 ingresos mínimos mensuales
+   * 25% del sueldo base con tope de 4.75 ingresos mínimos mensuales dividido por 12 meses
+   * ✅ ACTUALIZADO: Usa sueldo mínimo desde indicadores económicos
    */
-  private calculateArticle50Gratification(baseSalary: number): number {
+  private async calculateArticle50Gratification(baseSalary: number): Promise<number> {
     const gratificationBase = baseSalary * 0.25; // 25% del sueldo base
-    const maxGratification = this.settings.income_limits.minimum_wage * 4.75; // 4.75 sueldos mínimos
     
-    const finalGratification = Math.min(gratificationBase, maxGratification);
+    // Obtener tope actualizado desde indicadores económicos
+    const gratificationCap = await calculateGratificationCap();
+    
+    const finalGratification = Math.min(gratificationBase, gratificationCap);
+    
+    // Obtener sueldo mínimo actual para mostrar en warnings
+    const currentMinimumWage = await getCurrentMinimumWage();
     
     // Agregar información a warnings para transparencia
-    if (gratificationBase > maxGratification) {
-      this.warnings.push(`ℹ️ Gratificación Art. 50 limitada a 4.75 sueldos mínimos: ${PayrollCalculator.formatCurrency(maxGratification)}`);
+    if (gratificationBase > gratificationCap) {
+      this.warnings.push(`ℹ️ Gratificación Art. 50 limitada: ${PayrollCalculator.formatCurrency(gratificationCap)} (4.75 × ${PayrollCalculator.formatCurrency(currentMinimumWage)} ÷ 12)`);
     } else {
       this.warnings.push(`ℹ️ Gratificación Art. 50: 25% del sueldo base = ${PayrollCalculator.formatCurrency(finalGratification)}`);
     }

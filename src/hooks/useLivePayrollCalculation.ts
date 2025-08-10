@@ -109,7 +109,7 @@ export function useLivePayrollCalculation(data: LiveCalculationData): LiveCalcul
   }, [data]);
 
   // Función de cálculo con debounce
-  const calculateLiquidation = useCallback(() => {
+  const calculateLiquidation = useCallback(async () => {
     if (!validationResult.isValid || !data.employee) {
       setResult(null);
       return;
@@ -118,7 +118,7 @@ export function useLivePayrollCalculation(data: LiveCalculationData): LiveCalcul
     setIsCalculating(true);
     
     try {
-      const liquidationResult = calculator.calculateLiquidation(
+      const liquidationResult = await calculator.calculateLiquidation(
         data.employee,
         data.period,
         data.additionalIncome,
@@ -142,9 +142,9 @@ export function useLivePayrollCalculation(data: LiveCalculationData): LiveCalcul
 
   // Recalcular con debounce cuando cambian los datos
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
+    const timeoutId = setTimeout(async () => {
       if (validationResult.isValid) {
-        calculateLiquidation();
+        await calculateLiquidation();
       } else {
         setResult(null);
         setIsCalculating(false);

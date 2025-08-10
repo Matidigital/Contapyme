@@ -89,7 +89,8 @@ export default function GenerateLiquidationPage() {
       contract_type: contract.contract_type as 'indefinido' | 'plazo_fijo' | 'obra_faena',
       afp_code: payrollConfig?.afp_code || 'MODELO', // ✅ CORREGIDO: Desde payroll_config
       health_institution_code: payrollConfig?.health_institution_code || 'FONASA', // ✅ CORREGIDO
-      family_allowances: payrollConfig?.family_allowances || 0 // ✅ CORREGIDO
+      family_allowances: payrollConfig?.family_allowances || 0, // ✅ CORREGIDO
+      legal_gratification_type: payrollConfig?.legal_gratification_type || 'none' // ✅ NUEVO: Gratificación legal
     } as EmployeeData;
   }, [employees, selectedEmployeeId]);
 
@@ -177,6 +178,7 @@ export default function GenerateLiquidationPage() {
         bonuses: result.bonuses || 0,
         commissions: result.commissions || 0,
         gratification: result.gratification || 0,
+        legal_gratification_art50: result.legal_gratification_art50 || 0, // ✅ NUEVO: Gratificación Art. 50
         total_taxable_income: result.total_taxable_income || 0,
         
         // Haberes no imponibles
@@ -533,6 +535,82 @@ export default function GenerateLiquidationPage() {
                 </div>
               </div>
             </div>
+
+            {/* Gratificación Legal Art. 50 */}
+            {selectedEmployee && (
+              <div className="bg-gradient-to-r from-purple-50/80 to-blue-50/80 backdrop-blur-sm rounded-2xl p-6 border border-purple-200/50 hover:from-purple-100/80 hover:to-blue-100/80 transition-all duration-200">
+                <div className="mb-6">
+                  <h3 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m-2.599-8.598a5.978 5.978 0 00.001 10.598M15.399 8.598a5.978 5.978 0 01-.001 10.598" />
+                    </svg>
+                    Gratificación Legal Art. 50
+                  </h3>
+                  <p className="text-gray-600 text-sm mb-4">
+                    Gratificación legal del 25% del sueldo base con tope de 4.75 sueldos mínimos ÷ 12
+                  </p>
+                </div>
+
+                <div className="bg-white/60 rounded-xl p-4 border border-purple-200/30">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="font-semibold text-gray-900">Estado Actual</h4>
+                      <p className="text-sm text-gray-600">
+                        {selectedEmployee.legal_gratification_type === 'article_50' 
+                          ? 'Gratificación Art. 50 activada'
+                          : 'Sin gratificación legal configurada'
+                        }
+                      </p>
+                    </div>
+                    <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      selectedEmployee.legal_gratification_type === 'article_50'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {selectedEmployee.legal_gratification_type === 'article_50' ? 'ACTIVA' : 'INACTIVA'}
+                    </div>
+                  </div>
+
+                  {selectedEmployee.legal_gratification_type === 'article_50' && result && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="bg-purple-50 rounded-lg p-3">
+                        <div className="text-sm text-purple-600 font-medium">Gratificación Calculada</div>
+                        <div className="text-lg font-bold text-purple-900">
+                          {new Intl.NumberFormat('es-CL', { 
+                            style: 'currency', 
+                            currency: 'CLP',
+                            minimumFractionDigits: 0 
+                          }).format(result.legal_gratification_art50 || 0)}
+                        </div>
+                      </div>
+                      <div className="bg-blue-50 rounded-lg p-3">
+                        <div className="text-sm text-blue-600 font-medium">Base de Cálculo</div>
+                        <div className="text-lg font-bold text-blue-900">
+                          25% de {new Intl.NumberFormat('es-CL', { 
+                            style: 'currency', 
+                            currency: 'CLP',
+                            minimumFractionDigits: 0 
+                          }).format(selectedEmployee.base_salary)}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedEmployee.legal_gratification_type !== 'article_50' && (
+                    <div className="text-center py-4">
+                      <p className="text-gray-500 text-sm mb-3">
+                        Para activar la gratificación legal, actualice la configuración del empleado.
+                      </p>
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                        <p className="text-yellow-800 text-sm">
+                          💡 La gratificación Art. 50 se configura por empleado y se aplica automáticamente cuando está activada.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Descuentos adicionales */}
             <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-white/20 hover:bg-white/80 transition-all duration-200">
