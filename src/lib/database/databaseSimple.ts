@@ -6,7 +6,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 // ✅ Configuración Supabase con fallbacks robustos
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://xytgylsdxtzkqcjlgqvk.supabase.co';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://yttdnmokivtayeunlvlk.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 // 🚨 VALIDACIÓN NO-BLOCKING: Solo advertencias, no errores fatales

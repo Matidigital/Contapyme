@@ -4,7 +4,7 @@
 
 ### **1. Supabase Configuration (CRÍTICAS)**
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=https://xytgylsdxtzkqcjlgqvk.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://yttdnmokivtayeunlvlk.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=[TU_SERVICE_ROLE_KEY_DE_SUPABASE]
 ```
 
@@ -23,7 +23,7 @@ NEXT_PUBLIC_DEBUG=false
 ## 🚀 PASOS DE CONFIGURACIÓN
 
 ### **Paso 1: Obtener Service Role Key**
-1. Ve a Supabase Dashboard: https://supabase.com/dashboard/project/xytgylsdxtzkqcjlgqvk
+1. Ve a Supabase Dashboard: https://supabase.com/dashboard/project/yttdnmokivtayeunlvlk
 2. Settings → API → Project API keys  
 3. Copia el **service_role** key (NO el anon key)
 
