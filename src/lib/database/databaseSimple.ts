@@ -7,34 +7,48 @@ import { createClient } from '@supabase/supabase-js';
 
 // ✅ Configuración Supabase con fallbacks robustos
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://yttdnmokivtayeunlvlk.supabase.co';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// 🚨 VALIDACIÓN NO-BLOCKING: Solo advertencias, no errores fatales
+// Detectar si estamos en servidor o cliente
+const isServer = typeof window === 'undefined';
+
+// 🚨 VALIDACIÓN SEGÚN CONTEXTO
 if (!supabaseUrl) {
   console.warn('⚠️ NEXT_PUBLIC_SUPABASE_URL no configurada, usando fallback');
 }
 
-if (!supabaseServiceKey) {
-  console.error('❌ SUPABASE_SERVICE_ROLE_KEY no está configurada - Funcionalidad limitada');
-  console.error('🔧 Para solucionarlo: Configura SUPABASE_SERVICE_ROLE_KEY en Netlify Environment Variables');
+if (isServer) {
+  // En servidor: requerimos service key
+  if (!supabaseServiceKey) {
+    console.error('❌ SUPABASE_SERVICE_ROLE_KEY no está configurada - Funcionalidad de servidor limitada');
+  } else {
+    console.log('✅ Supabase servidor configurado correctamente');
+  }
 } else {
-  console.log('✅ Supabase configurado correctamente');
+  // En cliente: usamos anon key
+  if (!supabaseAnonKey) {
+    console.warn('⚠️ NEXT_PUBLIC_SUPABASE_ANON_KEY no configurada');
+  } else {
+    console.log('✅ Supabase cliente configurado correctamente');
+  }
 }
 
-console.log('🔧 Configurando Supabase:', {
-  url: supabaseUrl,
-  hasServiceKey: !!supabaseServiceKey,
-  netlifyEnv: process.env.NETLIFY ? 'Netlify' : 'Local'
-});
-
-// ✅ Cliente con fallback - No bloquea la app si falta service key
-const supabase = supabaseServiceKey 
+// ✅ Cliente apropiado según contexto
+const supabase = isServer && supabaseServiceKey 
   ? createClient(supabaseUrl, supabaseServiceKey)
-  : createClient(supabaseUrl, 'fallback-key'); // Fallback temporal
+  : supabaseAnonKey 
+    ? createClient(supabaseUrl, supabaseAnonKey)
+    : createClient(supabaseUrl, 'fallback-key'); // Fallback temporal
 
 // ✅ Helper para verificar si Supabase está configurado correctamente
 export function isSupabaseConfigured(): boolean {
-  return !!(supabaseUrl && supabaseServiceKey);
+  const isServer = typeof window === 'undefined';
+  if (isServer) {
+    return !!(supabaseUrl && supabaseServiceKey);
+  } else {
+    return !!(supabaseUrl && supabaseAnonKey);
+  }
 }
 
 // Función para obtener conexión (para compatibilidad con APIs)
