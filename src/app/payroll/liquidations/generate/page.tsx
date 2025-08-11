@@ -64,7 +64,10 @@ export default function GenerateLiquidationPage() {
     loan_deductions: 0,
     advance_payments: 0,
     apv_amount: 0,
-    other_deductions: 0
+    other_deductions: 0,
+    
+    // ✅ NUEVO: Control de gratificación Art. 50
+    apply_legal_gratification: false
   });
 
   // Obtener empleado seleccionado
@@ -90,9 +93,12 @@ export default function GenerateLiquidationPage() {
       afp_code: payrollConfig?.afp_code || 'MODELO', // ✅ CORREGIDO: Desde payroll_config
       health_institution_code: payrollConfig?.health_institution_code || 'FONASA', // ✅ CORREGIDO
       family_allowances: payrollConfig?.family_allowances || 0, // ✅ CORREGIDO
-      legal_gratification_type: payrollConfig?.legal_gratification_type || 'none' // ✅ NUEVO: Gratificación legal
+      // ✅ NUEVO: Override dinámico - usa checkbox del formulario si está marcado
+      legal_gratification_type: formData.apply_legal_gratification ? 'article_50' : 'none',
+      // Guardar el tipo original para referencia
+      _original_gratification_type: payrollConfig?.legal_gratification_type || 'none'
     } as EmployeeData;
-  }, [employees, selectedEmployeeId]);
+  }, [employees, selectedEmployeeId, formData.apply_legal_gratification]);
 
   // Datos para el cálculo en tiempo real
   const calculationData = useMemo(() => ({
@@ -127,6 +133,20 @@ export default function GenerateLiquidationPage() {
     fetchEmployees();
   }, []);
 
+  // ✅ Auto-marcar checkbox si empleado tiene gratificación configurada
+  useEffect(() => {
+    if (selectedEmployeeId && employees.length > 0) {
+      const emp = employees.find(e => e.id === selectedEmployeeId);
+      const hasGratificationConfigured = emp?.payroll_config?.legal_gratification_type === 'article_50';
+      
+      // Solo auto-marcar si no se ha interactuado manualmente con el checkbox
+      setFormData(prev => ({
+        ...prev,
+        apply_legal_gratification: hasGratificationConfigured
+      }));
+    }
+  }, [selectedEmployeeId, employees]);
+
   const fetchEmployees = async () => {
     try {
       setLoading(true);
@@ -153,10 +173,11 @@ export default function GenerateLiquidationPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
+    const { checked } = e.target as HTMLInputElement;
     
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'number' ? parseFloat(value) || 0 : value
+      [name]: type === 'checkbox' ? checked : (type === 'number' ? parseFloat(value) || 0 : value)
     }));
   };
 
@@ -553,25 +574,48 @@ export default function GenerateLiquidationPage() {
 
                 <div className="bg-white/60 rounded-xl p-4 border border-purple-200/30">
                   <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h4 className="font-semibold text-gray-900">Estado Actual</h4>
-                      <p className="text-sm text-gray-600">
-                        {selectedEmployee.legal_gratification_type === 'article_50' 
-                          ? 'Gratificación Art. 50 activada'
-                          : 'Sin gratificación legal configurada'
-                        }
-                      </p>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900 mb-2">Aplicar a esta Liquidación</h4>
+                      <label className="flex items-center gap-3 cursor-pointer">
+                        <div className="relative">
+                          <input
+                            type="checkbox"
+                            name="apply_legal_gratification"
+                            checked={formData.apply_legal_gratification}
+                            onChange={handleInputChange}
+                            className="w-5 h-5 text-purple-600 bg-white border-2 border-purple-300 rounded focus:ring-purple-500 focus:ring-2 transition-all duration-200"
+                          />
+                          {formData.apply_legal_gratification && (
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <span className="text-sm font-medium text-gray-900">
+                            Aplicar Gratificación Art. 50 (25%)
+                          </span>
+                          <p className="text-xs text-gray-500">
+                            {selectedEmployee._original_gratification_type === 'article_50' 
+                              ? 'Este empleado tiene gratificación configurada por defecto'
+                              : 'Gratificación temporal solo para esta liquidación'
+                            }
+                          </p>
+                        </div>
+                      </label>
                     </div>
                     <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      selectedEmployee.legal_gratification_type === 'article_50'
+                      formData.apply_legal_gratification
                         ? 'bg-green-100 text-green-800'
                         : 'bg-gray-100 text-gray-600'
                     }`}>
-                      {selectedEmployee.legal_gratification_type === 'article_50' ? 'ACTIVA' : 'INACTIVA'}
+                      {formData.apply_legal_gratification ? 'APLICAR' : 'NO APLICAR'}
                     </div>
                   </div>
 
-                  {selectedEmployee.legal_gratification_type === 'article_50' && result && (
+                  {formData.apply_legal_gratification && result && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="bg-purple-50 rounded-lg p-3">
                         <div className="text-sm text-purple-600 font-medium">Gratificación Calculada</div>
@@ -596,14 +640,14 @@ export default function GenerateLiquidationPage() {
                     </div>
                   )}
 
-                  {selectedEmployee.legal_gratification_type !== 'article_50' && (
+                  {!formData.apply_legal_gratification && (
                     <div className="text-center py-4">
                       <p className="text-gray-500 text-sm mb-3">
-                        Para activar la gratificación legal, actualice la configuración del empleado.
+                        La gratificación Art. 50 no se aplicará a esta liquidación.
                       </p>
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                        <p className="text-yellow-800 text-sm">
-                          💡 La gratificación Art. 50 se configura por empleado y se aplica automáticamente cuando está activada.
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p className="text-blue-800 text-sm">
+                          💡 Puedes marcar el checkbox arriba para aplicar la gratificación legal (25% del sueldo base con tope legal).
                         </p>
                       </div>
                     </div>
