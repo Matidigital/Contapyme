@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+import { getDatabaseConnection, isSupabaseConfigured } from '@/lib/database/databaseSimple';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,6 +7,27 @@ export async function POST(request: NextRequest) {
     const companyId = searchParams.get('company_id');
 
     console.log('🔍 LIQUIDATION SAVE - Company ID:', companyId);
+
+    // ✅ Verificar configuración Supabase
+    if (!isSupabaseConfigured()) {
+      console.error('❌ Supabase no configurado correctamente en liquidation save');
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Base de datos no configurada. Verifica SUPABASE_SERVICE_ROLE_KEY en variables de entorno.',
+          code: 'SUPABASE_NOT_CONFIGURED'
+        },
+        { status: 503 }
+      );
+    }
+
+    const supabase = getDatabaseConnection();
+    if (!supabase) {
+      return NextResponse.json(
+        { success: false, error: 'Error de configuración de base de datos', code: 'DB_CONNECTION_ERROR' },
+        { status: 503 }
+      );
+    }
 
     if (!companyId) {
       return NextResponse.json(

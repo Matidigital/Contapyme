@@ -595,6 +595,12 @@ export const databaseSimple = {
 
 export async function getIndicatorsDashboard(): Promise<{ data: any; error: any }> {
   try {
+    // ✅ Verificar configuración antes de hacer requests
+    if (!isSupabaseConfigured()) {
+      console.warn('⚠️ Supabase no configurado - saltando obtención de indicadores');
+      return { data: null, error: { message: 'Supabase no configurado', code: 'SUPABASE_NOT_CONFIGURED' } };
+    }
+    
     // Obtener indicadores por categoría
     const { data: monetary, error: monetaryError } = await supabase.rpc('get_indicators_by_category', { cat: 'monetary' });
     const { data: currency, error: currencyError } = await supabase.rpc('get_indicators_by_category', { cat: 'currency' });
