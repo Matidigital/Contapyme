@@ -199,7 +199,6 @@ export default function GenerateLiquidationPage() {
         bonuses: result.bonuses || 0,
         commissions: result.commissions || 0,
         gratification: result.gratification || 0,
-        legal_gratification_art50: result.legal_gratification_art50 || 0, // ✅ NUEVO: Gratificación Art. 50
         total_taxable_income: result.total_taxable_income || 0,
         
         // Haberes no imponibles
