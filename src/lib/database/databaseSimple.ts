@@ -5,30 +5,44 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Configuración Supabase con validación
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+// ✅ Configuración Supabase con fallbacks robustos
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://xytgylsdxtzkqcjlgqvk.supabase.co';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+// 🚨 VALIDACIÓN NO-BLOCKING: Solo advertencias, no errores fatales
 if (!supabaseUrl) {
-  console.error('❌ NEXT_PUBLIC_SUPABASE_URL no está configurada');
-  throw new Error('Configuración de Supabase incompleta: falta NEXT_PUBLIC_SUPABASE_URL');
+  console.warn('⚠️ NEXT_PUBLIC_SUPABASE_URL no configurada, usando fallback');
 }
 
 if (!supabaseServiceKey) {
-  console.error('❌ SUPABASE_SERVICE_ROLE_KEY no está configurada');
-  throw new Error('Configuración de Supabase incompleta: falta SUPABASE_SERVICE_ROLE_KEY');
+  console.error('❌ SUPABASE_SERVICE_ROLE_KEY no está configurada - Funcionalidad limitada');
+  console.error('🔧 Para solucionarlo: Configura SUPABASE_SERVICE_ROLE_KEY en Netlify Environment Variables');
+} else {
+  console.log('✅ Supabase configurado correctamente');
 }
 
 console.log('🔧 Configurando Supabase:', {
   url: supabaseUrl,
-  hasServiceKey: !!supabaseServiceKey
+  hasServiceKey: !!supabaseServiceKey,
+  netlifyEnv: process.env.NETLIFY ? 'Netlify' : 'Local'
 });
 
-// Cliente con privilegios para operaciones de servidor
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+// ✅ Cliente con fallback - No bloquea la app si falta service key
+const supabase = supabaseServiceKey 
+  ? createClient(supabaseUrl, supabaseServiceKey)
+  : createClient(supabaseUrl, 'fallback-key'); // Fallback temporal
+
+// ✅ Helper para verificar si Supabase está configurado correctamente
+export function isSupabaseConfigured(): boolean {
+  return !!(supabaseUrl && supabaseServiceKey);
+}
 
 // Función para obtener conexión (para compatibilidad con APIs)
 export function getDatabaseConnection() {
+  if (!isSupabaseConfigured()) {
+    console.warn('⚠️ Supabase no está completamente configurado');
+    return null;
+  }
   return supabase;
 }
 

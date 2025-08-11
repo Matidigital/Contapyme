@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/database/supabase';
+import { getDatabaseConnection, isSupabaseConfigured } from '@/lib/database/databaseSimple';
 // import fileEmployeeStore from '@/lib/services/fileEmployeeStore'; // COMENTADO - Ya no usar file store
 
 // GET - Obtener todos los empleados de una empresa
@@ -16,6 +16,26 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('🔍 API empleados llamada para company_id:', companyId);
+
+    // ✅ Verificar configuración Supabase
+    if (!isSupabaseConfigured()) {
+      console.error('❌ Supabase no configurado correctamente');
+      return NextResponse.json(
+        { 
+          error: 'Base de datos no configurada. Verifica SUPABASE_SERVICE_ROLE_KEY en variables de entorno.',
+          success: false 
+        },
+        { status: 503 }
+      );
+    }
+
+    const supabase = getDatabaseConnection();
+    if (!supabase) {
+      return NextResponse.json(
+        { error: 'Error de configuración de base de datos', success: false },
+        { status: 503 }
+      );
+    }
 
     // Consulta SIMPLIFICADA para diagnosticar problema
     const { data: employees, error } = await supabase
