@@ -206,14 +206,21 @@ export class PayrollCalculator {
     // 9. Calcular otros descuentos
     const otherDeductions = this.calculateOtherDeductions(additionalDeductions);
 
-    // 10. Calcular gratificación Art. 50 individual para el resultado
+    // 10. Extraer gratificación Art. 50 del taxableIncome para mostrarla por separado
     console.log('🔍 Tipo de gratificación del empleado:', employee.legal_gratification_type);
-    const article50Gratification = (employee.legal_gratification_type === 'article_50') 
-      ? await this.calculateArticle50Gratification(employee.base_salary)
-      : 0;
-    console.log('🔍 Gratificación Art. 50 calculada para el resultado:', article50Gratification);
+    
+    // La gratificación ya está incluida en taxableIncome, solo la extraemos para mostrar
+    const baseImponibleWithoutGratification = proportionalBaseSalary + 
+           (additionalIncome.overtime_amount || 0) + 
+           (additionalIncome.bonuses || 0) + 
+           (additionalIncome.commissions || 0) + 
+           (additionalIncome.gratification || 0);
+    
+    const article50Gratification = taxableIncome - baseImponibleWithoutGratification;
+    console.log('🔍 Base imponible sin gratificación:', baseImponibleWithoutGratification);
+    console.log('🔍 Gratificación Art. 50 extraída:', article50Gratification);
 
-    // 11. Calcular totales
+    // 11. Calcular totales (taxableIncome ya incluye la gratificación, no sumar dos veces)
     const totalGrossIncome = taxableIncome + nonTaxableIncome;
     const totalDeductions = previsionalDeductions.total + incomeTax + otherDeductions;
     const netSalary = totalGrossIncome - totalDeductions;
