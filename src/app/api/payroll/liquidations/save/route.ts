@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
 
     const liquidationData = await request.json();
     console.log('🔍 LIQUIDATION SAVE - Data received:', JSON.stringify(liquidationData, null, 2));
+    console.log('🔍 LIQUIDATION SAVE - Data received:', JSON.stringify(liquidationData, null, 2));
 
     // ✅ BYPASS RLS - Service role key permite bypass automático de RLS
     // No necesitamos configurar el contexto con service role
@@ -113,6 +114,8 @@ export async function POST(request: NextRequest) {
         period: `${liquidationData.period_year}-${liquidationData.period_month}`
       });
       
+      console.log('🔍 API SAVE - Data to be updated:', JSON.stringify({ ...liquidationData, updated_at: new Date().toISOString() }, null, 2));
+
       // Actualizar liquidación existente
       const { data: updated, error: updateError } = await supabase
         .from('payroll_liquidations')

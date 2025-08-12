@@ -313,32 +313,24 @@ export class PayrollCalculator {
     additional: AdditionalIncome,
     employee: EmployeeData
   ): Promise<{ totalTaxableIncome: number; calculatedArticle50Gratification: number }> {
-    console.log('🔍 calculateTaxableIncome - baseSalary:', baseSalary);
-    console.log('🔍 calculateTaxableIncome - additionalIncome (bonuses, commissions, gratification, overtime_amount):', additional.bonuses, additional.commissions, additional.gratification, additional.overtime_amount);
-    console.log('🔍 calculateTaxableIncome - employee.legal_gratification_type:', employee?.legal_gratification_type);
-    // PASO 1: Calcular base imponible (sueldo base + bonos + comisiones + horas extras)
-    const baseImponible = baseSalary + 
+    
+    // Base para el cálculo de la gratificación.
+    const baseForGratification = baseSalary + 
            (additional.overtime_amount || 0) + 
            (additional.bonuses || 0) + 
-           (additional.commissions || 0) + 
-           (employee.legal_gratification_type !== 'article_50' ? (additional.gratification || 0) : 0); // Only add if NOT Article 50 gratification
+           (additional.commissions || 0);
 
-    console.log('🔍 Base imponible calculada:', baseImponible);
-
-    // PASO 2: Calcular gratificación legal Art. 50 si aplica
     let legalGratificationArt50Amount = 0;
     if (employee.legal_gratification_type === 'article_50') {
-      console.log('🔍 Empleado tiene gratificación Art. 50, calculando sobre base imponible...');
-      legalGratificationArt50Amount = await this.calculateArticle50GratificationFromBase(baseImponible);
-      console.log('🔍 Gratificación Art. 50 calculada:', legalGratificationArt50Amount);
+      legalGratificationArt50Amount = await this.calculateArticle50GratificationFromBase(baseForGratification);
     }
-    console.log('🔍 calculateTaxableIncome - legalGratificationArt50Amount (before adding to totalImponible):', legalGratificationArt50Amount);
 
-    // PASO 3: Total imponible = Base imponible + Gratificación Legal Art. 50
-    const totalImponible = baseImponible + legalGratificationArt50Amount;
-    console.log('🔍 Total imponible final:', totalImponible);
+    // El total imponible incluye la base, la gratificación legal, y cualquier otra gratificación si no es del Art. 50.
+    const totalTaxableIncome = baseForGratification + 
+                               legalGratificationArt50Amount + 
+                               (employee.legal_gratification_type !== 'article_50' ? (additional.gratification || 0) : 0);
 
-    return { totalTaxableIncome: totalImponible, calculatedArticle50Gratification: legalGratificationArt50Amount };
+    return { totalTaxableIncome, calculatedArticle50Gratification: legalGratificationArt50Amount };
   }
 
   /**
@@ -358,13 +350,14 @@ export class PayrollCalculator {
   /**
    * Calcula gratificación legal Art. 50 basada en la base imponible completa
    * 25% de la base imponible con tope de (4.75 ingresos mínimos anuales) ÷ 12
-   * ✅ NUEVA LÓGICA: Gratificación sobre base imponible total
+   * ✅ CORREGIDO: Usa el sueldo mínimo de la configuración del sistema.
    */
   private async calculateArticle50GratificationFromBase(baseImponible: number): Promise<number> {
     console.log('🔍 Calculando gratificación Art. 50 para base imponible:', baseImponible);
     
     const gratificationBase = baseImponible * 0.25; // 25% de la base imponible
-    const gratificationCapAnnual = 529000 * 4.75; // Tope anual: 4.75 × sueldo mínimo 2025
+    const minimumWage = this.settings.income_limits.minimum_wage || CHILE_TAX_VALUES.SUELDO_MINIMO_2025;
+    const gratificationCapAnnual = minimumWage * 4.75; // Tope anual: 4.75 × sueldo mínimo
     const gratificationCapMonthly = gratificationCapAnnual / 12; // Tope mensual
     
     const finalGratification = Math.min(gratificationBase, gratificationCapMonthly);
