@@ -48,6 +48,11 @@ async function getEconomicIndicatorsDirectly(): Promise<EconomicIndicators | nul
       .limit(10); // Últimos valores de cada indicador
 
     if (error) {
+      // Error 400 = tabla no existe, esto es normal
+      if (error.code === 'PGRST116' || error.message?.includes('does not exist')) {
+        console.log('💡 Tabla economic_indicators no existe - esto es normal');
+        return null;
+      }
       console.warn('Error consultando economic_indicators:', error);
       return null;
     }
@@ -113,14 +118,15 @@ async function getEconomicIndicatorsDirectly(): Promise<EconomicIndicators | nul
  */
 export async function getEconomicIndicators(): Promise<EconomicIndicators> {
   try {
-    // SOLUCION DEFINITIVA: Consulta directa sin RPC problemático
+    // SOLUCION DEFINITIVA: Intentar consulta directa, con fallback robusto
     const indicators = await getEconomicIndicatorsDirectly();
     if (indicators) {
+      console.log('✅ Usando indicadores económicos desde base de datos');
       return indicators;
     }
     
-    // Fallback a valores por defecto si no hay datos
-    console.log('No se encontraron indicadores, usando valores por defecto');
+    // Fallback a valores por defecto (modo normal cuando no hay tabla)
+    console.log('📊 Usando indicadores económicos por defecto (tabla no existe)');
     return getDefaultIndicators();
     
     /* CODIGO ANTERIOR COMENTADO PARA REFERENCIA:
