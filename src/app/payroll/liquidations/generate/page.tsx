@@ -131,12 +131,20 @@ export default function GenerateLiquidationPage() {
   
   // Resultado corregido que incluye la gratificación Art. 50 calculada manualmente
   const result = useMemo(() => {
+    console.log('🔍 RECALCULANDO RESULTADO:');
+    console.log('  - hookResult existe:', !!hookResult);
+    console.log('  - selectedEmployee existe:', !!selectedEmployee);
+    console.log('  - apply_legal_gratification:', formData.apply_legal_gratification);
+    
     if (!hookResult || !selectedEmployee) return hookResult;
     
     // Calcular gratificación si está habilitada
     const gratificationAmount = formData.apply_legal_gratification 
       ? Math.min(selectedEmployee.base_salary * 0.25, 529000 * 4.75) 
       : 0;
+    
+    console.log('  - Sueldo base:', selectedEmployee.base_salary);
+    console.log('  - Gratificación calculada:', gratificationAmount);
     
     // Corregir totales si hay gratificación
     if (gratificationAmount > 0) {
@@ -157,6 +165,7 @@ export default function GenerateLiquidationPage() {
       };
     }
     
+    console.log('  - Sin gratificación, devolviendo resultado original');
     return hookResult;
   }, [hookResult, selectedEmployee, formData.apply_legal_gratification]);
 
@@ -206,9 +215,19 @@ export default function GenerateLiquidationPage() {
     const { name, value, type } = e.target;
     const { checked } = e.target as HTMLInputElement;
     
+    const newValue = type === 'checkbox' ? checked : (type === 'number' ? parseFloat(value) || 0 : value);
+    
+    // ✅ LOGGING TEMPORAL PARA DEBUGGING
+    if (name === 'apply_legal_gratification') {
+      console.log('🔍 CHECKBOX GRATIFICACIÓN CAMBIADO:');
+      console.log('  - Checked:', checked);
+      console.log('  - Type:', type);
+      console.log('  - New value:', newValue);
+    }
+    
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : (type === 'number' ? parseFloat(value) || 0 : value)
+      [name]: newValue
     }));
   };
 
@@ -217,6 +236,23 @@ export default function GenerateLiquidationPage() {
 
     setSaving(true);
     try {
+      // ✅ CÁLCULO DIRECTO DE GRATIFICACIÓN PARA GARANTIZAR CONEXIÓN
+      const gratificationAmount = formData.apply_legal_gratification 
+        ? Math.min(selectedEmployee.base_salary * 0.25, 529000 * 4.75) 
+        : 0;
+      
+      // ✅ TOTALES CORREGIDOS MANUALMENTE PARA GARANTIZAR INCLUSIÓN
+      const baseGrossIncome = (result.total_gross_income || 0) - (result.legal_gratification_art50 || 0); // Remover gratificación anterior
+      const correctedGrossIncome = baseGrossIncome + gratificationAmount; // Agregar gratificación calculada
+      const correctedNetSalary = correctedGrossIncome - (result.total_deductions || 0);
+      
+      console.log('🔍 SAVE LIQUIDATION - GRATIFICACIÓN DEBUG:');
+      console.log('  - apply_legal_gratification:', formData.apply_legal_gratification);
+      console.log('  - selectedEmployee.base_salary:', selectedEmployee.base_salary);
+      console.log('  - gratificationAmount calculado:', gratificationAmount);
+      console.log('  - result.total_gross_income original:', result.total_gross_income);
+      console.log('  - correctedGrossIncome final:', correctedGrossIncome);
+
       // Mapear los datos de la liquidación al formato de la base de datos
       const liquidationData = {
         employee_id: selectedEmployeeId,
@@ -239,8 +275,8 @@ export default function GenerateLiquidationPage() {
         other_allowances: 0,
         total_non_taxable_income: result.total_non_taxable_income || 0,
         
-        // Gratificación legal Art. 50 - USAR RESULTADO CORREGIDO
-        legal_gratification_art50: result.legal_gratification_art50 || 0,
+        // ✅ GRATIFICACIÓN CALCULADA DIRECTAMENTE
+        legal_gratification_art50: gratificationAmount,
         
         // Descuentos previsionales (campos separados como espera la DB)
         afp_percentage: result.afp_percentage || 10.0,
@@ -265,10 +301,10 @@ export default function GenerateLiquidationPage() {
         other_deductions: formData.other_deductions || 0,
         total_other_deductions: result.total_other_deductions || 0,
         
-        // Totales calculados - USAR RESULTADO CORREGIDO
-        total_gross_income: result.total_gross_income || 0,
+        // ✅ TOTALES CORREGIDOS MANUALMENTE
+        total_gross_income: correctedGrossIncome,
         total_deductions: result.total_deductions || 0,
-        net_salary: result.net_salary || 0,
+        net_salary: correctedNetSalary,
         
         // Configuración usada (snapshot)
         calculation_config: result.calculation_config || {}
