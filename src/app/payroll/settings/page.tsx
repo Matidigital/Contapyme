@@ -544,84 +544,58 @@ export default function PayrollSettingsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* Hero Section con gradiente */}
-      <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div className="flex-1">
-              <h1 className="text-2xl sm:text-3xl font-bold mb-2">
-                Configuración Previsional
-              </h1>
-              <p className="text-blue-100 text-sm sm:text-base mb-6">
-                Gestiona AFP, Salud, Topes y Descuentos según normativa chilena
-              </p>
-              
-              {/* Quick stats en hero */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
-                  <div className="text-2xl font-bold">{settings?.afp_configs?.length || 0}</div>
-                  <div className="text-xs text-blue-100">AFP Configuradas</div>
-                </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
-                  <div className="text-2xl font-bold">{settings?.health_configs?.length || 0}</div>
-                  <div className="text-xs text-blue-100">Isapres/Fonasa</div>
-                </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
-                  <div className="text-2xl font-bold">{settings?.income_limits?.uf_limit || 0}</div>
-                  <div className="text-xs text-blue-100">Tope UF</div>
-                </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
-                  <div className="text-2xl font-bold">{Object.keys(validationErrors).length}</div>
-                  <div className="text-xs text-blue-100">Errores</div>
-                </div>
-              </div>
-            </div>
-            
-            {/* Acciones principales */}
-            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-              <button 
-                onClick={handlePreviredUpdate}
-                disabled={saving}
-                className="group relative px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/40 backdrop-blur-sm transition-all duration-200 flex items-center justify-center gap-2 text-white font-medium"
-              >
-                {saving ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                ) : (
-                  <Globe className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                )}
-                <span className="text-sm">{saving ? 'Actualizando...' : 'Actualizar Previred'}</span>
-              </button>
-              <button 
-                onClick={handleSaveAll}
-                disabled={saving || !settings || Object.keys(validationErrors).length > 0}
-                className={`group relative px-4 py-2.5 rounded-xl backdrop-blur-sm transition-all duration-200 flex items-center justify-center gap-2 font-medium text-sm ${
-                  Object.keys(validationErrors).length > 0 
-                    ? 'bg-gray-400/80 cursor-not-allowed text-gray-200' 
-                    : 'bg-green-500/80 hover:bg-green-500 border border-green-400/50 hover:border-green-400 text-white'
-                }`}
-              >
-                {saving ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                ) : (
-                  <Save className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                )}
-                <span>{saving ? 'Guardando...' : 'Guardar Todo'}</span>
-                {Object.keys(validationErrors).length > 0 && (
-                  <span className="ml-2 text-xs">({Object.keys(validationErrors).length} errores)</span>
-                )}
-              </button>
-            </div>
+      <PayrollHeader 
+        title="Configuración Previsional"
+        subtitle="Gestiona AFP, Salud, Topes y Descuentos"
+        showBackButton
+        actions={
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button 
+              variant="outline" 
+              size="md"
+              onClick={handlePreviredUpdate}
+              disabled={saving}
+              className="bg-white border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+            >
+              {saving ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+              ) : (
+                <Globe className="h-4 w-4 mr-2" />
+              )}
+              {saving ? 'Actualizando desde Previred...' : 'Actualizar desde Previred'}
+            </Button>
+            <Button 
+              variant="primary" 
+              size="md"
+              onClick={handleSaveAll}
+              disabled={saving || !settings || Object.keys(validationErrors).length > 0}
+              className={`transition-colors duration-200 ${
+                Object.keys(validationErrors).length > 0 
+                  ? 'bg-gray-400 cursor-not-allowed' 
+                  : 'bg-blue-600 hover:bg-blue-700'
+              } text-white`}
+            >
+              {saving ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              {saving ? 'Guardando configuración...' : 'Guardar Todo'}
+              {Object.keys(validationErrors).length > 0 && (
+                <span className="ml-2 text-xs">({Object.keys(validationErrors).length} errores)</span>
+              )}
+            </Button>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       <div className="max-w-6xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         {/* Status Messages */}
         {error && (
           <div className="mb-6 p-4 rounded-xl bg-red-50/80 backdrop-blur-sm border border-red-200">
             <div className="flex items-center text-red-700">
-              <AlertCircle className="h-5 w-5 mr-3 text-red-600" />
-              <span className="font-medium">{error}</span>
+              <AlertCircle className="h-5 w-5 mr-2" />
+              <span>{error}</span>
             </div>
           </div>
         )}
@@ -629,39 +603,39 @@ export default function PayrollSettingsPage() {
         {successMessage && (
           <div className="mb-6 p-4 rounded-xl bg-green-50/80 backdrop-blur-sm border border-green-200">
             <div className="flex items-center text-green-700">
-              <CheckCircle className="h-5 w-5 mr-3 text-green-600" />
-              <span className="font-medium">{successMessage}</span>
+              <CheckCircle className="h-5 w-5 mr-2" />
+              <span>{successMessage}</span>
             </div>
           </div>
         )}
 
         {Object.keys(validationErrors).length > 0 && (
           <div className="mb-6 p-4 rounded-xl bg-red-50/80 backdrop-blur-sm border border-red-200">
-            <div className="flex items-start">
-              <AlertCircle className="h-5 w-5 mr-3 text-red-600 mt-0.5" />
-              <div className="flex-1">
-                <h4 className="font-medium text-red-800 mb-2">Errores de Validación</h4>
-                <p className="text-sm text-red-700 mb-3">Por favor corrija los siguientes errores antes de guardar:</p>
-                <ul className="list-disc pl-5 space-y-1">
-                  {Object.entries(validationErrors).map(([key, error]) => (
-                    <li key={key} className="text-red-700 text-sm">{error}</li>
-                  ))}
-                </ul>
-              </div>
+            <div className="flex items-center text-red-700 mb-3">
+              <AlertCircle className="h-5 w-5 mr-2 text-red-600" />
+              <span className="font-medium">Errores de Validación</span>
             </div>
+            <p className="text-red-600 text-sm mb-3">
+              Por favor corrija los siguientes errores antes de guardar:
+            </p>
+            <ul className="list-disc pl-5 space-y-1">
+              {Object.entries(validationErrors).map(([key, error]) => (
+                <li key={key} className="text-red-600 text-sm">{error}</li>
+              ))}
+            </ul>
           </div>
         )}
 
-        {/* Navigation Tabs - Modernized */}
+        {/* Navigation Tabs - Modern Style */}
         <div className="mb-8">
-          <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-white/20 p-1">
-            <nav className="flex flex-wrap gap-1">
+          <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-white/20 p-2">
+            <nav className="flex flex-wrap gap-2">
               <button
                 onClick={() => setActiveTab('afp')}
                 className={`flex items-center px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 ${
                   activeTab === 'afp'
-                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-md'
-                    : 'text-gray-700 hover:text-blue-600 hover:bg-blue-50/80'
+                    ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg transform scale-105'
+                    : 'text-gray-700 hover:text-blue-700 hover:bg-blue-50/80 backdrop-blur-sm'
                 }`}
               >
                 <Building2 className="h-4 w-4 mr-2" />
@@ -671,8 +645,8 @@ export default function PayrollSettingsPage() {
                 onClick={() => setActiveTab('health')}
                 className={`flex items-center px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 ${
                   activeTab === 'health'
-                    ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-md'
-                    : 'text-gray-700 hover:text-green-600 hover:bg-green-50/80'
+                    ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-lg transform scale-105'
+                    : 'text-gray-700 hover:text-green-700 hover:bg-green-50/80 backdrop-blur-sm'
                 }`}
               >
                 <Heart className="h-4 w-4 mr-2" />
@@ -682,8 +656,8 @@ export default function PayrollSettingsPage() {
                 onClick={() => setActiveTab('limits')}
                 className={`flex items-center px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 ${
                   activeTab === 'limits'
-                    ? 'bg-gradient-to-r from-orange-600 to-orange-700 text-white shadow-md'
-                    : 'text-gray-700 hover:text-orange-600 hover:bg-orange-50/80'
+                    ? 'bg-gradient-to-r from-orange-600 to-orange-700 text-white shadow-lg transform scale-105'
+                    : 'text-gray-700 hover:text-orange-700 hover:bg-orange-50/80 backdrop-blur-sm'
                 }`}
               >
                 <Calculator className="h-4 w-4 mr-2" />
@@ -693,8 +667,8 @@ export default function PayrollSettingsPage() {
                 onClick={() => setActiveTab('family')}
                 className={`flex items-center px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 ${
                   activeTab === 'family'
-                    ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-md'
-                    : 'text-gray-700 hover:text-purple-600 hover:bg-purple-50/80'
+                    ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg transform scale-105'
+                    : 'text-gray-700 hover:text-purple-700 hover:bg-purple-50/80 backdrop-blur-sm'
                 }`}
               >
                 <Users className="h-4 w-4 mr-2" />
@@ -704,8 +678,8 @@ export default function PayrollSettingsPage() {
                 onClick={() => setActiveTab('company')}
                 className={`flex items-center px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 ${
                   activeTab === 'company'
-                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-md'
-                    : 'text-gray-700 hover:text-indigo-600 hover:bg-indigo-50/80'
+                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-lg transform scale-105'
+                    : 'text-gray-700 hover:text-indigo-700 hover:bg-indigo-50/80 backdrop-blur-sm'
                 }`}
               >
                 <Settings className="h-4 w-4 mr-2" />
@@ -718,32 +692,29 @@ export default function PayrollSettingsPage() {
         {/* Tab Content */}
         {activeTab === 'afp' && settings && (
           <div className="space-y-6">
-            <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden">
-              <div className="p-6 border-b border-white/20">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500/10 to-blue-600/10 rounded-xl flex items-center justify-center">
-                    <Building2 className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900">Configuración AFP</h3>
-                    <p className="text-gray-600 text-sm">Administra las comisiones y porcentajes de las AFP disponibles</p>
-                  </div>
-                </div>
+            <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-white/20">
+              <div className="border-b border-white/20 p-6">
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  Configuración AFP
+                </h3>
+                <p className="text-gray-600">
+                  Administra las comisiones y porcentajes de las AFP disponibles
+                </p>
               </div>
               <div className="p-6">
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-white/20">
-                    <thead className="bg-gradient-to-r from-blue-50/80 to-blue-100/80 backdrop-blur-sm">
+                  <table className="min-w-full divide-y divide-gray-200/50">
+                    <thead className="bg-gray-50/50 backdrop-blur-sm">
                       <tr>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-blue-800 uppercase tracking-wider rounded-tl-xl">AFP</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-blue-800 uppercase tracking-wider">Comisión %</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-blue-800 uppercase tracking-wider">SIS %</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-blue-800 uppercase tracking-wider rounded-tr-xl">Estado</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AFP</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Comisión %</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SIS %</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white/40 backdrop-blur-sm divide-y divide-white/20">
+                    <tbody className="bg-white/30 backdrop-blur-sm divide-y divide-gray-200/50">
                       {settings.afp_configs?.map((afp, index) => (
-                        <tr key={afp.id} className="hover:bg-white/60 transition-colors duration-200">
+                        <tr key={afp.id} className="hover:bg-white/50 transition-colors duration-200">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="font-semibold text-gray-900">{afp.name}</div>
                             <div className="text-sm text-gray-600 bg-blue-50 px-2 py-1 rounded-md inline-block mt-1">{afp.code}</div>
@@ -810,55 +781,50 @@ export default function PayrollSettingsPage() {
             </div>
 
             {/* Info Card */}
-            <div className="bg-blue-50/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-6">
-              <div className="flex items-start">
-                <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center mr-4 mt-1">
-                  <AlertCircle className="h-5 w-5 text-blue-600" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="text-sm font-semibold text-blue-900 mb-3">
-                    Información Importante
-                  </h4>
-                  <p className="text-sm text-blue-800 mb-4">
-                    Los porcentajes se actualizan mensualmente según los indicadores oficiales de <strong>Previred</strong>. 
-                    El descuento de AFP es del <strong>10%</strong> sobre el sueldo imponible más la <strong>comisión variable</strong> por AFP.
-                  </p>
-                  <div className="text-xs text-blue-700 bg-white/80 rounded-xl p-3 border border-blue-200/50">
-                    <strong>Auto-actualización:</strong> Usa el botón "Actualizar desde Previred" para obtener las tasas más recientes.
+            <div className="bg-blue-50/80 backdrop-blur-sm rounded-2xl border border-blue-200/50 p-4">
+                <div className="flex items-start">
+                  <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
+                  <div>
+                    <h4 className="text-sm font-semibold text-blue-900 mb-2">
+                      Información Importante
+                    </h4>
+                    <p className="text-sm text-blue-800 mb-3">
+                      Los porcentajes se actualizan mensualmente según los indicadores oficiales de <strong>Previred</strong>. 
+                      El descuento de AFP es del <strong>10%</strong> sobre el sueldo imponible más la <strong>comisión variable</strong> por AFP.
+                    </p>
+                    <div className="text-xs text-blue-700 bg-white rounded-md p-2 border border-blue-200">
+                      <strong>Auto-actualización:</strong> Usa el botón "Actualizar desde Previred" para obtener las tasas más recientes.
+                    </div>
                   </div>
                 </div>
-              </div>
             </div>
           </div>
         )}
 
         {activeTab === 'health' && settings && (
           <div className="space-y-6">
-            <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden">
-              <div className="p-6 border-b border-white/20">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 bg-gradient-to-br from-green-500/10 to-green-600/10 rounded-xl flex items-center justify-center">
-                    <Heart className="w-5 h-5 text-green-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900">Instituciones de Salud</h3>
-                    <p className="text-gray-600 text-sm">Administra las instituciones de salud y sus porcentajes de descuento</p>
-                  </div>
-                </div>
+            <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-white/20">
+              <div className="border-b border-white/20 p-6">
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  Instituciones de Salud
+                </h3>
+                <p className="text-gray-600">
+                  Administra las instituciones de salud y sus porcentajes de descuento
+                </p>
               </div>
               <div className="p-6">
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-white/20">
-                    <thead className="bg-gradient-to-r from-green-50/80 to-green-100/80 backdrop-blur-sm">
+                  <table className="min-w-full divide-y divide-gray-200/50">
+                    <thead className="bg-gray-50/50 backdrop-blur-sm">
                       <tr>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-green-800 uppercase tracking-wider rounded-tl-xl">Institución</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-green-800 uppercase tracking-wider">Plan %</th>
-                        <th className="px-6 py-4 text-left text-xs font-medium text-green-800 uppercase tracking-wider rounded-tr-xl">Estado</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Institución</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plan %</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white/40 backdrop-blur-sm divide-y divide-white/20">
+                    <tbody className="bg-white/30 backdrop-blur-sm divide-y divide-gray-200/50">
                       {settings.health_configs?.map((health, index) => (
-                        <tr key={health.id} className="hover:bg-white/60 transition-colors duration-200">
+                        <tr key={health.id} className="hover:bg-white/50 transition-colors duration-200">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="font-semibold text-gray-900">{health.name}</div>
                             <div className="text-sm text-gray-600 bg-green-50 px-2 py-1 rounded-md inline-block mt-1">{health.code}</div>
@@ -909,46 +875,41 @@ export default function PayrollSettingsPage() {
                     </tbody>
                   </table>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Info Card */}
-            <div className="bg-green-50/80 backdrop-blur-sm rounded-2xl border border-green-200/50 p-6">
-              <div className="flex items-start">
-                <div className="w-10 h-10 bg-green-500/10 rounded-xl flex items-center justify-center mr-4 mt-1">
-                  <AlertCircle className="h-5 w-5 text-green-600" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="text-sm font-semibold text-green-900 mb-3">
-                    Sistema de Salud Chileno
-                  </h4>
-                  <p className="text-sm text-green-800 mb-4">
-                    El descuento base es <strong>7%</strong> del sueldo imponible. Las ISAPRE pueden cobrar un plan adicional.
-                    FONASA no cobra adicional (solo el 7% legal).
-                  </p>
-                  <div className="text-xs text-green-700 bg-white/80 rounded-xl p-3 border border-green-200/50">
-                    <strong>Importante:</strong> Los porcentajes mostrados incluyen el 7% base más el adicional de cada institución.
-                  </div>
-                </div>
               </div>
             </div>
 
-            {/* Instituciones Comunes */}
-            <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden">
-              <div className="p-6 border-b border-white/20">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500/10 to-purple-600/10 rounded-xl flex items-center justify-center">
-                    <Heart className="w-5 h-5 text-purple-600" />
-                  </div>
+            {/* Info Card */}
+            <div className="bg-green-50/80 backdrop-blur-sm rounded-2xl border border-green-200/50 p-4">
+                <div className="flex items-start">
+                  <AlertCircle className="h-5 w-5 text-green-600 mt-0.5 mr-3 flex-shrink-0" />
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">Instituciones Más Comunes en Chile</h3>
-                    <p className="text-gray-600 text-sm">Referencia de las principales instituciones de salud</p>
+                    <h4 className="text-sm font-semibold text-green-900 mb-2">
+                      Sistema de Salud Chileno
+                    </h4>
+                    <p className="text-sm text-green-800 mb-3">
+                      El descuento base es <strong>7%</strong> del sueldo imponible. Las ISAPRE pueden cobrar un plan adicional.
+                      FONASA no cobra adicional (solo el 7% legal).
+                    </p>
+                    <div className="text-xs text-green-700 bg-white rounded-md p-2 border border-green-200">
+                      <strong>Importante:</strong> Los porcentajes mostrados incluyen el 7% base más el adicional de cada institución.
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="p-6">
+            </div>
+
+            {/* Instituciones Comunes */}
+            <Card className="bg-white border border-gray-200">
+              <CardHeader className="border-b border-gray-100">
+                <CardTitle className="text-lg font-semibold text-gray-900">
+                  Instituciones Más Comunes en Chile
+                </CardTitle>
+                <CardDescription className="text-gray-600">
+                  Referencia de las principales instituciones de salud
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-blue-50/80 backdrop-blur-sm p-4 rounded-xl border border-blue-200/50">
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                     <h4 className="font-semibold text-blue-900 mb-2">FONASA (Público)</h4>
                     <p className="text-sm text-blue-800">
                       • Solo 7% legal (sin adicional)<br/>
@@ -956,7 +917,7 @@ export default function PayrollSettingsPage() {
                       • Código: FONASA
                     </p>
                   </div>
-                  <div className="bg-purple-50/80 backdrop-blur-sm p-4 rounded-xl border border-purple-200/50">
+                  <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
                     <h4 className="font-semibold text-purple-900 mb-2">ISAPRE (Privadas)</h4>
                     <p className="text-sm text-purple-800">
                       • 7% + plan adicional<br/>
@@ -965,26 +926,23 @@ export default function PayrollSettingsPage() {
                     </p>
                   </div>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 
         {activeTab === 'limits' && settings && (
           <div className="space-y-6">
-            <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden">
-              <div className="p-6 border-b border-white/20">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 bg-gradient-to-br from-orange-500/10 to-orange-600/10 rounded-xl flex items-center justify-center">
-                    <Calculator className="w-5 h-5 text-orange-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900">Topes Imponibles</h3>
-                    <p className="text-gray-600 text-sm">Límites de renta para cálculos previsionales (valores en UF y CLP)</p>
-                  </div>
-                </div>
-              </div>
-              <div className="p-6">
+            <Card className="bg-white border border-gray-200">
+              <CardHeader className="border-b border-gray-100">
+                <CardTitle className="text-xl font-semibold text-gray-900">
+                  Topes Imponibles
+                </CardTitle>
+                <CardDescription className="text-gray-600">
+                  Límites de renta para cálculos previsionales (valores en UF y CLP)
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1170,13 +1128,11 @@ export default function PayrollSettingsPage() {
                 </div>
               </div>
 
-              <div className="mt-6 p-4 bg-yellow-50/80 backdrop-blur-sm border border-yellow-200/50 rounded-xl">
+              <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
                 <div className="flex items-start">
-                  <div className="w-8 h-8 bg-yellow-500/10 rounded-lg flex items-center justify-center mr-3 mt-1">
-                    <AlertCircle className="h-4 w-4 text-yellow-600" />
-                  </div>
+                  <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 mr-3" />
                   <div>
-                    <h4 className="text-sm font-medium text-yellow-800 mb-2">
+                    <h4 className="text-sm font-medium text-yellow-800 mb-1">
                       Cálculo Automático por Empleado
                     </h4>
                     <p className="text-sm text-yellow-700">
@@ -1186,24 +1142,21 @@ export default function PayrollSettingsPage() {
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         )}
 
         {activeTab === 'company' && settings && (
-          <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden">
-            <div className="p-6 border-b border-white/20">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-gradient-to-br from-indigo-500/10 to-indigo-600/10 rounded-xl flex items-center justify-center">
-                  <Settings className="w-5 h-5 text-indigo-600" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900">Configuración de Empresa</h3>
-                  <p className="text-gray-600 text-sm">Mutual de Seguridad y Caja de Compensación</p>
-                </div>
-              </div>
-            </div>
-            <div className="p-6">
+          <Card className="bg-white border border-gray-200">
+            <CardHeader className="border-b border-gray-100">
+              <CardTitle className="text-xl font-semibold text-gray-900">
+                Configuración de Empresa
+              </CardTitle>
+              <CardDescription className="text-gray-600">
+                Mutual de Seguridad y Caja de Compensación
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1244,13 +1197,11 @@ export default function PayrollSettingsPage() {
                 </div>
               </div>
 
-              <div className="mt-6 p-4 bg-blue-50/80 backdrop-blur-sm border border-blue-200/50 rounded-xl">
+              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
                 <div className="flex items-start">
-                  <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center mr-3 mt-1">
-                    <AlertCircle className="h-4 w-4 text-blue-600" />
-                  </div>
+                  <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 mr-3" />
                   <div>
-                    <h4 className="text-sm font-medium text-blue-800 mb-2">
+                    <h4 className="text-sm font-medium text-blue-800 mb-1">
                       Configuración Empresarial
                     </h4>
                     <p className="text-sm text-blue-700">
@@ -1260,8 +1211,8 @@ export default function PayrollSettingsPage() {
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>
