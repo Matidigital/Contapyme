@@ -208,8 +208,8 @@ export default function GenerateLiquidationPage() {
         other_allowances: 0,
         total_non_taxable_income: result.total_non_taxable_income || 0,
         
-        // Gratificación legal Art. 50
-        legal_gratification_art50: result.legal_gratification_art50 || 0,
+        // Gratificación legal Art. 50 (temporalmente comentado hasta aplicar migración)
+        // legal_gratification_art50: result.legal_gratification_art50 || 0,
         
         // Descuentos previsionales (campos separados como espera la DB)
         afp_percentage: result.afp_percentage || 10.0,
