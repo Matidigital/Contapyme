@@ -46,6 +46,7 @@ export interface AdditionalIncome {
   overtime_amount?: number;
   food_allowance?: number;
   transport_allowance?: number;
+  cash_allowance?: number;
 }
 
 export interface AdditionalDeductions {
@@ -90,6 +91,7 @@ export interface LiquidationResult {
   // Haberes No Imponibles
   food_allowance: number;
   transport_allowance: number;
+  cash_allowance: number;
   family_allowance: number;
   other_allowances: number;
   total_non_taxable_income: number;
@@ -235,6 +237,7 @@ export class PayrollCalculator {
       // Haberes No Imponibles
       food_allowance: additionalIncome.food_allowance || 0,
       transport_allowance: additionalIncome.transport_allowance || 0,
+      cash_allowance: additionalIncome.cash_allowance || 0,
       family_allowance: familyAllowance,
       other_allowances: 0,
       total_non_taxable_income: nonTaxableIncome,
@@ -285,31 +288,36 @@ export class PayrollCalculator {
 
   /**
    * Calcula total de haberes imponibles
-   * ✅ ACTUALIZADO: Maneja gratificación Art. 50 con indicadores dinámicos
+   * ✅ NUEVA LÓGICA: Base imponible + Gratificación calculada sobre la base
    */
   private async calculateTaxableIncome(
     baseSalary: number,
     additional: AdditionalIncome,
     employee?: EmployeeData
   ): Promise<number> {
-    let totalIncome = baseSalary + 
+    // PASO 1: Calcular base imponible (sueldo base + bonos + comisiones + horas extras)
+    const baseImponible = baseSalary + 
            (additional.overtime_amount || 0) + 
            (additional.bonuses || 0) + 
            (additional.commissions || 0) + 
            (additional.gratification || 0);
 
-    // Agregar gratificación legal Art. 50 si aplica
-    console.log('🔍 Verificando gratificación Art. 50 en haberes imponibles...');
+    console.log('🔍 Base imponible calculada:', baseImponible);
+
+    // PASO 2: Calcular gratificación sobre la base imponible
+    let gratificationAmount = 0;
     if (employee && employee.legal_gratification_type === 'article_50') {
-      console.log('🔍 Empleado tiene gratificación Art. 50, calculando...');
-      const article50Gratification = await this.calculateArticle50Gratification(employee.base_salary);
-      console.log('🔍 Gratificación a agregar a haberes imponibles:', article50Gratification);
-      totalIncome += article50Gratification;
-    } else {
-      console.log('🔍 Empleado NO tiene gratificación Art. 50');
+      console.log('🔍 Empleado tiene gratificación Art. 50, calculando sobre base imponible...');
+      // Calcular gratificación basada en la base imponible, no solo el sueldo base
+      gratificationAmount = await this.calculateArticle50GratificationFromBase(baseImponible);
+      console.log('🔍 Gratificación Art. 50 calculada:', gratificationAmount);
     }
 
-    return totalIncome;
+    // PASO 3: Total imponible = Base imponible + Gratificación
+    const totalImponible = baseImponible + gratificationAmount;
+    console.log('🔍 Total imponible final:', totalImponible);
+
+    return totalImponible;
   }
 
   /**
@@ -327,7 +335,36 @@ export class PayrollCalculator {
   }
 
   /**
-   * Calcula gratificación legal Art. 50
+   * Calcula gratificación legal Art. 50 basada en la base imponible completa
+   * 25% de la base imponible con tope de (4.75 ingresos mínimos anuales) ÷ 12
+   * ✅ NUEVA LÓGICA: Gratificación sobre base imponible total
+   */
+  private async calculateArticle50GratificationFromBase(baseImponible: number): Promise<number> {
+    console.log('🔍 Calculando gratificación Art. 50 para base imponible:', baseImponible);
+    
+    const gratificationBase = baseImponible * 0.25; // 25% de la base imponible
+    const gratificationCapAnnual = 529000 * 4.75; // Tope anual: 4.75 × sueldo mínimo 2025
+    const gratificationCapMonthly = gratificationCapAnnual / 12; // Tope mensual
+    
+    const finalGratification = Math.min(gratificationBase, gratificationCapMonthly);
+    
+    console.log('🔍 Gratificación base (25% base imponible):', gratificationBase);
+    console.log('🔍 Tope anual:', gratificationCapAnnual);
+    console.log('🔍 Tope mensual:', gratificationCapMonthly);
+    console.log('🔍 Gratificación final:', finalGratification);
+    
+    // Agregar información a warnings para transparencia
+    if (gratificationBase > gratificationCapMonthly) {
+      this.warnings.push(`ℹ️ Gratificación Art. 50 limitada: ${PayrollCalculator.formatCurrency(gratificationCapMonthly)} mensual (tope legal)`);
+    } else {
+      this.warnings.push(`ℹ️ Gratificación Art. 50: 25% de la base imponible = ${PayrollCalculator.formatCurrency(finalGratification)}`);
+    }
+    
+    return Math.round(finalGratification);
+  }
+
+  /**
+   * Calcula gratificación legal Art. 50 (método original para compatibilidad)
    * 25% del sueldo base mensual con tope de (4.75 ingresos mínimos anuales) ÷ 12 = $209.396
    * ✅ CORREGIDO: Tope mensual = tope anual ÷ 12
    */
@@ -372,6 +409,7 @@ export class PayrollCalculator {
 
   /**
    * Calcula total haberes no imponibles
+   * ✅ NUEVA LÓGICA: Incluye asignación de caja
    */
   private calculateNonTaxableIncome(
     additional: AdditionalIncome,
@@ -379,6 +417,7 @@ export class PayrollCalculator {
   ): number {
     return (additional.food_allowance || 0) + 
            (additional.transport_allowance || 0) + 
+           (additional.cash_allowance || 0) + 
            familyAllowance;
   }
 

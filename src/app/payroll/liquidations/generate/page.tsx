@@ -59,6 +59,7 @@ export default function GenerateLiquidationPage() {
     overtime_amount: 0,
     food_allowance: 0,
     transport_allowance: 0,
+    cash_allowance: 0,
     
     // Descuentos adicionales
     loan_deductions: 0,
@@ -116,7 +117,8 @@ export default function GenerateLiquidationPage() {
       gratification: formData.gratification,
       overtime_amount: formData.overtime_amount,
       food_allowance: formData.food_allowance,
-      transport_allowance: formData.transport_allowance
+      transport_allowance: formData.transport_allowance,
+      cash_allowance: formData.cash_allowance
     },
     additionalDeductions: {
       loan_deductions: formData.loan_deductions,
@@ -650,6 +652,20 @@ export default function GenerateLiquidationPage() {
                     type="number"
                     name="transport_allowance"
                     value={formData.transport_allowance}
+                    onChange={handleInputChange}
+                    min="0"
+                    placeholder="0"
+                    className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500 transition-all duration-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Asignación de Caja
+                  </label>
+                  <input
+                    type="number"
+                    name="cash_allowance"
+                    value={formData.cash_allowance}
                     onChange={handleInputChange}
                     min="0"
                     placeholder="0"
