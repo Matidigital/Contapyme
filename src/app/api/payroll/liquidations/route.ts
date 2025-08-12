@@ -404,6 +404,8 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const companyId = searchParams.get('company_id');
 
+    console.log('🗑️ DELETE liquidations - Company ID:', companyId);
+
     if (!companyId) {
       return NextResponse.json(
         { success: false, error: 'company_id es requerido' },
@@ -414,10 +416,48 @@ export async function DELETE(request: NextRequest) {
     const body = await request.json();
     const { liquidation_ids } = body;
 
-    if (!liquidation_ids || !Array.isArray(liquidation_ids)) {
+    console.log('🗑️ DELETE liquidations - IDs to delete:', liquidation_ids);
+
+    if (!liquidation_ids || !Array.isArray(liquidation_ids) || liquidation_ids.length === 0) {
       return NextResponse.json(
-        { success: false, error: 'liquidation_ids debe ser un array' },
+        { success: false, error: 'liquidation_ids debe ser un array no vacío' },
         { status: 400 }
+      );
+    }
+
+    // Validar que todos los IDs sean UUIDs válidos
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const invalidIds = liquidation_ids.filter(id => !uuidRegex.test(id));
+    
+    if (invalidIds.length > 0) {
+      console.error('Invalid UUIDs detected:', invalidIds);
+      return NextResponse.json(
+        { success: false, error: `IDs inválidos detectados: ${invalidIds.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    // Primero verificar que las liquidaciones existen y pertenecen a la empresa
+    const { data: existingLiquidations, error: checkError } = await supabase
+      .from('payroll_liquidations')
+      .select('id, employee_id')
+      .in('id', liquidation_ids)
+      .eq('company_id', companyId);
+
+    if (checkError) {
+      console.error('Error checking existing liquidations:', checkError);
+      return NextResponse.json(
+        { success: false, error: 'Error verificando liquidaciones existentes' },
+        { status: 500 }
+      );
+    }
+
+    console.log('🔍 Found liquidations to delete:', existingLiquidations?.length || 0);
+
+    if (!existingLiquidations || existingLiquidations.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'No se encontraron liquidaciones válidas para eliminar' },
+        { status: 404 }
       );
     }
 
@@ -425,22 +465,24 @@ export async function DELETE(request: NextRequest) {
     const { data: deleted, error: deleteError } = await supabase
       .from('payroll_liquidations')
       .delete()
-      .in('id', liquidation_ids)
+      .in('id', existingLiquidations.map(liq => liq.id))
       .eq('company_id', companyId)
       .select();
 
     if (deleteError) {
       console.error('Error deleting liquidations:', deleteError);
       return NextResponse.json(
-        { success: false, error: 'Error al eliminar liquidaciones' },
+        { success: false, error: `Error eliminando liquidaciones: ${deleteError.message}` },
         { status: 500 }
       );
     }
 
+    console.log('✅ Successfully deleted liquidations:', deleted?.length || 0);
+
     return NextResponse.json({
       success: true,
       data: deleted,
-      message: `${deleted?.length || 0} liquidaciones eliminadas exitosamente`
+      message: `${deleted?.length || 0} liquidación(es) eliminada(s) exitosamente`
     });
 
   } catch (error) {

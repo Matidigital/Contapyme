@@ -292,31 +292,36 @@ export default function LiquidationsPage() {
     if (!confirmDelete) return;
 
     setDeletingLiquidations(true);
+    console.log('🗑️ Deleting liquidations:', selectedLiquidations);
+    
     try {
-      const response = await fetch(`/api/payroll/liquidations`, {
+      const response = await fetch(`/api/payroll/liquidations?company_id=${COMPANY_ID}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          company_id: COMPANY_ID,
           liquidation_ids: selectedLiquidations
         }),
       });
 
       const result = await response.json();
+      console.log('🗑️ Delete response:', result);
 
-      if (result.success) {
-        setValidationMessage(`🗑️ ${selectedLiquidations.length} liquidación(es) eliminada(s) exitosamente`);
+      if (response.ok && result.success) {
+        setValidationMessage(`🗑️ ${result.message || `${selectedLiquidations.length} liquidación(es) eliminada(s) exitosamente`}`);
         setSelectedLiquidations([]);
         fetchLiquidations(); // Refrescar lista
         setTimeout(() => setValidationMessage(null), 5000);
       } else {
-        throw new Error(result.error || 'Error eliminando liquidaciones');
+        const errorMessage = result.error || `Error ${response.status}: ${response.statusText}`;
+        console.error('Delete failed:', errorMessage);
+        setValidationMessage(`❌ ${errorMessage}`);
+        setTimeout(() => setValidationMessage(null), 8000);
       }
     } catch (error) {
       console.error('Error deleting liquidations:', error);
-      setValidationMessage('❌ Error al eliminar liquidaciones');
+      setValidationMessage('❌ Error de conexión al eliminar liquidaciones');
       setTimeout(() => setValidationMessage(null), 5000);
     } finally {
       setDeletingLiquidations(false);
