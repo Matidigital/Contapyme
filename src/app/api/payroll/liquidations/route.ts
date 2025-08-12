@@ -24,25 +24,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Construir query con filtros
+    // Construir query con filtros - usar * para obtener todos los campos disponibles
     let query = supabase
       .from('payroll_liquidations')
       .select(`
-        id,
-        employee_id,
-        period_year,
-        period_month,
-        days_worked,
-        base_salary,
-        legal_gratification_art50,
-        bonuses,
-        overtime_amount,
-        total_gross_income,
-        total_deductions,
-        net_salary,
-        status,
-        created_at,
-        updated_at,
+        *,
         employees (
           rut,
           first_name,
@@ -84,25 +70,25 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Formatear datos para respuesta
+    // Formatear datos para respuesta - manejar campos opcionales
     const formattedLiquidations = liquidations?.map(liquidation => ({
       id: liquidation.id,
       employee_id: liquidation.employee_id,
-      employee_name: `${liquidation.employees?.first_name} ${liquidation.employees?.last_name}`,
-      employee_rut: liquidation.employees?.rut,
+      employee_name: `${liquidation.employees?.first_name || ''} ${liquidation.employees?.last_name || ''}`.trim(),
+      employee_rut: liquidation.employees?.rut || '',
       period_year: liquidation.period_year,
       period_month: liquidation.period_month,
-      days_worked: liquidation.days_worked,
-      base_salary: liquidation.base_salary,
-      legal_gratification_art50: liquidation.legal_gratification_art50,
-      bonuses: liquidation.bonuses,
-      overtime_amount: liquidation.overtime_amount,
-      total_gross_income: liquidation.total_gross_income,
-      total_deductions: liquidation.total_deductions,
-      net_salary: liquidation.net_salary,
-      status: liquidation.status,
+      days_worked: liquidation.days_worked || 30,
+      base_salary: liquidation.base_salary || 0,
+      legal_gratification_art50: liquidation.legal_gratification_art50 || 0,
+      bonuses: liquidation.bonuses || 0,
+      overtime_amount: liquidation.overtime_amount || 0,
+      total_gross_income: liquidation.total_gross_income || 0,
+      total_deductions: liquidation.total_deductions || 0,
+      net_salary: liquidation.net_salary || 0,
+      status: liquidation.status || 'draft',
       created_at: liquidation.created_at,
-      updated_at: liquidation.updated_at
+      updated_at: liquidation.updated_at || liquidation.created_at
     })) || [];
 
     return NextResponse.json({

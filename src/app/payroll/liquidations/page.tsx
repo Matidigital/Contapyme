@@ -58,10 +58,16 @@ export default function LiquidationsPage() {
   const fetchLiquidations = async () => {
     try {
       setLoading(true);
+      setError(null);
       const response = await fetch(`/api/payroll/liquidations?company_id=${COMPANY_ID}`);
+      
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+      
       const data = await response.json();
 
-      if (response.ok && data.success) {
+      if (data.success) {
         // Deduplicar liquidaciones: mantener solo la más reciente por RUT
         const liquidationsMap = new Map<string, LiquidationSummary>();
         
@@ -79,7 +85,8 @@ export default function LiquidationsPage() {
         // Mantener solo la liquidación más reciente por RUT
         sortedLiquidations.forEach((liquidation: LiquidationSummary) => {
           const key = liquidation.employee_rut;
-          if (!liquidationsMap.has(key)) {
+          // Solo procesar si tiene RUT válido
+          if (key && !liquidationsMap.has(key)) {
             liquidationsMap.set(key, liquidation);
           }
         });
@@ -87,7 +94,9 @@ export default function LiquidationsPage() {
         const deduplicatedLiquidations = Array.from(liquidationsMap.values());
         
         // Extraer RUTs y períodos únicos para los filtros
-        const uniqueRuts = [...new Set(sortedLiquidations.map((l: LiquidationSummary) => l.employee_rut))];
+        const uniqueRuts = [...new Set(sortedLiquidations
+          .filter((l: LiquidationSummary) => l.employee_rut)
+          .map((l: LiquidationSummary) => l.employee_rut))];
         const uniquePeriods = [...new Set(sortedLiquidations.map((l: LiquidationSummary) => 
           `${l.period_year}-${l.period_month.toString().padStart(2, '0')}`
         ))].sort().reverse();
