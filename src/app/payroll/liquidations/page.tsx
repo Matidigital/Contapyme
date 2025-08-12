@@ -259,7 +259,7 @@ export default function LiquidationsPage() {
         body: JSON.stringify({
           liquidation_ids: periodLiquidations.map(liq => liq.id),
           status: 'approved',
-          approved_by: 'system'
+          approved_by: COMPANY_ID
         }),
       });
 
