@@ -274,7 +274,7 @@ export function LivePayrollPreview({
           <div className="bg-green-100 p-3 rounded-lg">
             <div className="flex justify-between items-center font-bold text-green-800">
               <span>Total Haberes</span>
-              <span className="text-lg">{formatCurrency(result.total_taxable_income)}</span>
+              <span className="text-lg">{formatCurrency(result.total_gross_income)}</span>
             </div>
           </div>
         </CardContent>
