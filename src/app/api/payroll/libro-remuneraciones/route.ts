@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
     const { company_id, period, company_name, company_rut } = body;
     const [year, month] = period.split('-');
     
-    // ✅ Verificar si ya existe un libro para este período en la BD real
+    // ✅ Verificar si ya existe un libro para este período y eliminarlo si existe
     const { data: existingBook, error: existingError } = await supabase
       .from('payroll_books')
       .select('id')
@@ -220,10 +220,21 @@ export async function POST(request: NextRequest) {
       .single();
     
     if (existingBook && !existingError) {
-      return NextResponse.json(
-        { error: 'Ya existe un libro de remuneraciones para este período' },
-        { status: 409 }
-      );
+      console.log('📋 Libro existente encontrado, eliminando para reemplazar:', existingBook.id);
+      
+      // Eliminar detalles del libro existente primero
+      await supabase
+        .from('payroll_book_details')
+        .delete()
+        .eq('payroll_book_id', existingBook.id);
+      
+      // Eliminar el libro existente
+      await supabase
+        .from('payroll_books')
+        .delete()
+        .eq('id', existingBook.id);
+        
+      console.log('✅ Libro existente eliminado, procediendo a crear nuevo');
     }
 
     // ✅ OBTENER LIQUIDACIONES REALES DEL PERÍODO
@@ -371,6 +382,11 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ Libro de remuneraciones REAL generado: ${newBook.id} con ${totalEmployees} empleados`);
     
+    const wasReplaced = existingBook && !existingError;
+    const message = wasReplaced 
+      ? `Libro de remuneraciones reemplazado exitosamente con ${totalEmployees} empleados`
+      : `Libro de remuneraciones generado exitosamente con ${totalEmployees} empleados`;
+    
     return NextResponse.json({
       success: true,
       data: {
@@ -384,7 +400,8 @@ export async function POST(request: NextRequest) {
           area: detail.area
         }))
       },
-      message: `Libro de remuneraciones generado exitosamente con ${totalEmployees} empleados`
+      message,
+      replaced: wasReplaced
     }, { status: 201 });
     
   } catch (error) {
