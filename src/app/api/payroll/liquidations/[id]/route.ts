@@ -70,55 +70,62 @@ export async function GET(
     }
 
     console.log('✅ Liquidation detail found:', liquidation.id);
+    console.log('🔍 Raw liquidation data:', {
+      legal_gratification_art50: liquidation.legal_gratification_art50,
+      total_gross_income: liquidation.total_gross_income,
+      base_salary: liquidation.base_salary,
+      employee: liquidation.employees
+    });
 
-    // Formatear datos para respuesta
+    // Formatear datos para respuesta con valores por defecto
     const formattedLiquidation = {
       id: liquidation.id,
       employee: {
-        rut: liquidation.employees?.rut,
-        first_name: liquidation.employees?.first_name,
-        last_name: liquidation.employees?.last_name
+        rut: liquidation.employees?.rut || '',
+        first_name: liquidation.employees?.first_name || '',
+        last_name: liquidation.employees?.last_name || ''
       },
       period_year: liquidation.period_year,
       period_month: liquidation.period_month,
-      days_worked: liquidation.days_worked,
+      days_worked: liquidation.days_worked || 30,
       
       // Haberes
-      base_salary: liquidation.base_salary,
-      overtime_amount: liquidation.overtime_amount,
-      bonuses: liquidation.bonuses,
-      commissions: liquidation.commissions,
-      gratification: liquidation.gratification,
-      food_allowance: liquidation.food_allowance,
-      transport_allowance: liquidation.transport_allowance,
-      family_allowance: liquidation.family_allowance,
-      total_taxable_income: liquidation.total_taxable_income,
-      total_non_taxable_income: liquidation.total_non_taxable_income,
+      base_salary: liquidation.base_salary || 0,
+      overtime_amount: liquidation.overtime_amount || 0,
+      bonuses: liquidation.bonuses || 0,
+      commissions: liquidation.commissions || 0,
+      gratification: liquidation.gratification || 0,
+      legal_gratification_art50: liquidation.legal_gratification_art50 || 0,
+      food_allowance: liquidation.food_allowance || 0,
+      transport_allowance: liquidation.transport_allowance || 0,
+      family_allowance: liquidation.family_allowance || 0,
+      total_taxable_income: liquidation.total_taxable_income || 0,
+      total_non_taxable_income: liquidation.total_non_taxable_income || 0,
       
       // Descuentos
-      afp_percentage: liquidation.afp_percentage,
-      afp_commission_percentage: liquidation.afp_commission_percentage,
-      afp_amount: liquidation.afp_amount,
-      afp_commission_amount: liquidation.afp_commission_amount,
-      health_percentage: liquidation.health_percentage,
-      health_amount: liquidation.health_amount,
-      unemployment_percentage: liquidation.unemployment_percentage,
-      unemployment_amount: liquidation.unemployment_amount,
-      income_tax_amount: liquidation.income_tax_amount,
+      afp_percentage: liquidation.afp_percentage || 10.0,
+      afp_commission_percentage: liquidation.afp_commission_percentage || 0.58,
+      afp_amount: liquidation.afp_amount || 0,
+      afp_commission_amount: liquidation.afp_commission_amount || 0,
+      health_percentage: liquidation.health_percentage || 7.0,
+      health_amount: liquidation.health_amount || 0,
+      unemployment_percentage: liquidation.unemployment_percentage || 0.6,
+      unemployment_amount: liquidation.unemployment_amount || 0,
+      income_tax_amount: liquidation.income_tax_amount || 0,
       
       // Otros descuentos
-      loan_deductions: liquidation.loan_deductions,
-      advance_payments: liquidation.advance_payments,
-      apv_amount: liquidation.apv_amount,
-      other_deductions: liquidation.other_deductions,
-      total_other_deductions: liquidation.total_other_deductions,
+      loan_deductions: liquidation.loan_deductions || 0,
+      advance_payments: liquidation.advance_payments || 0,
+      apv_amount: liquidation.apv_amount || 0,
+      other_deductions: liquidation.other_deductions || 0,
+      total_other_deductions: liquidation.total_other_deductions || 0,
       
       // Totales
-      total_gross_income: liquidation.total_gross_income,
-      total_deductions: liquidation.total_deductions,
-      net_salary: liquidation.net_salary,
+      total_gross_income: liquidation.total_gross_income || 0,
+      total_deductions: liquidation.total_deductions || 0,
+      net_salary: liquidation.net_salary || 0,
       
-      status: liquidation.status,
+      status: liquidation.status || 'draft',
       created_at: liquidation.created_at,
       updated_at: liquidation.updated_at
     };
