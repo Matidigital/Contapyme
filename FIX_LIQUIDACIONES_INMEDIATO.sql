@@ -170,17 +170,20 @@ BEGIN
             afp_code,
             health_institution_code,
             family_allowances,
+            legal_gratification_type,
             created_at
         ) VALUES (
             'e1111111-1111-1111-1111-111111111111'::UUID,
             'HABITAT',
             'FONASA',
             2,
+            'article_50', -- Habilitar gratificación legal
             '2024-01-15T10:00:00Z'::TIMESTAMPTZ
         ) ON CONFLICT (employee_id) DO UPDATE SET
             afp_code = 'HABITAT',
             health_institution_code = 'FONASA',
-            family_allowances = 2;
+            family_allowances = 2,
+            legal_gratification_type = 'article_50';
             
         -- María Elena
         INSERT INTO payroll_config (
@@ -188,17 +191,20 @@ BEGIN
             afp_code,
             health_institution_code,
             family_allowances,
+            legal_gratification_type,
             created_at
         ) VALUES (
             'e2222222-2222-2222-2222-222222222222'::UUID,
             'PROVIDA',
             'FONASA',
             0,
+            'article_50', -- Habilitar gratificación legal
             '2024-02-01T10:00:00Z'::TIMESTAMPTZ
         ) ON CONFLICT (employee_id) DO UPDATE SET
             afp_code = 'PROVIDA',
             health_institution_code = 'FONASA',
-            family_allowances = 0;
+            family_allowances = 0,
+            legal_gratification_type = 'article_50';
     END IF;
 END $$;
 

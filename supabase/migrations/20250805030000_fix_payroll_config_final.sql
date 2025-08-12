@@ -17,6 +17,9 @@ CREATE TABLE payroll_config (
     
     -- Cargas familiares
     family_allowances INTEGER DEFAULT 0,
+
+    -- Gratificación Legal
+    legal_gratification_type VARCHAR(20) DEFAULT 'none' NOT NULL,
     
     -- Campos para expansión futura
     apv_amount INTEGER DEFAULT 0,
@@ -30,6 +33,7 @@ CREATE TABLE payroll_config (
     UNIQUE(employee_id),
     CHECK (afp_code IN ('CAPITAL', 'CUPRUM', 'HABITAT', 'PLANVITAL', 'PROVIDA', 'MODELO', 'UNO')),
     CHECK (health_institution_code IN ('FONASA', 'BANMEDICA', 'CONSALUD', 'CRUZ_BLANCA', 'VIDA_TRES', 'COLMENA', 'MAS_VIDA')),
+    CHECK (legal_gratification_type IN ('article_50', 'none')),
     CHECK (family_allowances >= 0 AND family_allowances <= 10)
 );
 
