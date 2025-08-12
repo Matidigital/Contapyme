@@ -227,7 +227,7 @@ export function LivePayrollPreview({
                     <span>Incluye Gratificación Art. 50: {formatCurrency(result.legal_gratification_art50)}</span>
                   </div>
                   <div className="text-xs text-purple-600">
-                    ✓ Ya incluida en subtotal imponible (25% sueldo base)
+                    ✓ Ya incluida en subtotal imponible (25% base imponible)
                   </div>
                 </div>
               )}
@@ -239,7 +239,7 @@ export function LivePayrollPreview({
           </div>
 
           {/* Haberes no imponibles */}
-          {(result.family_allowance > 0 || result.food_allowance > 0 || result.transport_allowance > 0) && (
+          {(result.family_allowance > 0 || result.food_allowance > 0 || result.transport_allowance > 0 || result.cash_allowance > 0) && (
             <div className="bg-blue-50 p-3 rounded-lg">
               <h4 className="font-medium text-blue-800 mb-2 text-sm">No Imponibles</h4>
               <div className="space-y-2">
@@ -261,6 +261,12 @@ export function LivePayrollPreview({
                     <span className="font-medium">{formatCurrency(result.transport_allowance)}</span>
                   </div>
                 )}
+                {result.cash_allowance > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Asignación de Caja</span>
+                    <span className="font-medium">{formatCurrency(result.cash_allowance)}</span>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -268,7 +274,7 @@ export function LivePayrollPreview({
           <div className="bg-green-100 p-3 rounded-lg">
             <div className="flex justify-between items-center font-bold text-green-800">
               <span>Total Haberes</span>
-              <span className="text-lg">{formatCurrency(result.total_gross_income)}</span>
+              <span className="text-lg">{formatCurrency(result.total_taxable_income)}</span>
             </div>
           </div>
         </CardContent>

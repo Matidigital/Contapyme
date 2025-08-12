@@ -131,45 +131,8 @@ export default function GenerateLiquidationPage() {
   // Hook de cálculo en tiempo real con configuración dinámica
   const { result: hookResult, isCalculating, errors, warnings, isValid, configurationStatus } = useLivePayrollCalculation(calculationData);
   
-  // Resultado corregido que incluye la gratificación Art. 50 calculada manualmente
-  const result = useMemo(() => {
-    console.log('🔍 RECALCULANDO RESULTADO:');
-    console.log('  - hookResult existe:', !!hookResult);
-    console.log('  - selectedEmployee existe:', !!selectedEmployee);
-    console.log('  - apply_legal_gratification:', formData.apply_legal_gratification);
-    
-    if (!hookResult || !selectedEmployee) return hookResult;
-    
-    // Calcular gratificación si está habilitada (corregido: tope mensual)
-    const gratificationAmount = formData.apply_legal_gratification 
-      ? Math.min(selectedEmployee.base_salary * 0.25, (529000 * 4.75) / 12) 
-      : 0;
-    
-    console.log('  - Sueldo base:', selectedEmployee.base_salary);
-    console.log('  - Gratificación calculada:', gratificationAmount);
-    
-    // Corregir totales si hay gratificación
-    if (gratificationAmount > 0) {
-      const correctedGrossIncome = hookResult.total_gross_income + gratificationAmount;
-      const correctedNetSalary = correctedGrossIncome - hookResult.total_deductions;
-      
-      console.log('🔍 Resultado corregido con gratificación:');
-      console.log('  - Gratificación Art. 50:', gratificationAmount);
-      console.log('  - Total haberes original:', hookResult.total_gross_income);
-      console.log('  - Total haberes corregido:', correctedGrossIncome);
-      console.log('  - Salario líquido corregido:', correctedNetSalary);
-      
-      return {
-        ...hookResult,
-        legal_gratification_art50: gratificationAmount,
-        total_gross_income: correctedGrossIncome,
-        net_salary: correctedNetSalary
-      };
-    }
-    
-    console.log('  - Sin gratificación, devolviendo resultado original');
-    return hookResult;
-  }, [hookResult, selectedEmployee, formData.apply_legal_gratification]);
+  // Usar resultado directo de la calculadora (ya maneja gratificación correctamente)
+  const result = hookResult;
 
   useEffect(() => {
     fetchEmployees();
