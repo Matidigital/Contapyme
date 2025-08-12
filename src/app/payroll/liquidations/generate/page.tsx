@@ -211,6 +211,9 @@ export default function GenerateLiquidationPage() {
         // Gratificación legal Art. 50
         legal_gratification_art50: result.legal_gratification_art50 || 0,
         
+        // Debug: Verificar que el checkbox esté enviándose
+        _debug_checkbox_state: formData.apply_legal_gratification,
+        
         // Descuentos previsionales (campos separados como espera la DB)
         afp_percentage: result.afp_percentage || 10.0,
         afp_commission_percentage: result.afp_commission_percentage || 0.58,
