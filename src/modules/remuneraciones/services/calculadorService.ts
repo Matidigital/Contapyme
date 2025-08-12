@@ -205,9 +205,11 @@ export class PayrollCalculator {
     const otherDeductions = this.calculateOtherDeductions(additionalDeductions);
 
     // 10. Calcular gratificación Art. 50 individual para el resultado
+    console.log('🔍 Tipo de gratificación del empleado:', employee.legal_gratification_type);
     const article50Gratification = (employee.legal_gratification_type === 'article_50') 
       ? await this.calculateArticle50Gratification(employee.base_salary)
       : 0;
+    console.log('🔍 Gratificación Art. 50 calculada para el resultado:', article50Gratification);
 
     // 11. Calcular totales
     const totalGrossIncome = taxableIncome + nonTaxableIncome;
@@ -297,9 +299,14 @@ export class PayrollCalculator {
            (additional.gratification || 0);
 
     // Agregar gratificación legal Art. 50 si aplica
+    console.log('🔍 Verificando gratificación Art. 50 en haberes imponibles...');
     if (employee && employee.legal_gratification_type === 'article_50') {
+      console.log('🔍 Empleado tiene gratificación Art. 50, calculando...');
       const article50Gratification = await this.calculateArticle50Gratification(employee.base_salary);
+      console.log('🔍 Gratificación a agregar a haberes imponibles:', article50Gratification);
       totalIncome += article50Gratification;
+    } else {
+      console.log('🔍 Empleado NO tiene gratificación Art. 50');
     }
 
     return totalIncome;
@@ -321,23 +328,24 @@ export class PayrollCalculator {
 
   /**
    * Calcula gratificación legal Art. 50
-   * 25% del sueldo base con tope de 4.75 ingresos mínimos mensuales dividido por 12 meses
-   * ✅ ACTUALIZADO: Usa sueldo mínimo desde indicadores económicos
+   * 25% del sueldo base con tope de 4.75 ingresos mínimos mensuales (≈ $2.512.750)
+   * ✅ SIMPLIFICADO: Usa valor fijo para mayor confiabilidad
    */
   private async calculateArticle50Gratification(baseSalary: number): Promise<number> {
-    const gratificationBase = baseSalary * 0.25; // 25% del sueldo base
+    console.log('🔍 Calculando gratificación Art. 50 para sueldo base:', baseSalary);
     
-    // Obtener tope actualizado desde indicadores económicos
-    const gratificationCap = await calculateGratificationCap();
+    const gratificationBase = baseSalary * 0.25; // 25% del sueldo base
+    const gratificationCap = 529000 * 4.75; // Tope: 4.75 × sueldo mínimo 2025
     
     const finalGratification = Math.min(gratificationBase, gratificationCap);
     
-    // Obtener sueldo mínimo actual para mostrar en warnings
-    const currentMinimumWage = await getCurrentMinimumWage();
+    console.log('🔍 Gratificación base (25%):', gratificationBase);
+    console.log('🔍 Tope legal:', gratificationCap);
+    console.log('🔍 Gratificación final:', finalGratification);
     
     // Agregar información a warnings para transparencia
     if (gratificationBase > gratificationCap) {
-      this.warnings.push(`ℹ️ Gratificación Art. 50 limitada: ${PayrollCalculator.formatCurrency(gratificationCap)} (4.75 × ${PayrollCalculator.formatCurrency(currentMinimumWage)} ÷ 12)`);
+      this.warnings.push(`ℹ️ Gratificación Art. 50 limitada: ${PayrollCalculator.formatCurrency(gratificationCap)} (4.75 × $529.000)`);
     } else {
       this.warnings.push(`ℹ️ Gratificación Art. 50: 25% del sueldo base = ${PayrollCalculator.formatCurrency(finalGratification)}`);
     }

@@ -127,7 +127,38 @@ export default function GenerateLiquidationPage() {
   }), [selectedEmployee, formData]);
 
   // Hook de cálculo en tiempo real con configuración dinámica
-  const { result, isCalculating, errors, warnings, isValid, configurationStatus } = useLivePayrollCalculation(calculationData);
+  const { result: hookResult, isCalculating, errors, warnings, isValid, configurationStatus } = useLivePayrollCalculation(calculationData);
+  
+  // Resultado corregido que incluye la gratificación Art. 50 calculada manualmente
+  const result = useMemo(() => {
+    if (!hookResult || !selectedEmployee) return hookResult;
+    
+    // Calcular gratificación si está habilitada
+    const gratificationAmount = formData.apply_legal_gratification 
+      ? Math.min(selectedEmployee.base_salary * 0.25, 529000 * 4.75) 
+      : 0;
+    
+    // Corregir totales si hay gratificación
+    if (gratificationAmount > 0) {
+      const correctedGrossIncome = hookResult.total_gross_income + gratificationAmount;
+      const correctedNetSalary = correctedGrossIncome - hookResult.total_deductions;
+      
+      console.log('🔍 Resultado corregido con gratificación:');
+      console.log('  - Gratificación Art. 50:', gratificationAmount);
+      console.log('  - Total haberes original:', hookResult.total_gross_income);
+      console.log('  - Total haberes corregido:', correctedGrossIncome);
+      console.log('  - Salario líquido corregido:', correctedNetSalary);
+      
+      return {
+        ...hookResult,
+        legal_gratification_art50: gratificationAmount,
+        total_gross_income: correctedGrossIncome,
+        net_salary: correctedNetSalary
+      };
+    }
+    
+    return hookResult;
+  }, [hookResult, selectedEmployee, formData.apply_legal_gratification]);
 
   useEffect(() => {
     fetchEmployees();
@@ -208,14 +239,8 @@ export default function GenerateLiquidationPage() {
         other_allowances: 0,
         total_non_taxable_income: result.total_non_taxable_income || 0,
         
-        // Gratificación legal Art. 50 - CÁLCULO DIRECTO
-        legal_gratification_art50: (() => {
-          const gratification = formData.apply_legal_gratification && selectedEmployee 
-            ? Math.min(selectedEmployee.base_salary * 0.25, 529000 * 4.75) 
-            : 0;
-          console.log('🔍 Gratificación calculada directamente:', gratification);
-          return gratification;
-        })(),
+        // Gratificación legal Art. 50 - USAR RESULTADO CORREGIDO
+        legal_gratification_art50: result.legal_gratification_art50 || 0,
         
         // Descuentos previsionales (campos separados como espera la DB)
         afp_percentage: result.afp_percentage || 10.0,
@@ -240,27 +265,10 @@ export default function GenerateLiquidationPage() {
         other_deductions: formData.other_deductions || 0,
         total_other_deductions: result.total_other_deductions || 0,
         
-        // Totales calculados - CORREGIR PARA INCLUIR GRATIFICACIÓN ART. 50
-        total_gross_income: (() => {
-          const gratificationAmount = formData.apply_legal_gratification && selectedEmployee 
-            ? Math.min(selectedEmployee.base_salary * 0.25, 529000 * 4.75) 
-            : 0;
-          const correctedTotal = (result.total_gross_income || 0) + gratificationAmount;
-          console.log('🔍 Total haberes original:', result.total_gross_income);
-          console.log('🔍 Gratificación agregada:', gratificationAmount);
-          console.log('🔍 Total haberes corregido:', correctedTotal);
-          return correctedTotal;
-        })(),
+        // Totales calculados - USAR RESULTADO CORREGIDO
+        total_gross_income: result.total_gross_income || 0,
         total_deductions: result.total_deductions || 0,
-        net_salary: (() => {
-          const gratificationAmount = formData.apply_legal_gratification && selectedEmployee 
-            ? Math.min(selectedEmployee.base_salary * 0.25, 529000 * 4.75) 
-            : 0;
-          const correctedGross = (result.total_gross_income || 0) + gratificationAmount;
-          const correctedNet = correctedGross - (result.total_deductions || 0);
-          console.log('🔍 Salario líquido corregido:', correctedNet);
-          return correctedNet;
-        })(),
+        net_salary: result.net_salary || 0,
         
         // Configuración usada (snapshot)
         calculation_config: result.calculation_config || {}
