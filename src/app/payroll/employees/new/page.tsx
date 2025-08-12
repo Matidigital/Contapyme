@@ -6,8 +6,8 @@ import Link from 'next/link';
 import { Header } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { ArrowLeft, Save, User, Phone, Mail, Home, Calendar, AlertCircle, Calculator, Settings, DollarSign } from 'lucide-react';
-import RutInputFixed from '@/components/payroll/RutInputFixed';
-import { usePayrollOptions } from '@/hooks/usePayrollOptions';
+import RutInputFixed from '@/modules/remuneraciones/components/empleados/RutInputFixed';
+import { usePayrollOptions } from '@/modules/remuneraciones/hooks/useConfiguracion';
 import { useCompanyId } from '@/contexts/CompanyContext';
 
 interface EmployeeFormData {

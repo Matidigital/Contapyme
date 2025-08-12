@@ -4,8 +4,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { PayrollHeader } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
-import { LivePayrollPreview } from '@/components/payroll/LivePayrollPreview';
-import { useLivePayrollCalculation } from '@/hooks/useLivePayrollCalculation';
+import { LivePayrollPreview } from '@/modules/remuneraciones/components/liquidaciones/LivePayrollPreview';
+import { useLivePayrollCalculation } from '@/modules/remuneraciones/hooks/useCalculadora';
 import { 
   Calculator, 
   Users, 

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { PayrollCalculator, type EmployeeData, type PayrollPeriod, type AdditionalIncome, type AdditionalDeductions, type LiquidationResult } from '@/lib/services/payrollCalculator';
-import { CHILEAN_PAYROLL_CONFIG } from '@/lib/services/chileanPayrollConfig';
+import { PayrollCalculator, type EmployeeData, type PayrollPeriod, type AdditionalIncome, type AdditionalDeductions, type LiquidationResult } from '../services/calculadorService';
+import { CHILEAN_PAYROLL_CONFIG } from '../constants/parametrosLegales';
 import { usePayrollCalculatorSettings } from './usePayrollCalculatorSettings';
 import { useCompanyId } from '@/contexts/CompanyContext';
 
