@@ -28,11 +28,11 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Valores exactos proporcionados por el usuario
+    // Valores exactos proporcionados por el usuario (corregidos)
     const afpCombinadoPorcentaje = 11.27; // 10% AFP + 1.27% Comisión
-    const afpMonto = 104107; // Valor exacto proporcionado
-    const saludMonto = 64663; // Valor exacto proporcionado  
-    const cesantiaMonto = 5543; // Valor exacto proporcionado
+    const afpMonto = 75932; // Valor exacto proporcionado corregido
+    const saludMonto = 47163; // Valor exacto proporcionado corregido
+    const cesantiaMonto = 4043; // Valor exacto proporcionado corregido
     
     // Separar AFP y comisión para la base de datos
     const afpPorcentaje = 10.0;
@@ -91,7 +91,8 @@ export async function POST(request: NextRequest) {
           afp_total: `$${afpMonto.toLocaleString('es-CL')} (11.27%)`,
           salud: `$${saludMonto.toLocaleString('es-CL')} (7%)`, 
           cesantia: `$${cesantiaMonto.toLocaleString('es-CL')} (0.6%)`,
-          total: `$${totalDescuentos.toLocaleString('es-CL')}`
+          total: `$${totalDescuentos.toLocaleString('es-CL')}`,
+          nota: "PDF calculará dinámicamente sumando todos los descuentos existentes"
         }
       }
     });

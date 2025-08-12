@@ -43,6 +43,25 @@ function generateLiquidationHTML(liquidation: any, employee: any, company: any) 
       .trim();
   };
 
+  // ✅ FUNCIÓN PARA CALCULAR TOTAL DESCUENTOS DINÁMICAMENTE
+  const calculateTotalDeductions = (liq: any) => {
+    return (liq.afp_amount || 0) + 
+           (liq.afp_commission_amount || 0) +
+           (liq.health_amount || 0) + 
+           (liq.additional_health_amount || 0) +
+           (liq.unemployment_amount || 0) + 
+           (liq.income_tax_amount || 0) +
+           (liq.loan_deductions || 0) +
+           (liq.advance_payments || 0) +
+           (liq.apv_amount || 0) +
+           (liq.other_deductions || 0);
+  };
+
+  // ✅ CALCULAR LÍQUIDO A PAGAR DINÁMICAMENTE
+  const calculateNetSalary = (liq: any) => {
+    return liq.total_gross_income - calculateTotalDeductions(liq);
+  };
+
   return `
 <!DOCTYPE html>
 <html lang="es">
@@ -299,7 +318,7 @@ function generateLiquidationHTML(liquidation: any, employee: any, company: any) 
                 </tr>` : ''}
                 <tr class="total-row">
                     <td>TOTAL DESCUENTOS</td>
-                    <td class="amount">${formatCurrency(liquidation.total_deductions)}</td>
+                    <td class="amount">${formatCurrency(calculateTotalDeductions(liquidation))}</td>
                 </tr>
             </table>
         </div>
@@ -309,7 +328,7 @@ function generateLiquidationHTML(liquidation: any, employee: any, company: any) 
             <table>
                 <tr class="net-salary">
                     <td style="width: 70%; padding: 10px;">LÍQUIDO A PAGAR</td>
-                    <td class="amount" style="padding: 10px; font-size: 16px;">${formatCurrency(liquidation.net_salary)}</td>
+                    <td class="amount" style="padding: 10px; font-size: 16px;">${formatCurrency(calculateNetSalary(liquidation))}</td>
                 </tr>
             </table>
         </div>
