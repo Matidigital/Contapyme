@@ -156,6 +156,7 @@ export class PayrollCalculator {
     additionalDeductions: AdditionalDeductions = {}
   ): Promise<LiquidationResult> {
     this.warnings = [];
+    console.log('🔍 calculateLiquidation - employee.legal_gratification_type:', employee.legal_gratification_type);
 
     // 1. Calcular sueldo base proporcional
     const proportionalBaseSalary = this.calculateProportionalSalary(
@@ -235,6 +236,8 @@ export class PayrollCalculator {
     // 12. Validar límite de descuentos (45% máximo)
     this.validateDeductionLimit(totalGrossIncome, totalDeductions);
 
+    console.log('🔍 calculateLiquidation - Final taxableIncome:', taxableIncome);
+
     return {
       employee,
       period,
@@ -309,6 +312,9 @@ export class PayrollCalculator {
     additional: AdditionalIncome,
     employee?: EmployeeData
   ): Promise<number> {
+    console.log('🔍 calculateTaxableIncome - baseSalary:', baseSalary);
+    console.log('🔍 calculateTaxableIncome - additionalIncome (bonuses, commissions, gratification, overtime_amount):', additional.bonuses, additional.commissions, additional.gratification, additional.overtime_amount);
+    console.log('🔍 calculateTaxableIncome - employee.legal_gratification_type:', employee?.legal_gratification_type);
     // PASO 1: Calcular base imponible (sueldo base + bonos + comisiones + horas extras)
     const baseImponible = baseSalary + 
            (additional.overtime_amount || 0) + 
@@ -326,6 +332,7 @@ export class PayrollCalculator {
       gratificationAmount = await this.calculateArticle50GratificationFromBase(baseImponible);
       console.log('🔍 Gratificación Art. 50 calculada:', gratificationAmount);
     }
+    console.log('🔍 calculateTaxableIncome - gratificationAmount (before adding to totalImponible):', gratificationAmount);
 
     // PASO 3: Total imponible = Base imponible + Gratificación
     const totalImponible = baseImponible + gratificationAmount;
