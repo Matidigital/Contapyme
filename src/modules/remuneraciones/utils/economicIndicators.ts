@@ -28,6 +28,12 @@ export async function getEconomicIndicators(): Promise<EconomicIndicators> {
       return getDefaultIndicators();
     }
 
+    // Verificar que data sea un array antes de usar .find()
+    if (!Array.isArray(data)) {
+      console.warn('Los datos de indicadores no son un array, usando valores por defecto');
+      return getDefaultIndicators();
+    }
+
     // Extraer valores de los indicadores organizados por categoría
     const indicators: EconomicIndicators = {
       minimum_wage: 529000, // Valor por defecto si no se encuentra
@@ -41,10 +47,10 @@ export async function getEconomicIndicators(): Promise<EconomicIndicators> {
     };
 
     // Buscar sueldo mínimo en la categoría laboral
-    const laborCategory = data.find(cat => cat.category === 'laboral');
-    if (laborCategory) {
+    const laborCategory = data.find(cat => cat && cat.category === 'laboral');
+    if (laborCategory && laborCategory.indicators && Array.isArray(laborCategory.indicators)) {
       const minimumWageIndicator = laborCategory.indicators.find(
-        ind => ind.code === 'SUELDO_MINIMO' || ind.code === 'minimum_wage'
+        ind => ind && (ind.code === 'SUELDO_MINIMO' || ind.code === 'minimum_wage')
       );
       if (minimumWageIndicator) {
         indicators.minimum_wage = minimumWageIndicator.current_value;
@@ -53,22 +59,22 @@ export async function getEconomicIndicators(): Promise<EconomicIndicators> {
     }
 
     // Buscar otros indicadores útiles para remuneraciones
-    const monetaryCategory = data.find(cat => cat.category === 'monetarios');
-    if (monetaryCategory) {
-      const ufIndicator = monetaryCategory.indicators.find(ind => ind.code === 'UF');
+    const monetaryCategory = data.find(cat => cat && cat.category === 'monetarios');
+    if (monetaryCategory && monetaryCategory.indicators && Array.isArray(monetaryCategory.indicators)) {
+      const ufIndicator = monetaryCategory.indicators.find(ind => ind && ind.code === 'UF');
       if (ufIndicator) {
         indicators.uf = ufIndicator.current_value;
       }
       
-      const utmIndicator = monetaryCategory.indicators.find(ind => ind.code === 'UTM');
+      const utmIndicator = monetaryCategory.indicators.find(ind => ind && ind.code === 'UTM');
       if (utmIndicator) {
         indicators.utm = utmIndicator.current_value;
       }
     }
 
-    const currencyCategory = data.find(cat => cat.category === 'divisas');
-    if (currencyCategory) {
-      const usdIndicator = currencyCategory.indicators.find(ind => ind.code === 'USD');
+    const currencyCategory = data.find(cat => cat && cat.category === 'divisas');
+    if (currencyCategory && currencyCategory.indicators && Array.isArray(currencyCategory.indicators)) {
+      const usdIndicator = currencyCategory.indicators.find(ind => ind && ind.code === 'USD');
       if (usdIndicator) {
         indicators.usd = usdIndicator.current_value;
       }
@@ -104,7 +110,13 @@ function getDefaultIndicators(): EconomicIndicators {
 export async function getCurrentMinimumWage(): Promise<number> {
   try {
     const indicators = await getEconomicIndicators();
-    return indicators.minimum_wage;
+    // Validar que el sueldo mínimo sea un número válido
+    if (typeof indicators.minimum_wage === 'number' && indicators.minimum_wage > 0) {
+      return indicators.minimum_wage;
+    } else {
+      console.warn('Sueldo mínimo no válido, usando valor por defecto');
+      return 529000; // Valor por defecto Chile 2025
+    }
   } catch (error) {
     console.error('Error obteniendo sueldo mínimo, usando valor por defecto:', error);
     return 529000; // Valor por defecto Chile 2025
