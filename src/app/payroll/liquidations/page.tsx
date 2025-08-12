@@ -266,19 +266,33 @@ export default function LiquidationsPage() {
       console.log('✅ Validation response:', result);
 
       if (response.ok && result.success) {
-        const successMessage = `✅ ${result.message || `${periodLiquidations.length} liquidaciones validadas exitosamente`}`;
+        // Calcular estadísticas para mensaje informativo
+        const totalEmployees = [...new Set(liquidations.map(liq => liq.employee_id))].length;
+        const employeesWithLiquidation = periodLiquidations.length;
+        const missingLiquidations = Math.max(0, totalEmployees - employeesWithLiquidation);
+        const percentage = Math.round((employeesWithLiquidation/totalEmployees)*100);
+        
+        const successMessage = `✅ ${periodLiquidations.length} liquidaciones validadas • 📊 ${employeesWithLiquidation} de ${totalEmployees} empleados (${percentage}%)${missingLiquidations > 0 ? ` • ⚠️ Faltan ${missingLiquidations} liquidaciones` : ''}`;
         setValidationMessage(successMessage);
         fetchLiquidations(); // Refrescar lista
         
         // 🎯 PREGUNTA AUTOMÁTICA PARA GENERAR LIBRO
         setTimeout(() => {
+          // Obtener total de empleados para mostrar información completa
+          const totalEmployees = [...new Set(liquidations.map(liq => liq.employee_id))].length;
+          const employeesWithLiquidation = periodLiquidations.length;
+          const missingLiquidations = Math.max(0, totalEmployees - employeesWithLiquidation);
+          
           const shouldGenerateBook = confirm(
             `🎉 Validación completada exitosamente!\n\n` +
             `✅ ${periodLiquidations.length} liquidación(es) validada(s)\n` +
+            `📊 ${employeesWithLiquidation} de ${totalEmployees} empleados con liquidación (${Math.round((employeesWithLiquidation/totalEmployees)*100)}%)\n` +
+            `${missingLiquidations > 0 ? `⚠️ Faltan ${missingLiquidations} liquidaciones para completar\n` : ''}` +
             `📅 Período: ${(() => {
               const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
               return `${monthNames[parseInt(month) - 1]} ${year}`;
             })()} \n\n` +
+            `✨ Puedes generar el libro aunque no estén todas las liquidaciones.\n` +
             `¿Deseas generar el Libro de Remuneraciones ahora?`
           );
           
