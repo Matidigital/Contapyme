@@ -11,8 +11,8 @@ import {
   calculateUnemploymentInsurance,
   calculateFamilyAllowance,
   calculateIncomeTax
-} from './chileanPayrollConfig';
-import { getCurrentMinimumWage, calculateGratificationCap } from './economicIndicators';
+} from '../constants/parametrosLegales';
+import { getCurrentMinimumWage, calculateGratificationCap } from '../utils/economicIndicators';
 
 // Re-exportar valores para compatibilidad
 export const CHILE_TAX_VALUES = CHILEAN_OFFICIAL_VALUES;

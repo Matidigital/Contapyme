@@ -1,8 +1,8 @@
 'use client';
 
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
-import { useChileanCurrency, useContractTypeInfo } from '@/hooks/useLivePayrollCalculation';
-import { LiquidationResult } from '@/lib/services/payrollCalculator';
+import { useChileanCurrency, useContractTypeInfo } from '../../hooks/useCalculadora';
+import { LiquidationResult } from '../../services/calculadorService';
 import { 
   Calculator, 
   TrendingUp, 

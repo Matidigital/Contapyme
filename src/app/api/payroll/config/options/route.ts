@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getAvailableAFPs, getAvailableHealthInstitutions } from '@/lib/services/chileanPayrollConfig';
+import { getAvailableAFPs, getAvailableHealthInstitutions } from '@/modules/remuneraciones/constants/parametrosLegales';
 import { createClient } from '@supabase/supabase-js';
 
 // Configuración Supabase
