@@ -165,11 +165,12 @@ export class PayrollCalculator {
     );
 
     // 2. Calcular haberes imponibles
-    const taxableIncome = await this.calculateTaxableIncome(
+    const { totalTaxableIncome, calculatedArticle50Gratification } = await this.calculateTaxableIncome(
       proportionalBaseSalary,
       additionalIncome,
       employee
     );
+    const taxableIncome = totalTaxableIncome; // Use this for further calculations
 
     // 3. Aplicar tope imponible
     const { adjustedTaxableIncome, topeExceeded } = this.applyIncomeLimit(taxableIncome);
@@ -248,7 +249,7 @@ export class PayrollCalculator {
       bonuses: additionalIncome.bonuses || 0,
       commissions: additionalIncome.commissions || 0,
       gratification: additionalIncome.gratification || 0,
-      legal_gratification_art50: actualArticle50Gratification,
+      legal_gratification_art50: calculatedArticle50Gratification,
       total_taxable_income: taxableIncome,
       
       // Haberes No Imponibles
@@ -310,8 +311,8 @@ export class PayrollCalculator {
   private async calculateTaxableIncome(
     baseSalary: number,
     additional: AdditionalIncome,
-    employee?: EmployeeData
-  ): Promise<number> {
+    employee: EmployeeData
+  ): Promise<{ totalTaxableIncome: number; calculatedArticle50Gratification: number }> {
     console.log('🔍 calculateTaxableIncome - baseSalary:', baseSalary);
     console.log('🔍 calculateTaxableIncome - additionalIncome (bonuses, commissions, gratification, overtime_amount):', additional.bonuses, additional.commissions, additional.gratification, additional.overtime_amount);
     console.log('🔍 calculateTaxableIncome - employee.legal_gratification_type:', employee?.legal_gratification_type);
@@ -320,25 +321,24 @@ export class PayrollCalculator {
            (additional.overtime_amount || 0) + 
            (additional.bonuses || 0) + 
            (additional.commissions || 0) + 
-           (additional.gratification || 0);
+           (employee.legal_gratification_type !== 'article_50' ? (additional.gratification || 0) : 0); // Only add if NOT Article 50 gratification
 
     console.log('🔍 Base imponible calculada:', baseImponible);
 
-    // PASO 2: Calcular gratificación sobre la base imponible
-    let gratificationAmount = 0;
-    if (employee && employee.legal_gratification_type === 'article_50') {
+    // PASO 2: Calcular gratificación legal Art. 50 si aplica
+    let legalGratificationArt50Amount = 0;
+    if (employee.legal_gratification_type === 'article_50') {
       console.log('🔍 Empleado tiene gratificación Art. 50, calculando sobre base imponible...');
-      // Calcular gratificación basada en la base imponible, no solo el sueldo base
-      gratificationAmount = await this.calculateArticle50GratificationFromBase(baseImponible);
-      console.log('🔍 Gratificación Art. 50 calculada:', gratificationAmount);
+      legalGratificationArt50Amount = await this.calculateArticle50GratificationFromBase(baseImponible);
+      console.log('🔍 Gratificación Art. 50 calculada:', legalGratificationArt50Amount);
     }
-    console.log('🔍 calculateTaxableIncome - gratificationAmount (before adding to totalImponible):', gratificationAmount);
+    console.log('🔍 calculateTaxableIncome - legalGratificationArt50Amount (before adding to totalImponible):', legalGratificationArt50Amount);
 
-    // PASO 3: Total imponible = Base imponible + Gratificación
-    const totalImponible = baseImponible + gratificationAmount;
+    // PASO 3: Total imponible = Base imponible + Gratificación Legal Art. 50
+    const totalImponible = baseImponible + legalGratificationArt50Amount;
     console.log('🔍 Total imponible final:', totalImponible);
 
-    return totalImponible;
+    return { totalTaxableIncome: totalImponible, calculatedArticle50Gratification: legalGratificationArt50Amount };
   }
 
   /**
