@@ -332,6 +332,8 @@ export async function PUT(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const companyId = searchParams.get('company_id');
 
+    console.log('✅ PUT liquidations - Company ID:', companyId);
+
     if (!companyId) {
       return NextResponse.json(
         { success: false, error: 'company_id es requerido' },
@@ -342,9 +344,12 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { liquidation_ids, status, approved_by } = body;
 
-    if (!liquidation_ids || !Array.isArray(liquidation_ids)) {
+    console.log('✅ PUT liquidations - IDs to update:', liquidation_ids);
+    console.log('✅ PUT liquidations - New status:', status);
+
+    if (!liquidation_ids || !Array.isArray(liquidation_ids) || liquidation_ids.length === 0) {
       return NextResponse.json(
-        { success: false, error: 'liquidation_ids debe ser un array' },
+        { success: false, error: 'liquidation_ids debe ser un array no vacío' },
         { status: 400 }
       );
     }
@@ -356,6 +361,42 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Validar que todos los IDs sean UUIDs válidos
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const invalidIds = liquidation_ids.filter(id => !uuidRegex.test(id));
+    
+    if (invalidIds.length > 0) {
+      console.error('Invalid UUIDs detected:', invalidIds);
+      return NextResponse.json(
+        { success: false, error: `IDs inválidos detectados: ${invalidIds.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    // Primero verificar que las liquidaciones existen y pertenecen a la empresa
+    const { data: existingLiquidations, error: checkError } = await supabase
+      .from('payroll_liquidations')
+      .select('id, employee_id, status')
+      .in('id', liquidation_ids)
+      .eq('company_id', companyId);
+
+    if (checkError) {
+      console.error('Error checking existing liquidations:', checkError);
+      return NextResponse.json(
+        { success: false, error: 'Error verificando liquidaciones existentes' },
+        { status: 500 }
+      );
+    }
+
+    console.log('🔍 Found liquidations to update:', existingLiquidations?.length || 0);
+
+    if (!existingLiquidations || existingLiquidations.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'No se encontraron liquidaciones válidas para validar' },
+        { status: 404 }
+      );
+    }
+
     // Actualizar estado de liquidaciones
     const updateData: any = {
       status: status,
@@ -363,7 +404,7 @@ export async function PUT(request: NextRequest) {
     };
 
     if (status === 'approved') {
-      updateData.approved_by = approved_by || companyId; // TODO: user ID real
+      updateData.approved_by = approved_by || companyId;
       updateData.approved_at = new Date().toISOString();
     } else if (status === 'paid') {
       updateData.paid_at = new Date().toISOString();
@@ -372,22 +413,24 @@ export async function PUT(request: NextRequest) {
     const { data: updated, error: updateError } = await supabase
       .from('payroll_liquidations')
       .update(updateData)
-      .in('id', liquidation_ids)
+      .in('id', existingLiquidations.map(liq => liq.id))
       .eq('company_id', companyId)
       .select();
 
     if (updateError) {
       console.error('Error updating liquidations:', updateError);
       return NextResponse.json(
-        { success: false, error: 'Error al actualizar liquidaciones' },
+        { success: false, error: `Error actualizando liquidaciones: ${updateError.message}` },
         { status: 500 }
       );
     }
 
+    console.log('✅ Successfully updated liquidations:', updated?.length || 0);
+
     return NextResponse.json({
       success: true,
       data: updated,
-      message: `${updated?.length || 0} liquidaciones actualizadas a ${status}`
+      message: `${updated?.length || 0} liquidación(es) validada(s) exitosamente`
     });
 
   } catch (error) {

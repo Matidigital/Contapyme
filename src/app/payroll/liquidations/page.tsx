@@ -232,6 +232,8 @@ export default function LiquidationsPage() {
     }
 
     setValidatingLiquidations(true);
+    console.log('✅ Starting validation for period:', filterPeriod);
+    
     try {
       const [year, month] = filterPeriod.split('-');
       
@@ -240,6 +242,8 @@ export default function LiquidationsPage() {
         liq.period_year === parseInt(year) && liq.period_month === parseInt(month)
       );
 
+      console.log('✅ Found liquidations to validate:', periodLiquidations.length);
+
       if (periodLiquidations.length === 0) {
         setValidationMessage('⚠️ No hay liquidaciones para validar en este período');
         setTimeout(() => setValidationMessage(null), 5000);
@@ -247,13 +251,12 @@ export default function LiquidationsPage() {
       }
 
       // Actualizar estado de liquidaciones a "approved"
-      const response = await fetch(`/api/payroll/liquidations`, {
+      const response = await fetch(`/api/payroll/liquidations?company_id=${COMPANY_ID}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          company_id: COMPANY_ID,
           liquidation_ids: periodLiquidations.map(liq => liq.id),
           status: 'approved',
           approved_by: 'system'
@@ -261,17 +264,41 @@ export default function LiquidationsPage() {
       });
 
       const result = await response.json();
+      console.log('✅ Validation response:', result);
 
-      if (result.success) {
-        setValidationMessage(`✅ ${periodLiquidations.length} liquidaciones validadas exitosamente`);
+      if (response.ok && result.success) {
+        const successMessage = `✅ ${result.message || `${periodLiquidations.length} liquidaciones validadas exitosamente`}`;
+        setValidationMessage(successMessage);
         fetchLiquidations(); // Refrescar lista
+        
+        // 🎯 PREGUNTA AUTOMÁTICA PARA GENERAR LIBRO
+        setTimeout(() => {
+          const shouldGenerateBook = confirm(
+            `🎉 Validación completada exitosamente!\n\n` +
+            `✅ ${periodLiquidations.length} liquidación(es) validada(s)\n` +
+            `📅 Período: ${(() => {
+              const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+              return `${monthNames[parseInt(month) - 1]} ${year}`;
+            })()} \n\n` +
+            `¿Deseas generar el Libro de Remuneraciones ahora?`
+          );
+          
+          if (shouldGenerateBook) {
+            // Redirigir al libro de remuneraciones con período seleccionado
+            window.location.href = `/payroll/libro-remuneraciones?period=${filterPeriod}&validated=true`;
+          }
+        }, 2000);
+        
         setTimeout(() => setValidationMessage(null), 8000);
       } else {
-        throw new Error(result.error || 'Error validando liquidaciones');
+        const errorMessage = result.error || `Error ${response.status}: ${response.statusText}`;
+        console.error('Validation failed:', errorMessage);
+        setValidationMessage(`❌ ${errorMessage}`);
+        setTimeout(() => setValidationMessage(null), 8000);
       }
     } catch (error) {
       console.error('Error validating liquidations:', error);
-      setValidationMessage('❌ Error al validar liquidaciones');
+      setValidationMessage('❌ Error de conexión al validar liquidaciones');
       setTimeout(() => setValidationMessage(null), 5000);
     } finally {
       setValidatingLiquidations(false);
