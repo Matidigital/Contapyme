@@ -277,23 +277,12 @@ export default function GenerateLiquidationPage() {
 
     setSaving(true);
     try {
-      // ✅ CÁLCULO DIRECTO DE GRATIFICACIÓN PARA GARANTIZAR CONEXIÓN
-      // Art. 50: 25% anual dividido en 12 cuotas mensuales, tope 4.75 sueldos mínimos anuales ÷ 12
-      const gratificationAmount = formData.apply_legal_gratification 
-        ? Math.min(selectedEmployee.base_salary * 0.25, (529000 * 4.75) / 12) 
-        : 0;
-      
-      // ✅ TOTALES CORREGIDOS MANUALMENTE PARA GARANTIZAR INCLUSIÓN
-      const baseGrossIncome = (result.total_gross_income || 0) - (result.legal_gratification_art50 || 0); // Remover gratificación anterior
-      const correctedGrossIncome = baseGrossIncome + gratificationAmount; // Agregar gratificación calculada
-      const correctedNetSalary = correctedGrossIncome - (result.total_deductions || 0);
-      
-      console.log('🔍 SAVE LIQUIDATION - GRATIFICACIÓN DEBUG:');
+      console.log('🔍 SAVE LIQUIDATION - USANDO RESULTADOS DEL HOOK:');
       console.log('  - apply_legal_gratification:', formData.apply_legal_gratification);
-      console.log('  - selectedEmployee.base_salary:', selectedEmployee.base_salary);
-      console.log('  - gratificationAmount calculado:', gratificationAmount);
-      console.log('  - result.total_gross_income original:', result.total_gross_income);
-      console.log('  - correctedGrossIncome final:', correctedGrossIncome);
+      console.log('  - result.legal_gratification_art50:', result.legal_gratification_art50);
+      console.log('  - result.total_gross_income:', result.total_gross_income);
+      console.log('  - result.total_taxable_income:', result.total_taxable_income);
+      console.log('  - result.net_salary:', result.net_salary);
 
       // Mapear los datos de la liquidación al formato de la base de datos
       const liquidationData = {
@@ -317,8 +306,8 @@ export default function GenerateLiquidationPage() {
         other_allowances: 0,
         total_non_taxable_income: result.total_non_taxable_income || 0,
         
-        // ✅ GRATIFICACIÓN CALCULADA DIRECTAMENTE
-        legal_gratification_art50: gratificationAmount,
+        // ✅ GRATIFICACIÓN DEL RESULTADO DEL HOOK
+        legal_gratification_art50: result.legal_gratification_art50 || 0,
         
         // Descuentos previsionales (campos separados como espera la DB)
         afp_percentage: result.afp_percentage || 10.0,
@@ -343,10 +332,10 @@ export default function GenerateLiquidationPage() {
         other_deductions: formData.other_deductions || 0,
         total_other_deductions: result.total_other_deductions || 0,
         
-        // ✅ TOTALES CORREGIDOS MANUALMENTE
-        total_gross_income: correctedGrossIncome,
+        // ✅ TOTALES DEL RESULTADO DEL HOOK (SIN MODIFICACIONES MANUALES)
+        total_gross_income: result.total_gross_income || 0,
         total_deductions: result.total_deductions || 0,
-        net_salary: correctedNetSalary,
+        net_salary: result.net_salary || 0,
         
         // Configuración usada (snapshot)
         calculation_config: result.calculation_config || {}

@@ -79,9 +79,7 @@ export default function LiquidationsPage() {
       const data = await response.json();
 
       if (data.success) {
-        // Deduplicar liquidaciones: mantener solo la más reciente por RUT
-        const liquidationsMap = new Map<string, LiquidationSummary>();
-        
+        // ✅ MOSTRAR TODAS LAS LIQUIDACIONES (sin deduplicar)
         // Ordenar por fecha (más reciente primero)
         const sortedLiquidations = (data.data || []).sort((a: LiquidationSummary, b: LiquidationSummary) => {
           // Primero comparar por año y mes
@@ -93,29 +91,19 @@ export default function LiquidationsPage() {
           return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
         });
         
-        // Mantener solo la liquidación más reciente por RUT
-        sortedLiquidations.forEach((liquidation: LiquidationSummary) => {
-          const key = liquidation.employee_rut;
-          // Solo procesar si tiene RUT válido
-          if (key && !liquidationsMap.has(key)) {
-            liquidationsMap.set(key, liquidation);
-          }
-        });
-        
-        const deduplicatedLiquidations = Array.from(liquidationsMap.values());
+        // Filtrar solo liquidaciones válidas (con RUT)
+        const validLiquidations = sortedLiquidations.filter((l: LiquidationSummary) => l.employee_rut);
         
         // Extraer RUTs y períodos únicos para los filtros
-        const uniqueRuts = [...new Set(sortedLiquidations
-          .filter((l: LiquidationSummary) => l.employee_rut)
-          .map((l: LiquidationSummary) => l.employee_rut))];
-        const uniquePeriods = [...new Set(sortedLiquidations.map((l: LiquidationSummary) => 
+        const uniqueRuts = [...new Set(validLiquidations.map((l: LiquidationSummary) => l.employee_rut))];
+        const uniquePeriods = [...new Set(validLiquidations.map((l: LiquidationSummary) => 
           `${l.period_year}-${l.period_month.toString().padStart(2, '0')}`
         ))].sort().reverse();
         
         setAvailableRuts(uniqueRuts);
         setAvailablePeriods(uniquePeriods);
-        setLiquidations(deduplicatedLiquidations);
-        calculateStats(deduplicatedLiquidations);
+        setLiquidations(validLiquidations);
+        calculateStats(validLiquidations);
       } else {
         setError(data.error || 'Error al cargar liquidaciones');
       }
