@@ -224,7 +224,7 @@ export default function LiquidationDetailPage() {
       `⚠️ ELIMINAR LIQUIDACIÓN\n\n` +
       `Empleado: ${employeeName}\n` +
       `Período: ${period}\n` +
-      `Monto: ${formatCurrency(liquidation.net_salary)}\n\n` +
+      `Monto: ${formatCurrency(calculateNetSalary(liquidation))}\n\n` +
       `Esta acción NO se puede deshacer.\n\n` +
       `¿Estás completamente seguro?`
     );
@@ -310,6 +310,24 @@ export default function LiquidationDetailPage() {
       'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
     ];
     return `${monthNames[month - 1]} ${year}`;
+  };
+
+  // ✅ FUNCIÓN PARA CALCULAR TOTAL DESCUENTOS DINÁMICAMENTE (igual que en PDF)
+  const calculateTotalDeductions = (liq: LiquidationDetail) => {
+    return (liq.afp_amount || 0) + 
+           (liq.afp_commission_amount || 0) +
+           (liq.health_amount || 0) + 
+           (liq.unemployment_amount || 0) + 
+           (liq.income_tax_amount || 0) +
+           (liq.loan_deductions || 0) +
+           (liq.advance_payments || 0) +
+           (liq.apv_amount || 0) +
+           (liq.other_deductions || 0);
+  };
+
+  // ✅ CALCULAR LÍQUIDO A PAGAR DINÁMICAMENTE
+  const calculateNetSalary = (liq: LiquidationDetail) => {
+    return liq.total_gross_income - calculateTotalDeductions(liq);
   };
 
   const getStatusBadge = (status: string) => {
@@ -569,13 +587,13 @@ export default function LiquidationDetailPage() {
       if (liquidation.apv_amount > 0) addText(`APV: ${formatCurrency(liquidation.apv_amount)}`);
       if (liquidation.other_deductions > 0) addText(`Otros: ${formatCurrency(liquidation.other_deductions)}`);
       
-      addText(`TOTAL DESCUENTOS: ${formatCurrency(liquidation.total_deductions)}`, margin, 12, 'bold');
+      addText(`TOTAL DESCUENTOS: ${formatCurrency(calculateTotalDeductions(liquidation))}`, margin, 12, 'bold');
       yPosition += lineHeight * 2;
       
       // Líquido a pagar
       pdf.setFontSize(16);
       pdf.setFont('helvetica', 'bold');
-      pdf.text(`LÍQUIDO A PAGAR: ${formatCurrency(liquidation.net_salary)}`, pageWidth / 2, yPosition, { align: 'center' });
+      pdf.text(`LÍQUIDO A PAGAR: ${formatCurrency(calculateNetSalary(liquidation))}`, pageWidth / 2, yPosition, { align: 'center' });
       
       // Descargar
       const fileName = `liquidacion_${liquidation.employee.rut}_${liquidation.period_year}_${String(liquidation.period_month).padStart(2, '0')}.pdf`;
@@ -821,7 +839,7 @@ export default function LiquidationDetailPage() {
                 <div className="lg:text-right">
                   <div className="text-sm text-gray-600 mb-2">Líquido a Pagar</div>
                   <div className="text-4xl font-bold text-blue-600 mb-2">
-                    {formatCurrency(liquidation.net_salary)}
+                    {formatCurrency(calculateNetSalary(liquidation))}
                   </div>
                   <div className="text-xs text-gray-500">
                     Estado: {getStatusBadge(liquidation.status)}
@@ -858,7 +876,7 @@ export default function LiquidationDetailPage() {
                 <TrendingDown className="w-6 h-6 text-red-600" />
               </div>
               <div className="text-2xl font-bold text-red-700">
-                {formatCurrency(liquidation.total_deductions)}
+                {formatCurrency(calculateTotalDeductions(liquidation))}
               </div>
               <div className="text-sm text-gray-600 mt-1">Total Descuentos</div>
               <div className="text-xs text-gray-500 mt-2">
@@ -873,7 +891,7 @@ export default function LiquidationDetailPage() {
                 <DollarSign className="w-6 h-6 text-blue-600" />
               </div>
               <div className="text-2xl font-bold text-blue-700">
-                {formatCurrency(liquidation.net_salary)}
+                {formatCurrency(calculateNetSalary(liquidation))}
               </div>
               <div className="text-sm text-gray-600 mt-1">Líquido Final</div>
               <div className="text-xs text-gray-500 mt-2">
@@ -994,7 +1012,7 @@ export default function LiquidationDetailPage() {
                   <span>Descuentos</span>
                 </div>
                 <span className="text-lg font-bold text-red-700">
-                  {formatCurrency(liquidation.total_deductions)}
+                  {formatCurrency(calculateTotalDeductions(liquidation))}
                 </span>
               </CardTitle>
             </CardHeader>
@@ -1069,13 +1087,13 @@ export default function LiquidationDetailPage() {
                 <div className="text-center">
                   <div className="text-sm text-gray-600 mb-1">Total Descuentos</div>
                   <div className="text-2xl font-bold text-red-600">
-                    {formatCurrency(liquidation.total_deductions)}
+                    {formatCurrency(calculateTotalDeductions(liquidation))}
                   </div>
                 </div>
                 <div className="text-center border-l border-blue-300 md:pl-6">
                   <div className="text-sm text-gray-600 mb-1">Líquido a Pagar</div>
                   <div className="text-3xl font-bold text-blue-600">
-                    {formatCurrency(liquidation.net_salary)}
+                    {formatCurrency(calculateNetSalary(liquidation))}
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
                     Para transferir al empleado
