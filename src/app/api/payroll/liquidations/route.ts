@@ -404,8 +404,8 @@ export async function PUT(request: NextRequest) {
     };
 
     if (status === 'approved') {
-      updateData.approved_by = approved_by || companyId;
       updateData.approved_at = new Date().toISOString();
+      // Note: approved_by removed due to foreign key constraint - no users table implemented yet
     } else if (status === 'paid') {
       updateData.paid_at = new Date().toISOString();
     }
