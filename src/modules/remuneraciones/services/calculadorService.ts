@@ -328,24 +328,26 @@ export class PayrollCalculator {
 
   /**
    * Calcula gratificación legal Art. 50
-   * 25% del sueldo base con tope de 4.75 ingresos mínimos mensuales (≈ $2.512.750)
-   * ✅ SIMPLIFICADO: Usa valor fijo para mayor confiabilidad
+   * 25% del sueldo base mensual con tope de (4.75 ingresos mínimos anuales) ÷ 12 = $209.396
+   * ✅ CORREGIDO: Tope mensual = tope anual ÷ 12
    */
   private async calculateArticle50Gratification(baseSalary: number): Promise<number> {
     console.log('🔍 Calculando gratificación Art. 50 para sueldo base:', baseSalary);
     
-    const gratificationBase = baseSalary * 0.25; // 25% del sueldo base
-    const gratificationCap = 529000 * 4.75; // Tope: 4.75 × sueldo mínimo 2025
+    const gratificationBase = baseSalary * 0.25; // 25% del sueldo base mensual
+    const gratificationCapAnnual = 529000 * 4.75; // Tope anual: 4.75 × sueldo mínimo 2025
+    const gratificationCapMonthly = gratificationCapAnnual / 12; // Tope mensual
     
-    const finalGratification = Math.min(gratificationBase, gratificationCap);
+    const finalGratification = Math.min(gratificationBase, gratificationCapMonthly);
     
-    console.log('🔍 Gratificación base (25%):', gratificationBase);
-    console.log('🔍 Tope legal:', gratificationCap);
+    console.log('🔍 Gratificación base (25% mensual):', gratificationBase);
+    console.log('🔍 Tope anual:', gratificationCapAnnual);
+    console.log('🔍 Tope mensual:', gratificationCapMonthly);
     console.log('🔍 Gratificación final:', finalGratification);
     
     // Agregar información a warnings para transparencia
-    if (gratificationBase > gratificationCap) {
-      this.warnings.push(`ℹ️ Gratificación Art. 50 limitada: ${PayrollCalculator.formatCurrency(gratificationCap)} (4.75 × $529.000)`);
+    if (gratificationBase > gratificationCapMonthly) {
+      this.warnings.push(`ℹ️ Gratificación Art. 50 limitada: ${PayrollCalculator.formatCurrency(gratificationCapMonthly)} mensual (tope legal)`);
     } else {
       this.warnings.push(`ℹ️ Gratificación Art. 50: 25% del sueldo base = ${PayrollCalculator.formatCurrency(finalGratification)}`);
     }

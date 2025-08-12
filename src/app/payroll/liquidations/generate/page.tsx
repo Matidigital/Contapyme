@@ -138,9 +138,9 @@ export default function GenerateLiquidationPage() {
     
     if (!hookResult || !selectedEmployee) return hookResult;
     
-    // Calcular gratificación si está habilitada
+    // Calcular gratificación si está habilitada (corregido: tope mensual)
     const gratificationAmount = formData.apply_legal_gratification 
-      ? Math.min(selectedEmployee.base_salary * 0.25, 529000 * 4.75) 
+      ? Math.min(selectedEmployee.base_salary * 0.25, (529000 * 4.75) / 12) 
       : 0;
     
     console.log('  - Sueldo base:', selectedEmployee.base_salary);
@@ -237,8 +237,9 @@ export default function GenerateLiquidationPage() {
     setSaving(true);
     try {
       // ✅ CÁLCULO DIRECTO DE GRATIFICACIÓN PARA GARANTIZAR CONEXIÓN
+      // Art. 50: 25% anual dividido en 12 cuotas mensuales, tope 4.75 sueldos mínimos anuales ÷ 12
       const gratificationAmount = formData.apply_legal_gratification 
-        ? Math.min(selectedEmployee.base_salary * 0.25, 529000 * 4.75) 
+        ? Math.min(selectedEmployee.base_salary * 0.25, (529000 * 4.75) / 12) 
         : 0;
       
       // ✅ TOTALES CORREGIDOS MANUALMENTE PARA GARANTIZAR INCLUSIÓN
