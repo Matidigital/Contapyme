@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Header } from '@/components/layout';
+import { PayrollHeader } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
-import { ArrowLeft, Save, User, Phone, Mail, Home, Calendar, AlertCircle, Calculator, Settings, DollarSign } from 'lucide-react';
+import { ArrowLeft, Save, User, Phone, Mail, Home, Calendar, AlertCircle, Calculator, Settings, DollarSign, UserPlus, Briefcase } from 'lucide-react';
 import RutInputFixed from '@/modules/remuneraciones/components/empleados/RutInputFixed';
 import { usePayrollOptions } from '@/modules/remuneraciones/hooks/useConfiguracion';
 import { useCompanyId } from '@/contexts/CompanyContext';
@@ -255,78 +255,106 @@ export default function NewEmployeePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header 
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <PayrollHeader 
         title="Nuevo Empleado"
         subtitle="Registra la información del empleado y su contrato"
         showBackButton
       />
 
-      <div className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 sm:px-0">
+      {/* Hero Section */}
+      <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <h1 className="text-2xl sm:text-3xl font-bold mb-2">
+                Agregar Nuevo Empleado
+              </h1>
+              <p className="text-blue-100 text-sm sm:text-base">
+                Complete la información en las pestañas para registrar al empleado en el sistema
+              </p>
+            </div>
+            <div className="hidden sm:block">
+              <div className="w-16 h-16 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+                <Briefcase className="w-8 h-8 text-white" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <div className="space-y-6">
           <form onSubmit={handleSubmit}>
-            {/* Navigation Tabs */}
-            <div className="border-b border-gray-200 mb-6">
-              <nav className="-mb-px flex space-x-8 overflow-x-auto">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('personal')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                    activeTab === 'personal'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <User className="w-4 h-4 inline-block mr-2" />
-                  Información Personal
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('contact')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                    activeTab === 'contact'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <Phone className="w-4 h-4 inline-block mr-2" />
-                  Contacto
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('contract')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                    activeTab === 'contract'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <Calendar className="w-4 h-4 inline-block mr-2" />
-                  Contrato
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('payroll')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
-                    activeTab === 'payroll'
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <Settings className="w-4 h-4 inline-block mr-2" />
-                  Configuración Previsional
-                </button>
-              </nav>
+            {/* Navigation Tabs - Modern Style */}
+            <div className="mb-8">
+              <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-white/20 p-2">
+                <nav className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('personal')}
+                    className={`flex items-center px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap ${
+                      activeTab === 'personal'
+                        ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg transform scale-105'
+                        : 'text-gray-700 hover:text-blue-700 hover:bg-blue-50/80 backdrop-blur-sm'
+                    }`}
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    Información Personal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('contact')}
+                    className={`flex items-center px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap ${
+                      activeTab === 'contact'
+                        ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-lg transform scale-105'
+                        : 'text-gray-700 hover:text-green-700 hover:bg-green-50/80 backdrop-blur-sm'
+                    }`}
+                  >
+                    <Phone className="w-4 h-4 mr-2" />
+                    Contacto
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('contract')}
+                    className={`flex items-center px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap ${
+                      activeTab === 'contract'
+                        ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg transform scale-105'
+                        : 'text-gray-700 hover:text-purple-700 hover:bg-purple-50/80 backdrop-blur-sm'
+                    }`}
+                  >
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Contrato
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('payroll')}
+                    className={`flex items-center px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap ${
+                      activeTab === 'payroll'
+                        ? 'bg-gradient-to-r from-orange-600 to-orange-700 text-white shadow-lg transform scale-105'
+                        : 'text-gray-700 hover:text-orange-700 hover:bg-orange-50/80 backdrop-blur-sm'
+                    }`}
+                  >
+                    <Settings className="w-4 h-4 mr-2" />
+                    Configuración Previsional
+                  </button>
+                </nav>
+              </div>
             </div>
 
             {/* Personal Information Tab */}
             {activeTab === 'personal' && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Información Personal</CardTitle>
-                  <CardDescription>Datos personales del empleado</CardDescription>
-                </CardHeader>
-                <CardContent>
+              <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-white/20">
+                <div className="border-b border-white/20 p-6">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                      <User className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-900">Información Personal</h3>
+                  </div>
+                  <p className="text-gray-600">Datos personales del empleado</p>
+                </div>
+                <div className="p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -350,7 +378,7 @@ export default function NewEmployeePage() {
                         name="nationality"
                         value={formData.nationality}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                       />
                     </div>
 
@@ -381,7 +409,7 @@ export default function NewEmployeePage() {
                         name="middleName"
                         value={formData.middleName}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                       />
                     </div>
 
@@ -429,7 +457,7 @@ export default function NewEmployeePage() {
                         name="gender"
                         value={formData.gender}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                       >
                         <option value="">Seleccionar</option>
                         <option value="masculino">Masculino</option>
@@ -446,7 +474,7 @@ export default function NewEmployeePage() {
                         name="maritalStatus"
                         value={formData.maritalStatus}
                         onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                       >
                         <option value="">Seleccionar</option>
                         <option value="soltero">Soltero/a</option>
@@ -457,19 +485,24 @@ export default function NewEmployeePage() {
                       </select>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
 
             {/* Contact Information Tab */}
             {activeTab === 'contact' && (
               <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Información de Contacto</CardTitle>
-                    <CardDescription>Datos de contacto y dirección</CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-white/20">
+                  <div className="border-b border-white/20 p-6">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 bg-green-500/10 rounded-lg flex items-center justify-center">
+                        <Phone className="w-4 h-4 text-green-600" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900">Información de Contacto</h3>
+                    </div>
+                    <p className="text-gray-600">Datos de contacto y dirección</p>
+                  </div>
+                  <div className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -498,7 +531,7 @@ export default function NewEmployeePage() {
                           name="phone"
                           value={formData.phone}
                           onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                         />
                       </div>
 
@@ -511,7 +544,7 @@ export default function NewEmployeePage() {
                           name="mobilePhone"
                           value={formData.mobilePhone}
                           onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                         />
                       </div>
 
@@ -524,7 +557,7 @@ export default function NewEmployeePage() {
                           name="postalCode"
                           value={formData.postalCode}
                           onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                         />
                       </div>
 
@@ -537,7 +570,7 @@ export default function NewEmployeePage() {
                           name="address"
                           value={formData.address}
                           onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                         />
                       </div>
 
@@ -550,7 +583,7 @@ export default function NewEmployeePage() {
                           name="city"
                           value={formData.city}
                           onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                         />
                       </div>
 
@@ -562,7 +595,7 @@ export default function NewEmployeePage() {
                           name="region"
                           value={formData.region}
                           onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                         >
                           <option value="">Seleccionar</option>
                           <option value="I">I - Tarapacá</option>
@@ -584,15 +617,20 @@ export default function NewEmployeePage() {
                         </select>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Contacto de Emergencia</CardTitle>
-                    <CardDescription>Persona a contactar en caso de emergencia</CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-white/20">
+                  <div className="border-b border-white/20 p-6">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 bg-red-500/10 rounded-lg flex items-center justify-center">
+                        <AlertCircle className="w-4 h-4 text-red-600" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900">Contacto de Emergencia</h3>
+                    </div>
+                    <p className="text-gray-600">Persona a contactar en caso de emergencia</p>
+                  </div>
+                  <div className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -603,7 +641,7 @@ export default function NewEmployeePage() {
                           name="emergencyContactName"
                           value={formData.emergencyContactName}
                           onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                         />
                       </div>
 
@@ -616,7 +654,7 @@ export default function NewEmployeePage() {
                           name="emergencyContactPhone"
                           value={formData.emergencyContactPhone}
                           onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                         />
                       </div>
 
@@ -630,24 +668,29 @@ export default function NewEmployeePage() {
                           value={formData.emergencyContactRelationship}
                           onChange={handleInputChange}
                           placeholder="Ej: Cónyuge, Padre, Madre, etc."
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                         />
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </div>
             )}
 
             {/* Contract Information Tab */}
             {activeTab === 'contract' && (
               <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Información del Contrato</CardTitle>
-                    <CardDescription>Detalles del contrato laboral</CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-white/20">
+                  <div className="border-b border-white/20 p-6">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-8 h-8 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                        <Calendar className="w-4 h-4 text-purple-600" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-900">Información del Contrato</h3>
+                    </div>
+                    <p className="text-gray-600">Detalles del contrato laboral</p>
+                  </div>
+                  <div className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -678,7 +721,7 @@ export default function NewEmployeePage() {
                           value={formData.department}
                           onChange={handleInputChange}
                           placeholder="Ej: Ventas, Administración, etc."
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                         />
                       </div>
 
@@ -690,7 +733,7 @@ export default function NewEmployeePage() {
                           name="contractType"
                           value={formData.contractType}
                           onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                         >
                           <option value="indefinido">Indefinido</option>
                           <option value="plazo_fijo">Plazo Fijo</option>
@@ -710,7 +753,7 @@ export default function NewEmployeePage() {
                           onChange={handleInputChange}
                           min="1"
                           max="45"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                         />
                       </div>
 
@@ -745,7 +788,7 @@ export default function NewEmployeePage() {
                           value={formData.endDate}
                           onChange={handleInputChange}
                           disabled={formData.contractType === 'indefinido'}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
                         />
                       </div>
 
@@ -777,7 +820,7 @@ export default function NewEmployeePage() {
                           name="salaryType"
                           value={formData.salaryType}
                           onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                         >
                           <option value="monthly">Mensual</option>
                           <option value="hourly">Por Hora</option>
@@ -786,8 +829,8 @@ export default function NewEmployeePage() {
                       </div>
 
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
 
                 {/* Alert about contract creation */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -939,7 +982,7 @@ export default function NewEmployeePage() {
                             type="number"
                             step="0.01"
                             placeholder="Ej: 2.5"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                           />
                           <p className="mt-1 text-xs text-gray-500">
                             Valor del plan en UF. Si es mayor al 7%, el trabajador paga la diferencia.
@@ -1159,23 +1202,33 @@ export default function NewEmployeePage() {
             )}
 
             {/* Form Actions */}
-            <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
-              <Link href="/payroll">
-                <Button variant="outline" type="button">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Cancelar
+            <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-white/20 p-6 mt-8">
+              <div className="flex flex-col sm:flex-row justify-between gap-4">
+                <Link href="/payroll">
+                  <Button 
+                    variant="outline" 
+                    type="button"
+                    className="w-full sm:w-auto bg-white/80 border-gray-200 text-gray-700 hover:bg-gray-50"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Cancelar
+                  </Button>
+                </Link>
+                
+                <Button 
+                  type="submit" 
+                  variant="primary"
+                  disabled={loading || !isRutValid}
+                  className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg"
+                >
+                  {loading ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  ) : (
+                    <UserPlus className="w-4 h-4 mr-2" />
+                  )}
+                  {loading ? 'Guardando...' : 'Crear Empleado'}
                 </Button>
-              </Link>
-              
-              <Button 
-                type="submit" 
-                variant="primary"
-                loading={loading}
-                disabled={loading}
-              >
-                <Save className="w-4 h-4 mr-2" />
-                Guardar Empleado
-              </Button>
+              </div>
             </div>
           </form>
         </div>
