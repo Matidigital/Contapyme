@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
 // Función para generar el contenido del archivo PREVIRED TXT
 function generatePreviredTXT(book: any, employees: any[]): string {
   const lines: string[] = [];
-  const separator = '|'; // Separador estándar PREVIRED
+  const separator = ';'; // Separador estándar PREVIRED (punto y coma)
   
   // Crear mapa de empleados para acceso rápido
   const employeeMap = new Map();
