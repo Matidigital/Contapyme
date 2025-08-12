@@ -1,5 +1,4 @@
 import React, { Suspense } from 'react';
-import { Preloader } from './Preloader';
 
 interface LazyLoaderProps {
   children: React.ReactNode;
@@ -7,16 +6,22 @@ interface LazyLoaderProps {
   errorFallback?: React.ComponentType<{ error: Error }>;
 }
 
+// Simple loading spinner component
+const SimpleSpinner = () => (
+  <div className="flex items-center justify-center min-h-[400px]">
+    <div className="relative">
+      <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+      <div className="mt-4 text-sm text-gray-600 text-center">Cargando...</div>
+    </div>
+  </div>
+);
+
 export const LazyLoader: React.FC<LazyLoaderProps> = ({ 
   children, 
   fallback: CustomFallback, 
   errorFallback: ErrorFallback 
 }) => {
-  const FallbackComponent = CustomFallback || (() => (
-    <div className="flex items-center justify-center min-h-[400px]">
-      <Preloader />
-    </div>
-  ));
+  const FallbackComponent = CustomFallback || SimpleSpinner;
 
   return (
     <Suspense fallback={<FallbackComponent />}>
