@@ -206,22 +206,29 @@ export class PayrollCalculator {
     // 9. Calcular otros descuentos
     const otherDeductions = this.calculateOtherDeductions(additionalDeductions);
 
-    // 10. Extraer gratificación Art. 50 del taxableIncome para mostrarla por separado
-    console.log('🔍 Tipo de gratificación del empleado:', employee.legal_gratification_type);
-    
-    // La gratificación ya está incluida en taxableIncome, solo la extraemos para mostrar
-    const baseImponibleWithoutGratification = proportionalBaseSalary + 
-           (additionalIncome.overtime_amount || 0) + 
-           (additionalIncome.bonuses || 0) + 
-           (additionalIncome.commissions || 0) + 
-           (additionalIncome.gratification || 0);
-    
-    const article50Gratification = taxableIncome - baseImponibleWithoutGratification;
-    console.log('🔍 Base imponible sin gratificación:', baseImponibleWithoutGratification);
-    console.log('🔍 Gratificación Art. 50 extraída:', article50Gratification);
+    // Calculate the actual Article 50 gratification amount, regardless of whether it's included in taxable income
+    let actualArticle50Gratification = 0;
+    if (employee.legal_gratification_type === 'article_50') {
+      actualArticle50Gratification = await this.calculateArticle50GratificationFromBase(proportionalBaseSalary + 
+        (additionalIncome.overtime_amount || 0) + 
+        (additionalIncome.bonuses || 0) + 
+        (additionalIncome.commissions || 0) + 
+        (additionalIncome.gratification || 0));
+    }
+    console.log('🔍 Gratificación Art. 50 calculada (independiente):', actualArticle50Gratification);
 
     // 11. Calcular totales (taxableIncome ya incluye la gratificación, no sumar dos veces)
+    console.log('🔍 DEBUG TOTALES:');
+    console.log('  - taxableIncome:', taxableIncome);
+    console.log('  - nonTaxableIncome:', nonTaxableIncome);
+    console.log('  - food_allowance:', additionalIncome.food_allowance || 0);
+    console.log('  - transport_allowance:', additionalIncome.transport_allowance || 0);
+    console.log('  - cash_allowance:', additionalIncome.cash_allowance || 0);
+    console.log('  - familyAllowance:', familyAllowance);
+    
     const totalGrossIncome = taxableIncome + nonTaxableIncome;
+    console.log('  - totalGrossIncome calculated:', totalGrossIncome);
+    
     const totalDeductions = previsionalDeductions.total + incomeTax + otherDeductions;
     const netSalary = totalGrossIncome - totalDeductions;
 
@@ -238,7 +245,7 @@ export class PayrollCalculator {
       bonuses: additionalIncome.bonuses || 0,
       commissions: additionalIncome.commissions || 0,
       gratification: additionalIncome.gratification || 0,
-      legal_gratification_art50: article50Gratification,
+      legal_gratification_art50: actualArticle50Gratification,
       total_taxable_income: taxableIncome,
       
       // Haberes No Imponibles
