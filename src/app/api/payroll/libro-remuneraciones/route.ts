@@ -212,32 +212,42 @@ export async function POST(request: NextRequest) {
     const [year, month] = period.split('-');
     
     // ✅ Verificar si ya existe un libro para este período y eliminarlo si existe
-    const { data: existingBook, error: existingError } = await supabase
+    const { data: existingBooks, error: existingError } = await supabase
       .from('payroll_books')
       .select('id')
       .eq('company_id', company_id)
-      .eq('period', period)
-      .single();
+      .eq('period', period);
     
-    if (existingBook && !existingError) {
+    if (!existingError && existingBooks && existingBooks.length > 0) {
+      const existingBook = existingBooks[0];
       console.log('📋 Libro existente encontrado, eliminando para reemplazar:', existingBook.id);
       
       // Eliminar detalles del libro existente primero
-      await supabase
+      const { error: deleteDetailsError } = await supabase
         .from('payroll_book_details')
         .delete()
         .eq('payroll_book_id', existingBook.id);
       
+      if (deleteDetailsError) {
+        console.error('Error eliminando detalles del libro:', deleteDetailsError);
+      }
+      
       // Eliminar el libro existente
-      await supabase
+      const { error: deleteBookError } = await supabase
         .from('payroll_books')
         .delete()
         .eq('id', existingBook.id);
         
-      console.log('✅ Libro existente eliminado, procediendo a crear nuevo');
+      if (deleteBookError) {
+        console.error('Error eliminando libro:', deleteBookError);
+      } else {
+        console.log('✅ Libro existente eliminado, procediendo a crear nuevo');
+      }
     }
 
-    // ✅ OBTENER LIQUIDACIONES REALES DEL PERÍODO
+    // ✅ OBTENER LIQUIDACIONES REALES DEL PERÍODO (consulta simplificada)
+    console.log('🔍 Buscando liquidaciones para:', { company_id, year: parseInt(year), month: parseInt(month) });
+    
     const { data: liquidations, error: liquidationsError } = await supabase
       .from('payroll_liquidations')
       .select(`
@@ -262,19 +272,12 @@ export async function POST(request: NextRequest) {
           rut,
           first_name,
           last_name,
-          middle_name,
-          employment_contracts!inner (
-            position,
-            department,
-            weekly_hours,
-            status
-          )
+          middle_name
         )
       `)
       .eq('company_id', company_id)
       .eq('period_year', parseInt(year))
-      .eq('period_month', parseInt(month))
-      .eq('employees.employment_contracts.status', 'active');
+      .eq('period_month', parseInt(month));
 
     if (liquidationsError) {
       console.error('Error obteniendo liquidaciones:', liquidationsError);
@@ -337,7 +340,6 @@ export async function POST(request: NextRequest) {
     // ✅ Crear detalles por empleado con datos REALES
     const bookDetails = liquidations.map(liquidation => {
       const employee = liquidation.employees;
-      const contract = employee?.employment_contracts?.[0];
       
       return {
         payroll_book_id: newBook.id,
@@ -346,11 +348,11 @@ export async function POST(request: NextRequest) {
         apellido_paterno: employee?.last_name || '',
         apellido_materno: employee?.middle_name || '',
         nombres: employee?.first_name || '',
-        cargo: contract?.position || '',
-        area: contract?.department || '',
+        cargo: 'Empleado', // Valor por defecto ya que no tenemos contratos
+        area: 'General', // Valor por defecto ya que no tenemos contratos  
         centro_costo: 'GENERAL',
         dias_trabajados: liquidation.days_worked || 30,
-        horas_semanales: contract?.weekly_hours || 45,
+        horas_semanales: 45, // Valor por defecto
         horas_no_trabajadas: 0,
         base_imp_prevision: liquidation.total_gross_income || 0,
         base_imp_cesantia: liquidation.total_gross_income || 0,
@@ -382,7 +384,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`✅ Libro de remuneraciones REAL generado: ${newBook.id} con ${totalEmployees} empleados`);
     
-    const wasReplaced = existingBook && !existingError;
+    const wasReplaced = !existingError && existingBooks && existingBooks.length > 0;
     const message = wasReplaced 
       ? `Libro de remuneraciones reemplazado exitosamente con ${totalEmployees} empleados`
       : `Libro de remuneraciones generado exitosamente con ${totalEmployees} empleados`;
