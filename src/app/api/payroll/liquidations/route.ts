@@ -33,6 +33,10 @@ export async function GET(request: NextRequest) {
         period_year,
         period_month,
         days_worked,
+        base_salary,
+        legal_gratification_art50,
+        bonuses,
+        overtime_amount,
         total_gross_income,
         total_deductions,
         net_salary,
@@ -46,6 +50,8 @@ export async function GET(request: NextRequest) {
         )
       `)
       .eq('company_id', companyId)
+      .order('period_year', { ascending: false })
+      .order('period_month', { ascending: false })
       .order('created_at', { ascending: false });
 
     // Aplicar filtros opcionales
@@ -87,6 +93,10 @@ export async function GET(request: NextRequest) {
       period_year: liquidation.period_year,
       period_month: liquidation.period_month,
       days_worked: liquidation.days_worked,
+      base_salary: liquidation.base_salary,
+      legal_gratification_art50: liquidation.legal_gratification_art50,
+      bonuses: liquidation.bonuses,
+      overtime_amount: liquidation.overtime_amount,
       total_gross_income: liquidation.total_gross_income,
       total_deductions: liquidation.total_deductions,
       net_salary: liquidation.net_salary,

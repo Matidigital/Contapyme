@@ -12,11 +12,17 @@ interface LiquidationSummary {
   employee_rut: string;
   period_year: number;
   period_month: number;
+  days_worked: number;
+  base_salary: number;
+  legal_gratification_art50: number;
+  bonuses: number;
+  overtime_amount: number;
   net_salary: number;
   total_gross_income: number;
   total_deductions: number;
   status: string;
   created_at: string;
+  updated_at: string;
 }
 
 interface LiquidationStats {
@@ -39,6 +45,9 @@ export default function LiquidationsPage() {
   const [filterPeriod, setFilterPeriod] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterRut, setFilterRut] = useState('');
+  const [availableRuts, setAvailableRuts] = useState<string[]>([]);
+  const [availablePeriods, setAvailablePeriods] = useState<string[]>([]);
 
   const COMPANY_ID = '8033ee69-b420-4d91-ba0e-482f46cd6fce';
 
@@ -53,8 +62,40 @@ export default function LiquidationsPage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setLiquidations(data.data || []);
-        calculateStats(data.data || []);
+        // Deduplicar liquidaciones: mantener solo la más reciente por RUT
+        const liquidationsMap = new Map<string, LiquidationSummary>();
+        
+        // Ordenar por fecha (más reciente primero)
+        const sortedLiquidations = (data.data || []).sort((a: LiquidationSummary, b: LiquidationSummary) => {
+          // Primero comparar por año y mes
+          const periodA = a.period_year * 100 + a.period_month;
+          const periodB = b.period_year * 100 + b.period_month;
+          if (periodA !== periodB) return periodB - periodA;
+          
+          // Si el período es el mismo, comparar por fecha de actualización
+          return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+        });
+        
+        // Mantener solo la liquidación más reciente por RUT
+        sortedLiquidations.forEach((liquidation: LiquidationSummary) => {
+          const key = liquidation.employee_rut;
+          if (!liquidationsMap.has(key)) {
+            liquidationsMap.set(key, liquidation);
+          }
+        });
+        
+        const deduplicatedLiquidations = Array.from(liquidationsMap.values());
+        
+        // Extraer RUTs y períodos únicos para los filtros
+        const uniqueRuts = [...new Set(sortedLiquidations.map((l: LiquidationSummary) => l.employee_rut))];
+        const uniquePeriods = [...new Set(sortedLiquidations.map((l: LiquidationSummary) => 
+          `${l.period_year}-${l.period_month.toString().padStart(2, '0')}`
+        ))].sort().reverse();
+        
+        setAvailableRuts(uniqueRuts);
+        setAvailablePeriods(uniquePeriods);
+        setLiquidations(deduplicatedLiquidations);
+        calculateStats(deduplicatedLiquidations);
       } else {
         setError(data.error || 'Error al cargar liquidaciones');
       }
@@ -152,7 +193,9 @@ export default function LiquidationsPage() {
     const matchesPeriod = filterPeriod === '' || 
       `${liquidation.period_year}-${liquidation.period_month.toString().padStart(2, '0')}` === filterPeriod;
     
-    return matchesSearch && matchesStatus && matchesPeriod;
+    const matchesRut = filterRut === '' || liquidation.employee_rut === filterRut;
+    
+    return matchesSearch && matchesStatus && matchesPeriod && matchesRut;
   });
 
   if (loading) {
@@ -301,10 +344,34 @@ export default function LiquidationsPage() {
                 className="flex-1 px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
               >
                 <option value="">Todos los períodos</option>
-                <option value="2025-01">Enero 2025</option>
-                <option value="2024-12">Diciembre 2024</option>
-                <option value="2024-11">Noviembre 2024</option>
-                <option value="2024-10">Octubre 2024</option>
+                {availablePeriods.map(period => {
+                  const [year, month] = period.split('-');
+                  const monthNames = [
+                    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+                  ];
+                  return (
+                    <option key={period} value={period}>
+                      {monthNames[parseInt(month) - 1]} {year}
+                    </option>
+                  );
+                })}
+              </select>
+
+              <select
+                value={filterRut}
+                onChange={(e) => setFilterRut(e.target.value)}
+                className="flex-1 px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+              >
+                <option value="">Todos los empleados</option>
+                {availableRuts.map(rut => {
+                  const employee = liquidations.find(l => l.employee_rut === rut);
+                  return (
+                    <option key={rut} value={rut}>
+                      {employee ? `${cleanText(employee.employee_name)} - ${rut}` : rut}
+                    </option>
+                  );
+                })}
               </select>
 
               <select
@@ -318,9 +385,16 @@ export default function LiquidationsPage() {
                 <option value="paid">Pagada</option>
               </select>
 
-              <button className="sm:w-auto px-4 py-3 bg-gradient-to-r from-blue-500/10 to-purple-500/10 hover:from-blue-500/20 hover:to-purple-500/20 border border-blue-200 hover:border-blue-300 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-blue-700 font-medium">
+              <button 
+                onClick={() => {
+                  setFilterPeriod('');
+                  setFilterRut('');
+                  setFilterStatus('');
+                  setSearchTerm('');
+                }}
+                className="sm:w-auto px-4 py-3 bg-gradient-to-r from-blue-500/10 to-purple-500/10 hover:from-blue-500/20 hover:to-purple-500/20 border border-blue-200 hover:border-blue-300 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-blue-700 font-medium">
                 <Filter className="h-4 w-4" />
-                <span>Filtros</span>
+                <span>Limpiar</span>
               </button>
             </div>
           </div>
@@ -374,26 +448,37 @@ export default function LiquidationsPage() {
                   {/* Métricas y acciones */}
                   <div className="flex flex-col sm:flex-row gap-4 sm:items-center">
                     {/* Métricas financieras - responsive */}
-                    <div className="grid grid-cols-3 sm:flex sm:gap-6 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 sm:flex sm:gap-4 gap-3">
                       <div className="text-center sm:text-right">
-                        <div className="text-xs text-gray-500 mb-1">Haberes</div>
+                        <div className="text-xs text-gray-500 mb-1">Sueldo Base</div>
+                        <div className="font-bold text-gray-700 text-sm sm:text-base truncate">
+                          {formatCurrency(liquidation.base_salary)}
+                        </div>
+                      </div>
+                      {liquidation.legal_gratification_art50 > 0 && (
+                        <div className="text-center sm:text-right">
+                          <div className="text-xs text-gray-500 mb-1">Grat. Art.50</div>
+                          <div className="font-bold text-purple-600 text-sm sm:text-base truncate">
+                            {formatCurrency(liquidation.legal_gratification_art50)}
+                          </div>
+                        </div>
+                      )}
+                      <div className="text-center sm:text-right">
+                        <div className="text-xs text-gray-500 mb-1">Total Haberes</div>
                         <div className="font-bold text-green-600 text-sm sm:text-base truncate">
-                          {formatCurrency(liquidation.total_gross_income).replace('$', '$').slice(0, 8)}
-                          {formatCurrency(liquidation.total_gross_income).length > 8 && '...'}
+                          {formatCurrency(liquidation.total_gross_income)}
                         </div>
                       </div>
                       <div className="text-center sm:text-right">
                         <div className="text-xs text-gray-500 mb-1">Descuentos</div>
                         <div className="font-bold text-red-600 text-sm sm:text-base truncate">
-                          {formatCurrency(liquidation.total_deductions).replace('$', '$').slice(0, 8)}
-                          {formatCurrency(liquidation.total_deductions).length > 8 && '...'}
+                          {formatCurrency(liquidation.total_deductions)}
                         </div>
                       </div>
-                      <div className="text-center sm:text-right">
-                        <div className="text-xs text-gray-500 mb-1">Líquido</div>
-                        <div className="font-bold text-blue-600 text-sm sm:text-base truncate">
-                          {formatCurrency(liquidation.net_salary).replace('$', '$').slice(0, 8)}
-                          {formatCurrency(liquidation.net_salary).length > 8 && '...'}
+                      <div className="text-center sm:text-right col-span-2 sm:col-span-1">
+                        <div className="text-xs text-gray-500 mb-1">Líquido a Pagar</div>
+                        <div className="font-bold text-blue-600 text-base sm:text-lg">
+                          {formatCurrency(liquidation.net_salary)}
                         </div>
                       </div>
                     </div>
