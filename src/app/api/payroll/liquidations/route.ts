@@ -398,3 +398,56 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const companyId = searchParams.get('company_id');
+
+    if (!companyId) {
+      return NextResponse.json(
+        { success: false, error: 'company_id es requerido' },
+        { status: 400 }
+      );
+    }
+
+    const body = await request.json();
+    const { liquidation_ids } = body;
+
+    if (!liquidation_ids || !Array.isArray(liquidation_ids)) {
+      return NextResponse.json(
+        { success: false, error: 'liquidation_ids debe ser un array' },
+        { status: 400 }
+      );
+    }
+
+    // Eliminar liquidaciones
+    const { data: deleted, error: deleteError } = await supabase
+      .from('payroll_liquidations')
+      .delete()
+      .in('id', liquidation_ids)
+      .eq('company_id', companyId)
+      .select();
+
+    if (deleteError) {
+      console.error('Error deleting liquidations:', deleteError);
+      return NextResponse.json(
+        { success: false, error: 'Error al eliminar liquidaciones' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: deleted,
+      message: `${deleted?.length || 0} liquidaciones eliminadas exitosamente`
+    });
+
+  } catch (error) {
+    console.error('Error in DELETE /api/payroll/liquidations:', error);
+    return NextResponse.json(
+      { success: false, error: 'Error interno del servidor' },
+      { status: 500 }
+    );
+  }
+}

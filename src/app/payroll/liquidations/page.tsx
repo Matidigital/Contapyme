@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { PayrollHeader } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
-import { Calculator, Plus, FileText, Users, TrendingUp, Calendar, Filter, Search, Download, Eye, DollarSign, ArrowRight, Activity } from 'lucide-react';
+import { Calculator, Plus, FileText, Users, TrendingUp, Calendar, Filter, Search, Download, Eye, DollarSign, ArrowRight, Activity, CheckCircle, AlertTriangle, Trash2 } from 'lucide-react';
 
 interface LiquidationSummary {
   id: string;
@@ -63,11 +63,30 @@ export default function LiquidationsPage() {
   const [availableRuts, setAvailableRuts] = useState<string[]>([]);
   const [availablePeriods, setAvailablePeriods] = useState<string[]>([]);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  
+  // ✅ NUEVOS ESTADOS PARA VALIDACIÓN Y ELIMINACIÓN
+  const [validatingLiquidations, setValidatingLiquidations] = useState(false);
+  const [validationMessage, setValidationMessage] = useState<string | null>(null);
+  const [selectedLiquidations, setSelectedLiquidations] = useState<string[]>([]);
+  const [deletingLiquidations, setDeletingLiquidations] = useState(false);
 
   const COMPANY_ID = '8033ee69-b420-4d91-ba0e-482f46cd6fce';
+  
+  // ✅ OBTENER MES Y AÑO ACTUAL POR DEFECTO
+  const getCurrentPeriod = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    return `${year}-${month}`;
+  };
 
   useEffect(() => {
     fetchLiquidations();
+    
+    // ✅ ESTABLECER PERÍODO POR DEFECTO (MES Y AÑO ACTUAL)
+    if (!filterPeriod) {
+      setFilterPeriod(getCurrentPeriod());
+    }
     
     // ✅ REFRESH AUTOMÁTICO: Detectar si se guardó una liquidación
     const saved = searchParams?.get('saved');
@@ -203,6 +222,114 @@ export default function LiquidationsPage() {
   // ✅ CALCULAR LÍQUIDO A PAGAR DINÁMICAMENTE
   const calculateNetSalary = (liq: LiquidationSummary) => {
     return liq.total_gross_income - calculateTotalDeductions(liq);
+  };
+
+  // ✅ FUNCIÓN PARA VALIDAR LIQUIDACIONES
+  const validateLiquidations = async () => {
+    if (!filterPeriod) {
+      alert('Selecciona un período para validar las liquidaciones');
+      return;
+    }
+
+    setValidatingLiquidations(true);
+    try {
+      const [year, month] = filterPeriod.split('-');
+      
+      // Filtrar liquidaciones del período seleccionado
+      const periodLiquidations = liquidations.filter(liq => 
+        liq.period_year === parseInt(year) && liq.period_month === parseInt(month)
+      );
+
+      if (periodLiquidations.length === 0) {
+        setValidationMessage('⚠️ No hay liquidaciones para validar en este período');
+        setTimeout(() => setValidationMessage(null), 5000);
+        return;
+      }
+
+      // Actualizar estado de liquidaciones a "approved"
+      const response = await fetch(`/api/payroll/liquidations`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          company_id: COMPANY_ID,
+          liquidation_ids: periodLiquidations.map(liq => liq.id),
+          status: 'approved',
+          approved_by: 'system'
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setValidationMessage(`✅ ${periodLiquidations.length} liquidaciones validadas exitosamente`);
+        fetchLiquidations(); // Refrescar lista
+        setTimeout(() => setValidationMessage(null), 8000);
+      } else {
+        throw new Error(result.error || 'Error validando liquidaciones');
+      }
+    } catch (error) {
+      console.error('Error validating liquidations:', error);
+      setValidationMessage('❌ Error al validar liquidaciones');
+      setTimeout(() => setValidationMessage(null), 5000);
+    } finally {
+      setValidatingLiquidations(false);
+    }
+  };
+
+  // ✅ FUNCIÓN PARA ELIMINAR LIQUIDACIONES SELECCIONADAS
+  const deleteLiquidations = async () => {
+    if (selectedLiquidations.length === 0) {
+      alert('Selecciona al menos una liquidación para eliminar');
+      return;
+    }
+
+    const confirmDelete = confirm(
+      `¿Estás seguro de que deseas eliminar ${selectedLiquidations.length} liquidación(es)? Esta acción no se puede deshacer.`
+    );
+
+    if (!confirmDelete) return;
+
+    setDeletingLiquidations(true);
+    try {
+      const response = await fetch(`/api/payroll/liquidations`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          company_id: COMPANY_ID,
+          liquidation_ids: selectedLiquidations
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setValidationMessage(`🗑️ ${selectedLiquidations.length} liquidación(es) eliminada(s) exitosamente`);
+        setSelectedLiquidations([]);
+        fetchLiquidations(); // Refrescar lista
+        setTimeout(() => setValidationMessage(null), 5000);
+      } else {
+        throw new Error(result.error || 'Error eliminando liquidaciones');
+      }
+    } catch (error) {
+      console.error('Error deleting liquidations:', error);
+      setValidationMessage('❌ Error al eliminar liquidaciones');
+      setTimeout(() => setValidationMessage(null), 5000);
+    } finally {
+      setDeletingLiquidations(false);
+    }
+  };
+
+  // ✅ FUNCIÓN PARA SELECCIONAR/DESELECCIONAR LIQUIDACIÓN
+  const toggleLiquidationSelection = (liquidationId: string) => {
+    setSelectedLiquidations(prev => 
+      prev.includes(liquidationId)
+        ? prev.filter(id => id !== liquidationId)
+        : [...prev, liquidationId]
+    );
   };
 
   const getStatusBadge = (status: string) => {
@@ -364,19 +491,131 @@ export default function LiquidationsPage() {
           </div>
         )}
 
-        {/* ✅ BOTÓN GENERAR LIBRO DE REMUNERACIONES */}
-        <div className="mb-6 bg-purple-50/80 backdrop-blur-sm border border-purple-200 rounded-2xl p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h3 className="font-semibold text-purple-900 mb-1">Libro de Remuneraciones</h3>
-              <p className="text-purple-700 text-sm">Después de validar las liquidaciones del mes, genera el libro oficial</p>
+        {/* ✅ MENSAJE DE VALIDACIÓN/ELIMINACIÓN */}
+        {validationMessage && (
+          <div className={`mb-6 backdrop-blur-sm border rounded-2xl p-4 flex items-center gap-3 ${
+            validationMessage.includes('✅') || validationMessage.includes('🗑️') 
+              ? 'bg-green-50/80 border-green-200' 
+              : validationMessage.includes('⚠️')
+              ? 'bg-yellow-50/80 border-yellow-200'
+              : 'bg-red-50/80 border-red-200'
+          }`}>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+              validationMessage.includes('✅') || validationMessage.includes('🗑️')
+                ? 'bg-green-500/10'
+                : validationMessage.includes('⚠️')
+                ? 'bg-yellow-500/10'
+                : 'bg-red-500/10'
+            }`}>
+              {validationMessage.includes('✅') || validationMessage.includes('🗑️') ? (
+                <CheckCircle className="w-4 h-4 text-green-600" />
+              ) : validationMessage.includes('⚠️') ? (
+                <AlertTriangle className="w-4 h-4 text-yellow-600" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 text-red-600" />
+              )}
             </div>
-            <Link href="/payroll/libro-remuneraciones">
-              <button className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-medium rounded-xl transition-all duration-200 flex items-center gap-2 transform hover:scale-105">
-                <FileText className="w-4 h-4" />
-                <span className="text-sm">Generar Libro</span>
+            <div className="flex-1">
+              <p className={`font-medium ${
+                validationMessage.includes('✅') || validationMessage.includes('🗑️')
+                  ? 'text-green-800'
+                  : validationMessage.includes('⚠️')
+                  ? 'text-yellow-800'
+                  : 'text-red-800'
+              }`}>
+                {validationMessage}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ✅ PANEL DE VALIDACIÓN Y GESTIÓN DE LIQUIDACIONES */}
+        <div className="mb-6 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 backdrop-blur-sm border border-blue-200 rounded-2xl p-6">
+          <div className="flex flex-col lg:flex-row gap-6">
+            
+            {/* Información del período seleccionado */}
+            <div className="flex-1">
+              <h3 className="font-bold text-blue-900 mb-2 flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
+                Gestión de Liquidaciones
+              </h3>
+              <p className="text-blue-700 text-sm mb-4">
+                Período seleccionado: <span className="font-semibold">
+                  {filterPeriod ? (() => {
+                    const [year, month] = filterPeriod.split('-');
+                    const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+                    return `${monthNames[parseInt(month) - 1]} ${year}`;
+                  })() : 'No seleccionado'}
+                </span>
+              </p>
+              
+              {/* Estadísticas del período */}
+              {filterPeriod && (
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="bg-white/60 rounded-lg p-3">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {filteredLiquidations.length}
+                    </div>
+                    <div className="text-xs text-blue-700">Liquidaciones</div>
+                  </div>
+                  <div className="bg-white/60 rounded-lg p-3">
+                    <div className="text-2xl font-bold text-green-600">
+                      {filteredLiquidations.filter(liq => liq.status === 'approved').length}
+                    </div>
+                    <div className="text-xs text-green-700">Validadas</div>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Botones de acción */}
+            <div className="flex flex-col sm:flex-row lg:flex-col gap-3 lg:w-64">
+              
+              {/* Botón Validar Liquidaciones */}
+              <button
+                onClick={validateLiquidations}
+                disabled={validatingLiquidations || !filterPeriod || filteredLiquidations.length === 0}
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-medium rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:hover:scale-100"
+              >
+                {validatingLiquidations ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  <CheckCircle className="w-4 h-4" />
+                )}
+                <span className="text-sm">
+                  {validatingLiquidations ? 'Validando...' : 'Validar Período'}
+                </span>
               </button>
-            </Link>
+              
+              {/* Botón Eliminar Seleccionadas */}
+              <button
+                onClick={deleteLiquidations}
+                disabled={deletingLiquidations || selectedLiquidations.length === 0}
+                className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-medium rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:hover:scale-100"
+              >
+                {deletingLiquidations ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                <span className="text-sm">
+                  {deletingLiquidations 
+                    ? 'Eliminando...' 
+                    : selectedLiquidations.length > 0 
+                    ? `Eliminar (${selectedLiquidations.length})` 
+                    : 'Eliminar Selec.'
+                  }
+                </span>
+              </button>
+              
+              {/* Botón Generar Libro */}
+              <Link href="/payroll/libro-remuneraciones">
+                <button className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-medium rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">
+                  <FileText className="w-4 h-4" />
+                  <span className="text-sm">Generar Libro</span>
+                </button>
+              </Link>
+            </div>
           </div>
         </div>
 
@@ -498,6 +737,21 @@ export default function LiquidationsPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                   {/* Info principal del empleado */}
                   <div className="flex items-center gap-4 flex-1">
+                    {/* ✅ CHECKBOX DE SELECCIÓN */}
+                    <div 
+                      onClick={() => toggleLiquidationSelection(liquidation.id)}
+                      className="cursor-pointer p-2 hover:bg-blue-100/50 rounded-lg transition-all duration-200"
+                    >
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all duration-200 ${
+                        selectedLiquidations.includes(liquidation.id)
+                          ? 'bg-blue-600 border-blue-600'
+                          : 'border-gray-300 hover:border-blue-400'
+                      }`}>
+                        {selectedLiquidations.includes(liquidation.id) && (
+                          <CheckCircle className="w-3 h-3 text-white" />
+                        )}
+                      </div>
+                    </div>
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-xl flex items-center justify-center">
                       <Users className="h-6 w-6 text-blue-600" />
                     </div>
