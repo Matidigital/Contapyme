@@ -208,11 +208,10 @@ export default function GenerateLiquidationPage() {
         other_allowances: 0,
         total_non_taxable_income: result.total_non_taxable_income || 0,
         
-        // Gratificación legal Art. 50
-        legal_gratification_art50: result.legal_gratification_art50 || 0,
-        
-        // Debug: Verificar que el checkbox esté enviándose
-        _debug_checkbox_state: formData.apply_legal_gratification,
+        // Gratificación legal Art. 50 - FORZAR CÁLCULO DIRECTO
+        legal_gratification_art50: formData.apply_legal_gratification && selectedEmployee 
+          ? Math.min(selectedEmployee.base_salary * 0.25, 529000 * 4.75) 
+          : 0,
         
         // Descuentos previsionales (campos separados como espera la DB)
         afp_percentage: result.afp_percentage || 10.0,
