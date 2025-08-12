@@ -43,6 +43,7 @@ interface LiquidationDetail {
   bonuses: number;
   commissions: number;
   gratification: number;
+  legal_gratification_art50: number;
   food_allowance: number;
   transport_allowance: number;
   family_allowance: number;
@@ -548,6 +549,7 @@ export default function LiquidationDetailPage() {
       if (liquidation.bonuses > 0) addText(`Bonos: ${formatCurrency(liquidation.bonuses)}`);
       if (liquidation.commissions > 0) addText(`Comisiones: ${formatCurrency(liquidation.commissions)}`);
       if (liquidation.gratification > 0) addText(`Gratificación: ${formatCurrency(liquidation.gratification)}`);
+      if (liquidation.legal_gratification_art50 > 0) addText(`Gratificación Legal Art. 50: ${formatCurrency(liquidation.legal_gratification_art50)}`);
       if (liquidation.food_allowance > 0) addText(`Colación: ${formatCurrency(liquidation.food_allowance)}`);
       if (liquidation.transport_allowance > 0) addText(`Movilización: ${formatCurrency(liquidation.transport_allowance)}`);
       if (liquidation.family_allowance > 0) addText(`Asignación Familiar: ${formatCurrency(liquidation.family_allowance)}`);
@@ -932,6 +934,12 @@ export default function LiquidationDetailPage() {
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Gratificación</span>
                       <span className="font-medium">{formatCurrency(liquidation.gratification)}</span>
+                    </div>
+                  )}
+                  {liquidation.legal_gratification_art50 > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Gratificación Legal Art. 50</span>
+                      <span className="font-medium text-blue-700">{formatCurrency(liquidation.legal_gratification_art50)}</span>
                     </div>
                   )}
                 </div>
