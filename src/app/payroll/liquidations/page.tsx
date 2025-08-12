@@ -21,6 +21,18 @@ interface LiquidationSummary {
   net_salary: number;
   total_gross_income: number;
   total_deductions: number;
+  
+  // ✅ Campos individuales de descuentos para cálculo dinámico
+  afp_amount: number;
+  afp_commission_amount: number;
+  health_amount: number;
+  unemployment_amount: number;
+  income_tax_amount: number;
+  loan_deductions: number;
+  advance_payments: number;
+  apv_amount: number;
+  other_deductions: number;
+  
   status: string;
   created_at: string;
   updated_at: string;
@@ -125,7 +137,7 @@ export default function LiquidationsPage() {
     );
 
     const currentMonthTotal = currentMonthLiquidations.reduce(
-      (sum, liq) => sum + liq.net_salary, 0
+      (sum, liq) => sum + calculateNetSalary(liq), 0
     );
 
     const pendingCount = liquidationsData.filter(liq => liq.status === 'draft').length;
@@ -173,6 +185,24 @@ export default function LiquidationsPage() {
       'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
     ];
     return `${monthNames[month - 1]} ${year}`;
+  };
+
+  // ✅ FUNCIÓN PARA CALCULAR TOTAL DESCUENTOS DINÁMICAMENTE (igual que en PDF y página individual)
+  const calculateTotalDeductions = (liq: LiquidationSummary) => {
+    return (liq.afp_amount || 0) + 
+           (liq.afp_commission_amount || 0) +
+           (liq.health_amount || 0) + 
+           (liq.unemployment_amount || 0) + 
+           (liq.income_tax_amount || 0) +
+           (liq.loan_deductions || 0) +
+           (liq.advance_payments || 0) +
+           (liq.apv_amount || 0) +
+           (liq.other_deductions || 0);
+  };
+
+  // ✅ CALCULAR LÍQUIDO A PAGAR DINÁMICAMENTE
+  const calculateNetSalary = (liq: LiquidationSummary) => {
+    return liq.total_gross_income - calculateTotalDeductions(liq);
   };
 
   const getStatusBadge = (status: string) => {
@@ -510,13 +540,13 @@ export default function LiquidationsPage() {
                       <div className="text-center sm:text-right">
                         <div className="text-xs text-gray-500 mb-1">Descuentos</div>
                         <div className="font-bold text-red-600 text-sm sm:text-base truncate">
-                          {formatCurrency(liquidation.total_deductions)}
+                          {formatCurrency(calculateTotalDeductions(liquidation))}
                         </div>
                       </div>
                       <div className="text-center sm:text-right col-span-2 sm:col-span-1">
                         <div className="text-xs text-gray-500 mb-1">Líquido a Pagar</div>
                         <div className="font-bold text-blue-600 text-base sm:text-lg">
-                          {formatCurrency(liquidation.net_salary)}
+                          {formatCurrency(calculateNetSalary(liquidation))}
                         </div>
                       </div>
                     </div>

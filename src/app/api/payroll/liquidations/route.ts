@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Formatear datos para respuesta - manejar campos opcionales
+    // Formatear datos para respuesta - incluir campos de descuentos individuales para cálculo dinámico
     const formattedLiquidations = liquidations?.map(liquidation => ({
       id: liquidation.id,
       employee_id: liquidation.employee_id,
@@ -86,6 +86,18 @@ export async function GET(request: NextRequest) {
       total_gross_income: liquidation.total_gross_income || 0,
       total_deductions: liquidation.total_deductions || 0,
       net_salary: liquidation.net_salary || 0,
+      
+      // ✅ Incluir campos individuales de descuentos para cálculo dinámico
+      afp_amount: liquidation.afp_amount || 0,
+      afp_commission_amount: liquidation.afp_commission_amount || 0,
+      health_amount: liquidation.health_amount || 0,
+      unemployment_amount: liquidation.unemployment_amount || 0,
+      income_tax_amount: liquidation.income_tax_amount || 0,
+      loan_deductions: liquidation.loan_deductions || 0,
+      advance_payments: liquidation.advance_payments || 0,
+      apv_amount: liquidation.apv_amount || 0,
+      other_deductions: liquidation.other_deductions || 0,
+      
       status: liquidation.status || 'draft',
       created_at: liquidation.created_at,
       updated_at: liquidation.updated_at || liquidation.created_at
