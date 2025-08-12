@@ -211,11 +211,45 @@ export default function GenerateLiquidationPage() {
     }
   };
 
+  // ✅ VALIDACIÓN DE FECHAS: No permitir períodos futuros
+  const validatePeriod = (year: number, month: number): { isValid: boolean; message?: string } => {
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1;
+    
+    if (year > currentYear) {
+      return { isValid: false, message: `No se pueden crear liquidaciones para el año ${year} (futuro)` };
+    }
+    
+    if (year === currentYear && month > currentMonth) {
+      return { isValid: false, message: `No se pueden crear liquidaciones para ${month}/${year} (mes futuro)` };
+    }
+    
+    return { isValid: true };
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const { checked } = e.target as HTMLInputElement;
     
     const newValue = type === 'checkbox' ? checked : (type === 'number' ? parseFloat(value) || 0 : value);
+    
+    // ✅ VALIDACIÓN DE FECHAS AL CAMBIAR PERÍODO
+    if (name === 'period_year' || name === 'period_month') {
+      const updatedFormData = { ...formData, [name]: newValue };
+      const validation = validatePeriod(
+        updatedFormData.period_year, 
+        updatedFormData.period_month
+      );
+      
+      if (!validation.isValid) {
+        setError(validation.message || 'Período inválido');
+        setTimeout(() => setError(null), 5000);
+        return; // No actualizar si es inválido
+      } else {
+        setError(null); // Limpiar error si ahora es válido
+      }
+    }
     
     // ✅ LOGGING TEMPORAL PARA DEBUGGING
     if (name === 'apply_legal_gratification') {
@@ -233,6 +267,13 @@ export default function GenerateLiquidationPage() {
 
   const handleSaveAndGenerate = async () => {
     if (!result || !selectedEmployee) return;
+
+    // ✅ VALIDACIÓN FINAL DE PERÍODO ANTES DE GUARDAR
+    const periodValidation = validatePeriod(formData.period_year, formData.period_month);
+    if (!periodValidation.isValid) {
+      setError(periodValidation.message || 'No se puede guardar liquidación para período futuro');
+      return;
+    }
 
     setSaving(true);
     try {

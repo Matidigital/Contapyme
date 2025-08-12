@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { PayrollHeader } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { Calculator, Plus, FileText, Users, TrendingUp, Calendar, Filter, Search, Download, Eye, DollarSign, ArrowRight, Activity } from 'lucide-react';
@@ -33,6 +34,7 @@ interface LiquidationStats {
 }
 
 export default function LiquidationsPage() {
+  const searchParams = useSearchParams();
   const [liquidations, setLiquidations] = useState<LiquidationSummary[]>([]);
   const [stats, setStats] = useState<LiquidationStats>({
     total_liquidations: 0,
@@ -48,12 +50,21 @@ export default function LiquidationsPage() {
   const [filterRut, setFilterRut] = useState('');
   const [availableRuts, setAvailableRuts] = useState<string[]>([]);
   const [availablePeriods, setAvailablePeriods] = useState<string[]>([]);
+  const [savedMessage, setSavedMessage] = useState<string | null>(null);
 
   const COMPANY_ID = '8033ee69-b420-4d91-ba0e-482f46cd6fce';
 
   useEffect(() => {
     fetchLiquidations();
-  }, []);
+    
+    // ✅ REFRESH AUTOMÁTICO: Detectar si se guardó una liquidación
+    const saved = searchParams?.get('saved');
+    if (saved === 'true') {
+      setSavedMessage('✅ Liquidación guardada exitosamente');
+      // Limpiar mensaje después de 5 segundos
+      setTimeout(() => setSavedMessage(null), 5000);
+    }
+  }, [searchParams]);
 
   const fetchLiquidations = async () => {
     try {
@@ -321,6 +332,36 @@ export default function LiquidationsPage() {
       </div>
 
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        
+        {/* ✅ MENSAJE DE ÉXITO AL GUARDAR LIQUIDACIÓN */}
+        {savedMessage && (
+          <div className="mb-6 bg-green-50/80 backdrop-blur-sm border border-green-200 rounded-2xl p-4 flex items-center gap-3">
+            <div className="w-8 h-8 bg-green-500/10 rounded-lg flex items-center justify-center">
+              <FileText className="w-4 h-4 text-green-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-green-800 font-medium">{savedMessage}</p>
+              <p className="text-green-700 text-sm">La liquidación aparecerá en la lista a continuación</p>
+            </div>
+          </div>
+        )}
+
+        {/* ✅ BOTÓN GENERAR LIBRO DE REMUNERACIONES */}
+        <div className="mb-6 bg-purple-50/80 backdrop-blur-sm border border-purple-200 rounded-2xl p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h3 className="font-semibold text-purple-900 mb-1">Libro de Remuneraciones</h3>
+              <p className="text-purple-700 text-sm">Después de validar las liquidaciones del mes, genera el libro oficial</p>
+            </div>
+            <Link href="/payroll/libro-remuneraciones">
+              <button className="px-4 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-medium rounded-xl transition-all duration-200 flex items-center gap-2 transform hover:scale-105">
+                <FileText className="w-4 h-4" />
+                <span className="text-sm">Generar Libro</span>
+              </button>
+            </Link>
+          </div>
+        </div>
+
         {error && (
           <div className="mb-6 p-4 rounded-xl bg-red-50/80 backdrop-blur-sm border border-red-200">
             <div className="flex items-center text-red-700">
