@@ -190,7 +190,7 @@ export default function LibroRemuneracionesPage() {
 
   const downloadPrevired = async (book: PayrollBook) => {
     try {
-      const response = await fetch(`/api/payroll/previred?company_id=${companyId}&period=${book.period}`);
+      const response = await fetch(`/api/payroll/libro-remuneraciones/previred?company_id=${companyId}&period=${book.period}`);
       
       if (response.ok) {
         const blob = await response.blob();
@@ -911,6 +911,27 @@ export default function LibroRemuneracionesPage() {
                           </div>
                         </div>
                       )}
+                      
+                      {/* Botones de exportación */}
+                      <div className="mt-6 pt-4 border-t border-white/20">
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <button
+                            onClick={() => downloadCSV(book)}
+                            className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-medium rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                          >
+                            <FileSpreadsheet className="w-4 h-4" />
+                            Descargar CSV
+                          </button>
+                          
+                          <button
+                            onClick={() => downloadPrevired(book)}
+                            className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                          >
+                            <FileText className="w-4 h-4" />
+                            Descargar PREVIRED
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
