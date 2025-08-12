@@ -249,6 +249,28 @@ export default function GenerateLiquidationPage() {
       console.log('  - result.total_taxable_income:', result.total_taxable_income);
       console.log('  - result.net_salary:', result.net_salary);
 
+      // CALCULAR TOTALES CORRECTAMENTE incluyendo gratificación Art. 50
+      const calculatedTaxableIncome = (result.base_salary || 0) + 
+                                      (result.overtime_amount || 0) + 
+                                      (result.bonuses || 0) + 
+                                      (result.commissions || 0) + 
+                                      (result.gratification || 0) + 
+                                      (result.legal_gratification_art50 || 0); // ✅ INCLUIR GRATIFICACIÓN ART. 50
+      
+      const calculatedNonTaxableIncome = (result.food_allowance || 0) + 
+                                         (result.transport_allowance || 0) + 
+                                         (result.family_allowance || 0);
+      
+      const calculatedGrossIncome = calculatedTaxableIncome + calculatedNonTaxableIncome;
+      
+      console.log('🔍 CÁLCULO CORRECTO DE TOTALES:');
+      console.log('  - Base Salary:', result.base_salary);
+      console.log('  - Bonuses:', result.bonuses);
+      console.log('  - Gratificación Art. 50:', result.legal_gratification_art50);
+      console.log('  - Total Taxable (calculado):', calculatedTaxableIncome);
+      console.log('  - Total Non-Taxable (calculado):', calculatedNonTaxableIncome);
+      console.log('  - Total Gross (calculado):', calculatedGrossIncome);
+
       // Mapear los datos de la liquidación al formato de la base de datos
       const liquidationData = {
         employee_id: selectedEmployeeId,
@@ -262,14 +284,14 @@ export default function GenerateLiquidationPage() {
         bonuses: result.bonuses || 0,
         commissions: result.commissions || 0,
         gratification: result.gratification || 0,
-        total_taxable_income: result.total_taxable_income || 0,
+        total_taxable_income: calculatedTaxableIncome, // ✅ USAR TOTAL CALCULADO CORRECTAMENTE
         
         // Haberes no imponibles
         food_allowance: result.food_allowance || 0,
         transport_allowance: result.transport_allowance || 0,
         family_allowance: result.family_allowance || 0,
         other_allowances: 0,
-        total_non_taxable_income: result.total_non_taxable_income || 0,
+        total_non_taxable_income: calculatedNonTaxableIncome, // ✅ USAR TOTAL CALCULADO CORRECTAMENTE
         
         // ✅ GRATIFICACIÓN DEL RESULTADO DEL HOOK
         legal_gratification_art50: result.legal_gratification_art50 || 0,
