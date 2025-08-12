@@ -3,7 +3,7 @@
  * Integra con el módulo de indicadores para valores en tiempo real
  */
 
-import { getIndicatorsDashboard } from '@/lib/database/databaseSimple';
+import { createClient } from '@supabase/supabase-js';
 
 export interface EconomicIndicators {
   minimum_wage: number;
@@ -17,16 +17,113 @@ export interface EconomicIndicators {
 }
 
 /**
+ * Configuración Supabase para consultas directas
+ */
+const getSupabaseClient = () => {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl || !supabaseKey) {
+    console.warn('⚠️ Variables de entorno Supabase no configuradas');
+    return null;
+  }
+  
+  return createClient(supabaseUrl, supabaseKey);
+};
+
+/**
+ * Consulta directa a tabla economic_indicators sin RPC problemático
+ */
+async function getEconomicIndicatorsDirectly(): Promise<EconomicIndicators | null> {
+  try {
+    const supabase = getSupabaseClient();
+    if (!supabase) return null;
+
+    // Obtener los últimos valores de indicadores específicos
+    const { data, error } = await supabase
+      .from('economic_indicators')
+      .select('indicator_code, value, date')
+      .in('indicator_code', ['SUELDO_MINIMO', 'UF', 'UTM', 'USD', 'EUR'])
+      .order('date', { ascending: false })
+      .limit(10); // Últimos valores de cada indicador
+
+    if (error) {
+      console.warn('Error consultando economic_indicators:', error);
+      return null;
+    }
+
+    if (!data || data.length === 0) {
+      console.log('No hay datos en economic_indicators');
+      return null;
+    }
+
+    // Procesar los datos obtenidos
+    const indicators: EconomicIndicators = {
+      minimum_wage: 529000, // Valor por defecto
+      uf: 37800,
+      utm: 66391,
+      ipc: 0,
+      tpm: 5.75,
+      usd: 950,
+      eur: 1000,
+      last_updated: new Date().toISOString()
+    };
+
+    // Mapear los valores obtenidos
+    data.forEach(indicator => {
+      const value = parseFloat(indicator.value);
+      if (isNaN(value)) return;
+
+      switch (indicator.indicator_code) {
+        case 'SUELDO_MINIMO':
+          indicators.minimum_wage = value;
+          break;
+        case 'UF':
+          indicators.uf = value;
+          break;
+        case 'UTM':
+          indicators.utm = value;
+          break;
+        case 'USD':
+          indicators.usd = value;
+          break;
+        case 'EUR':
+          indicators.eur = value;
+          break;
+      }
+      
+      // Actualizar fecha con el más reciente
+      if (indicator.date && indicator.date > indicators.last_updated) {
+        indicators.last_updated = indicator.date;
+      }
+    });
+
+    console.log('✅ Indicadores económicos obtenidos de base de datos');
+    return indicators;
+
+  } catch (error) {
+    console.error('Error en consulta directa de indicadores:', error);
+    return null;
+  }
+}
+
+/**
  * Obtiene indicadores económicos desde la base de datos
- * SIMPLIFICADO: Usa valores por defecto para evitar errores de integración
+ * SOLUCION DEFINITIVA: Consulta directa a tabla economic_indicators
  */
 export async function getEconomicIndicators(): Promise<EconomicIndicators> {
   try {
-    // TEMPORAL: Usar valores por defecto mientras se resuelve la integración
-    console.log('Usando indicadores económicos por defecto (modo seguro)');
+    // SOLUCION DEFINITIVA: Consulta directa sin RPC problemático
+    const indicators = await getEconomicIndicatorsDirectly();
+    if (indicators) {
+      return indicators;
+    }
+    
+    // Fallback a valores por defecto si no hay datos
+    console.log('No se encontraron indicadores, usando valores por defecto');
     return getDefaultIndicators();
     
-    /* CODIGO ORIGINAL COMENTADO PARA DEBUGGING:
+    /* CODIGO ANTERIOR COMENTADO PARA REFERENCIA:
     const { data, error } = await getIndicatorsDashboard();
     
     if (error || !data) {
