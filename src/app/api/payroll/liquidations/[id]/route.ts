@@ -78,21 +78,13 @@ export async function GET(
       employee: liquidation.employees
     });
 
-    // ✅ CORREGIR TOTAL_GROSS_INCOME SI LA GRATIFICACIÓN NO ESTÁ INCLUIDA
-    const shouldIncludeGratification = (liquidation.legal_gratification_art50 || 0) > 0;
-    const currentTotalGross = liquidation.total_gross_income || 0;
-    const gratificationAmount = liquidation.legal_gratification_art50 || 0;
-    const correctedTotalGross = shouldIncludeGratification && 
-      (currentTotalGross < (liquidation.base_salary || 0) + gratificationAmount)
-      ? currentTotalGross + gratificationAmount 
-      : currentTotalGross;
-    
-    if (shouldIncludeGratification && correctedTotalGross !== currentTotalGross) {
-      console.log('🔧 Corrigiendo total_gross_income:');
-      console.log('  - Original:', currentTotalGross);
-      console.log('  - Gratificación:', gratificationAmount);
-      console.log('  - Corregido:', correctedTotalGross);
-    }
+    // ✅ USAR VALORES DE DB TAL COMO VIENEN (sin corrección duplicada)
+    console.log('🔍 Raw liquidation data:', {
+      legal_gratification_art50: liquidation.legal_gratification_art50,
+      total_gross_income: liquidation.total_gross_income,
+      total_taxable_income: liquidation.total_taxable_income,
+      base_salary: liquidation.base_salary
+    });
 
     // Formatear datos para respuesta con valores por defecto
     const formattedLiquidation = {
@@ -137,10 +129,10 @@ export async function GET(
       other_deductions: liquidation.other_deductions || 0,
       total_other_deductions: liquidation.total_other_deductions || 0,
       
-      // Totales - CORREGIDOS PARA INCLUIR GRATIFICACIÓN
-      total_gross_income: correctedTotalGross,
+      // Totales - USAR VALORES EXACTOS DE LA BASE DE DATOS
+      total_gross_income: liquidation.total_gross_income || 0,
       total_deductions: liquidation.total_deductions || 0,
-      net_salary: (liquidation.net_salary || 0) + (correctedTotalGross - currentTotalGross),
+      net_salary: liquidation.net_salary || 0,
       
       status: liquidation.status || 'draft',
       created_at: liquidation.created_at,
