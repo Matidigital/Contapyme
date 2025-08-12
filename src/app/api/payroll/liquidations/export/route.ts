@@ -225,6 +225,11 @@ function generateLiquidationHTML(liquidation: any, employee: any, company: any) 
                     <td>Gratificación</td>
                     <td class="amount">${formatCurrency(liquidation.gratification)}</td>
                 </tr>` : ''}
+                ${(liquidation.legal_gratification_art50 || 0) > 0 ? `
+                <tr style="background-color: #f8f4ff;">
+                    <td style="color: #7c3aed; font-weight: bold;">🏆 Gratificación Legal Art. 50 (25%)</td>
+                    <td class="amount" style="color: #7c3aed; font-weight: bold;">${formatCurrency(liquidation.legal_gratification_art50)}</td>
+                </tr>` : ''}
                 <tr class="row-divider">
                     <td><strong>Total Imponible</strong></td>
                     <td class="amount"><strong>${formatCurrency(liquidation.total_taxable_income)}</strong></td>
@@ -498,7 +503,7 @@ export async function GET(request: NextRequest) {
     // Generar CSV
     const headers = [
       'RUT', 'Nombre', 'Año', 'Mes', 'Días Trabajados',
-      'Sueldo Base', 'Total Imponible', 'Total No Imponible',
+      'Sueldo Base', 'Gratificación Art. 50', 'Total Imponible', 'Total No Imponible',
       'AFP', 'Salud', 'Cesantía', 'Impuesto',
       'Total Descuentos', 'Líquido a Pagar'
     ];
@@ -510,6 +515,7 @@ export async function GET(request: NextRequest) {
       liq.period_month,
       liq.days_worked,
       liq.base_salary,
+      liq.legal_gratification_art50 || 0,
       liq.total_taxable_income,
       liq.total_non_taxable_income,
       liq.afp_amount + liq.afp_commission_amount,

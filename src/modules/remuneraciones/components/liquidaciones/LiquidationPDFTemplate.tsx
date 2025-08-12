@@ -82,23 +82,37 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
     return result.trim() + ' pesos';
   };
 
+  // ✅ TOTAL HABERES IMPONIBLES: Incluir gratificación Art. 50
   const totalImponible = (liquidationData.base_salary || 0) + 
-                      legalGratificationArt50 + 
-                      (liquidationData.bonuses || 0) + 
-                      (liquidationData.overtime_amount || 0) + 
-                      (liquidationData.commissions || 0);
+                         legalGratificationArt50 + 
+                         (liquidationData.bonuses || 0) + 
+                         (liquidationData.overtime_amount || 0) + 
+                         (liquidationData.commissions || 0) +
+                         (liquidationData.gratification || 0); // Otras gratificaciones
 
-  // ✅ CORREGIDO: Incluir cesantía con campo correcto
+  // ✅ TOTAL HABERES NO IMPONIBLES
+  const totalNoImponible = (liquidationData.food_allowance || 0) + 
+                           (liquidationData.transport_allowance || 0) + 
+                           (liquidationData.family_allowance || 0) +
+                           (liquidationData.other_allowances || 0);
+
+  // ✅ TOTAL HABERES BRUTOS
+  const totalHaberesBrutos = totalImponible + totalNoImponible;
+
+  // ✅ TOTAL DESCUENTOS CORRECTOS
   const totalDescuentos = (liquidationData.afp_amount || 0) + 
                          (liquidationData.afp_commission_amount || 0) +
                          (liquidationData.health_amount || 0) + 
                          (liquidationData.additional_health_amount || 0) +
-                         // SIS REMOVIDO - Es costo del empleador, no descuento del trabajador
-                         (liquidationData.unemployment_amount || 0) + // ✅ Cesantía correcta
+                         (liquidationData.unemployment_amount || 0) + // Cesantía trabajador
                          (liquidationData.income_tax_amount || 0) +
-                         (liquidationData.total_other_deductions || 0);
+                         (liquidationData.loan_deductions || 0) +
+                         (liquidationData.advance_payments || 0) +
+                         (liquidationData.apv_amount || 0) +
+                         (liquidationData.other_deductions || 0);
 
-  const liquidoAPagar = totalImponible - totalDescuentos;
+  // ✅ LÍQUIDO A PAGAR = TOTAL HABERES BRUTOS - TOTAL DESCUENTOS
+  const liquidoAPagar = totalHaberesBrutos - totalDescuentos;
 
   return (
     <div 
@@ -617,7 +631,10 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
           RESUMEN FINAL
         </div>
         <div style={{ fontSize: '12px', marginBottom: '5px' }}>
-          <strong>TOTAL HABERES:</strong> ${(totalImponible + (liquidationData.food_allowance || 0) + (liquidationData.transport_allowance || 0) + (liquidationData.family_allowance || 0)).toLocaleString('es-CL')}
+          <strong>TOTAL HABERES:</strong> ${totalHaberesBrutos.toLocaleString('es-CL')}
+        </div>
+        <div style={{ fontSize: '10px', color: '#666', marginBottom: '5px' }}>
+          (Imponibles: ${totalImponible.toLocaleString('es-CL')} + No Imponibles: ${totalNoImponible.toLocaleString('es-CL')})
         </div>
         <div style={{ fontSize: '12px', marginBottom: '15px' }}>
           <strong>TOTAL DESCUENTOS:</strong> ${totalDescuentos.toLocaleString('es-CL')}
