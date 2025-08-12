@@ -82,19 +82,37 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Empleado encontrado:', employee.first_name, employee.last_name);
 
-    // Verificar si ya existe una liquidación para este período
-    const { data: existing } = await supabase
+    // Verificar si ya existe una liquidación para este período (RUT, mes, año)
+    const { data: existing, error: existingError } = await supabase
       .from('payroll_liquidations')
-      .select('id')
+      .select('id, created_at, updated_at')
       .eq('company_id', companyId)
       .eq('employee_id', liquidationData.employee_id)
       .eq('period_year', liquidationData.period_year)
       .eq('period_month', liquidationData.period_month)
-      .single();
+      .maybeSingle(); // Usa maybeSingle para evitar errores si no encuentra nada
+
+    if (existingError && existingError.code !== 'PGRST116') {
+      console.error('❌ Error checking existing liquidation:', existingError);
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Error verificando liquidación existente',
+          details: existingError.message 
+        },
+        { status: 500 }
+      );
+    }
 
     let savedLiquidation;
 
     if (existing) {
+      console.log('🔄 Liquidación existente encontrada, actualizando...', {
+        existingId: existing.id,
+        employeeId: liquidationData.employee_id,
+        period: `${liquidationData.period_year}-${liquidationData.period_month}`
+      });
+      
       // Actualizar liquidación existente
       const { data: updated, error: updateError } = await supabase
         .from('payroll_liquidations')
@@ -121,6 +139,11 @@ export async function POST(request: NextRequest) {
 
       savedLiquidation = updated;
     } else {
+      console.log('🆕 Creando nueva liquidación...', {
+        employeeId: liquidationData.employee_id,
+        period: `${liquidationData.period_year}-${liquidationData.period_month}`
+      });
+      
       // Crear nueva liquidación
       const { data: created, error: createError } = await supabase
         .from('payroll_liquidations')

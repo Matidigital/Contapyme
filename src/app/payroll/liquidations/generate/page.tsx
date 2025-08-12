@@ -208,6 +208,9 @@ export default function GenerateLiquidationPage() {
         other_allowances: 0,
         total_non_taxable_income: result.total_non_taxable_income || 0,
         
+        // Gratificación legal Art. 50
+        legal_gratification_art50: result.legal_gratification_art50 || 0,
+        
         // Descuentos previsionales (campos separados como espera la DB)
         afp_percentage: result.afp_percentage || 10.0,
         afp_commission_percentage: result.afp_commission_percentage || 0.58,
@@ -252,10 +255,12 @@ export default function GenerateLiquidationPage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // Redirigir a la vista de liquidaciones o mostrar éxito
-        router.push(`/payroll/liquidations`);
+        console.log('✅ Liquidación guardada exitosamente:', data);
+        // Redirigir a la vista de liquidaciones con mensaje de éxito
+        router.push(`/payroll/liquidations?saved=true`);
       } else {
-        setError(data.error || 'Error al guardar liquidación');
+        console.error('❌ Error al guardar liquidación:', data);
+        setError(data.error || `Error al guardar liquidación: ${data.details || 'Error desconocido'}`);
       }
     } catch (err) {
       setError('Error al guardar liquidación');
