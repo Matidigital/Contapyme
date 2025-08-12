@@ -39,13 +39,13 @@ async function getEconomicIndicatorsDirectly(): Promise<EconomicIndicators | nul
     const supabase = getSupabaseClient();
     if (!supabase) return null;
 
-    // Obtener los últimos valores de indicadores específicos
+    // Obtener los últimos valores de indicadores específicos (códigos reales en BD)
     const { data, error } = await supabase
       .from('economic_indicators')
-      .select('indicator_code, value, date')
-      .in('indicator_code', ['SUELDO_MINIMO', 'UF', 'UTM', 'USD', 'EUR'])
+      .select('code, value, date')
+      .in('code', ['sueldo_minimo', 'uf', 'utm', 'dolar', 'euro'])
       .order('date', { ascending: false })
-      .limit(10); // Últimos valores de cada indicador
+      .limit(5); // Últimos valores de cada indicador
 
     if (error) {
       // Error 400 = tabla no existe, esto es normal
@@ -74,26 +74,33 @@ async function getEconomicIndicatorsDirectly(): Promise<EconomicIndicators | nul
       last_updated: new Date().toISOString()
     };
 
-    // Mapear los valores obtenidos
+    // Mapear los valores obtenidos (solo el más reciente de cada tipo)
+    const processedCodes = new Set();
+    
     data.forEach(indicator => {
       const value = parseFloat(indicator.value);
-      if (isNaN(value)) return;
+      if (isNaN(value) || processedCodes.has(indicator.code)) return;
 
-      switch (indicator.indicator_code) {
-        case 'SUELDO_MINIMO':
+      switch (indicator.code) {
+        case 'sueldo_minimo':
           indicators.minimum_wage = value;
+          processedCodes.add(indicator.code);
           break;
-        case 'UF':
+        case 'uf':
           indicators.uf = value;
+          processedCodes.add(indicator.code);
           break;
-        case 'UTM':
+        case 'utm':
           indicators.utm = value;
+          processedCodes.add(indicator.code);
           break;
-        case 'USD':
+        case 'dolar':
           indicators.usd = value;
+          processedCodes.add(indicator.code);
           break;
-        case 'EUR':
+        case 'euro':
           indicators.eur = value;
+          processedCodes.add(indicator.code);
           break;
       }
       
