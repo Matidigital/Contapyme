@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { PayrollHeader } from '@/components/layout';
 import { JobDescriptionAssistant } from '@/components/payroll/JobDescriptionAssistant';
 import { Button, Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
-import { ArrowLeft, Save, FileText, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Save, FileText, Sparkles, CheckCircle2, Trash2, Eye, Clock, TrendingUp } from 'lucide-react';
+import { useCompanyId } from '@/contexts/CompanyContext';
 
 interface ExtractedData {
   position?: string;
@@ -17,8 +18,13 @@ interface ExtractedData {
 
 export default function JobDescriptionAssistantPage() {
   const router = useRouter();
+  const companyId = useCompanyId();
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
   const [isComplete, setIsComplete] = useState(false);
+  const [savedDescriptions, setSavedDescriptions] = useState<any[]>([]);
+  const [loadingSaved, setLoadingSaved] = useState(false);
+  const [showSaved, setShowSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Manejar datos extraídos del asistente
   const handleDataExtracted = (data: ExtractedData) => {
@@ -44,20 +50,107 @@ export default function JobDescriptionAssistantPage() {
     router.push('/payroll/contracts/new?prefilled=true&source=job-assistant');
   };
 
-  // Guardar para usar más tarde
-  const saveForLater = () => {
-    if (extractedData) {
-      const savedDescriptions = JSON.parse(localStorage.getItem('saved_job_descriptions') || '[]');
-      const newDescription = {
-        id: Date.now().toString(),
-        ...extractedData,
-        created_at: new Date().toISOString(),
-        title: `${extractedData.position || 'Cargo'} - ${extractedData.department || 'Sin departamento'}`
-      };
-      savedDescriptions.push(newDescription);
-      localStorage.setItem('saved_job_descriptions', JSON.stringify(savedDescriptions));
+  // Cargar descriptores guardados
+  useEffect(() => {
+    if (companyId) {
+      loadSavedDescriptions();
+    }
+  }, [companyId]);
+
+  const loadSavedDescriptions = async () => {
+    try {
+      setLoadingSaved(true);
+      const response = await fetch(`/api/payroll/job-descriptions?company_id=${companyId}&limit=50`);
+      const data = await response.json();
       
-      alert('Descriptor de cargo guardado exitosamente');
+      if (data.success) {
+        setSavedDescriptions(data.data || []);
+      }
+    } catch (error) {
+      console.error('Error loading saved descriptions:', error);
+    } finally {
+      setLoadingSaved(false);
+    }
+  };
+
+  // Guardar descriptor en base de datos
+  const saveToDatabase = async () => {
+    if (!extractedData || !companyId) return;
+
+    try {
+      setSaving(true);
+      const title = `${extractedData.position || 'Cargo'} - ${new Date().toLocaleDateString('es-CL')}`;
+      
+      const response = await fetch('/api/payroll/job-descriptions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          company_id: companyId,
+          title,
+          position: extractedData.position || '',
+          department: extractedData.department || '',
+          job_functions: extractedData.job_functions || [],
+          obligations: extractedData.obligations || [],
+          prohibitions: extractedData.prohibitions || [],
+          source_type: 'ai_assistant'
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert('✅ Descriptor guardado exitosamente en la base de datos');
+        loadSavedDescriptions(); // Recargar lista
+      } else {
+        alert(`Error: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Error saving to database:', error);
+      alert('Error al guardar el descriptor');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Usar un descriptor guardado
+  const useDescriptor = async (descriptor: any) => {
+    try {
+      // Incrementar contador de uso
+      await fetch(`/api/payroll/job-descriptions/${descriptor.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company_id: companyId })
+      });
+
+      // Cargar datos en el estado actual
+      setExtractedData({
+        position: descriptor.position,
+        department: descriptor.department,
+        job_functions: descriptor.job_functions,
+        obligations: descriptor.obligations,
+        prohibitions: descriptor.prohibitions
+      });
+      setIsComplete(true);
+      setShowSaved(false);
+    } catch (error) {
+      console.error('Error using descriptor:', error);
+    }
+  };
+
+  // Eliminar descriptor
+  const deleteDescriptor = async (descriptorId: string) => {
+    if (!confirm('¿Estás seguro de eliminar este descriptor?')) return;
+
+    try {
+      const response = await fetch(`/api/payroll/job-descriptions/${descriptorId}?company_id=${companyId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        loadSavedDescriptions(); // Recargar lista
+      }
+    } catch (error) {
+      console.error('Error deleting descriptor:', error);
     }
   };
 
@@ -199,11 +292,12 @@ export default function JobDescriptionAssistantPage() {
                         </p>
                       </div>
                       <Button
-                        onClick={saveForLater}
+                        onClick={saveToDatabase}
+                        disabled={saving}
                         variant="outline"
                         className="w-full"
                       >
-                        Guardar
+                        {saving ? 'Guardando...' : 'Guardar en BD'}
                       </Button>
                     </div>
                   </div>
@@ -228,6 +322,124 @@ export default function JobDescriptionAssistantPage() {
             </Card>
           )}
 
+          {/* Descriptores Guardados */}
+          <Card className="border-2 border-indigo-200">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Save className="h-5 w-5 text-indigo-600" />
+                  Descriptores Guardados ({savedDescriptions.length})
+                </CardTitle>
+                <Button
+                  onClick={() => setShowSaved(!showSaved)}
+                  variant="outline"
+                  className="text-sm"
+                >
+                  {showSaved ? 'Ocultar' : 'Ver Todos'}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loadingSaved ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-2"></div>
+                  <p className="text-sm text-gray-600">Cargando descriptores...</p>
+                </div>
+              ) : savedDescriptions.length === 0 ? (
+                <div className="text-center py-8">
+                  <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    No hay descriptores guardados
+                  </h3>
+                  <p className="text-gray-600">
+                    Los descriptores que generes se guardarán aquí para reutilizar
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Mostrar los 3 más populares siempre */}
+                  <div className="grid grid-cols-1 gap-4 mb-4">
+                    {savedDescriptions.slice(0, 3).map((descriptor) => (
+                      <div key={descriptor.id} className="p-4 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg border border-indigo-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <h4 className="font-semibold text-gray-900">{descriptor.position}</h4>
+                            <p className="text-sm text-gray-600">
+                              {descriptor.department} • Usado {descriptor.times_used} veces
+                            </p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={() => useDescriptor(descriptor)}
+                              size="sm"
+                              variant="primary"
+                              className="bg-indigo-600 hover:bg-indigo-700"
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              Usar
+                            </Button>
+                            <Button
+                              onClick={() => deleteDescriptor(descriptor.id)}
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="flex gap-4 text-xs text-gray-500">
+                          <span>✓ {descriptor.job_functions?.length || 0} funciones</span>
+                          <span>✓ {descriptor.obligations?.length || 0} obligaciones</span>
+                          <span>✓ {descriptor.prohibitions?.length || 0} prohibiciones</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Mostrar todos si está expandido */}
+                  {showSaved && savedDescriptions.length > 3 && (
+                    <div className="pt-4 border-t border-gray-200">
+                      <h4 className="font-medium text-gray-900 mb-3">Todos los Descriptores</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {savedDescriptions.slice(3).map((descriptor) => (
+                          <div key={descriptor.id} className="p-3 bg-white rounded-lg border border-gray-200">
+                            <div className="flex items-center justify-between mb-2">
+                              <div>
+                                <h5 className="font-medium text-gray-900 text-sm">{descriptor.position}</h5>
+                                <p className="text-xs text-gray-500">
+                                  {descriptor.department} • {descriptor.times_used} usos
+                                </p>
+                              </div>
+                              <div className="flex gap-1">
+                                <Button
+                                  onClick={() => useDescriptor(descriptor)}
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs px-2 py-1"
+                                >
+                                  Usar
+                                </Button>
+                                <Button
+                                  onClick={() => deleteDescriptor(descriptor.id)}
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs px-2 py-1 text-red-600"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Guía de Uso */}
           {!isComplete && (
             <Card>
@@ -235,7 +447,7 @@ export default function JobDescriptionAssistantPage() {
                 <CardTitle>¿Cómo usar el asistente?</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   <div className="text-center">
                     <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-3">
                       <FileText className="h-6 w-6 text-blue-600" />
@@ -263,6 +475,16 @@ export default function JobDescriptionAssistantPage() {
                     <h3 className="font-medium text-gray-900 mb-2">3. Subir PDF</h3>
                     <p className="text-sm text-gray-600">
                       Sube un descriptor existente y extraemos la información automáticamente
+                    </p>
+                  </div>
+
+                  <div className="text-center">
+                    <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mx-auto mb-3">
+                      <Save className="h-6 w-6 text-indigo-600" />
+                    </div>
+                    <h3 className="font-medium text-gray-900 mb-2">4. Guardar</h3>
+                    <p className="text-sm text-gray-600">
+                      Guarda descriptores en la BD para reutilizar en futuros empleados
                     </p>
                   </div>
                 </div>

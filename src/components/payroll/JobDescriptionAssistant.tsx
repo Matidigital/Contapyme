@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { Button, Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
-import { Upload, FileText, Zap, Loader2, CheckCircle, AlertTriangle, X, Sparkles } from 'lucide-react';
+import { Upload, FileText, Zap, Loader2, CheckCircle, AlertTriangle, X, Sparkles, Save } from 'lucide-react';
+import { SavedJobDescriptionsSelector } from './SavedJobDescriptionsSelector';
+import { useCompanyId } from '@/contexts/CompanyContext';
 
 interface JobDescriptionData {
   position?: string;
@@ -25,12 +27,14 @@ export function JobDescriptionAssistant({
   currentPosition = '',
   currentDepartment = '' 
 }: JobDescriptionAssistantProps) {
+  const companyId = useCompanyId();
   const [activeTab, setActiveTab] = useState<'upload' | 'ai' | 'manual'>('manual');
   const [loading, setLoading] = useState(false);
   const [refining, setRefining] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [showRefinedResult, setShowRefinedResult] = useState(false);
+  const [showSavedSelector, setShowSavedSelector] = useState(false);
 
   // Estados para asistente IA
   const [aiForm, setAiForm] = useState({
@@ -249,6 +253,27 @@ export function JobDescriptionAssistant({
     }));
   };
 
+  // Manejar selección de descriptor guardado
+  const handleSavedDescriptorSelect = (descriptor: any) => {
+    const data = {
+      position: descriptor.position,
+      department: descriptor.department,
+      job_functions: descriptor.job_functions,
+      obligations: descriptor.obligations,
+      prohibitions: descriptor.prohibitions
+    };
+
+    setResult({
+      success: true,
+      data,
+      message: 'Descriptor cargado desde base de datos',
+      confidence: null
+    });
+
+    onDataExtracted(data);
+    setShowSavedSelector(false);
+  };
+
   // Limpiar resultados
   const clearResults = () => {
     setResult(null);
@@ -260,13 +285,27 @@ export function JobDescriptionAssistant({
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="flex items-center">
-          <Zap className="h-5 w-5 mr-2 text-purple-600" />
-          Asistente de Descriptor de Cargo
-        </CardTitle>
-        <p className="text-sm text-gray-600">
-          Genere automáticamente las funciones del cargo usando IA o extraiga información de un PDF
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center">
+              <Zap className="h-5 w-5 mr-2 text-purple-600" />
+              Asistente de Descriptor de Cargo
+            </CardTitle>
+            <p className="text-sm text-gray-600">
+              Genere automáticamente las funciones del cargo usando IA o extraiga información de un PDF
+            </p>
+          </div>
+          {companyId && (
+            <Button
+              onClick={() => setShowSavedSelector(true)}
+              variant="outline"
+              className="flex items-center gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+            >
+              <Save className="h-4 w-4" />
+              Usar Guardado
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         {/* Tabs */}
@@ -828,6 +867,15 @@ export function JobDescriptionAssistant({
               Mejora automáticamente las funciones según normativa laboral chilena
             </p>
           </div>
+        )}
+
+        {/* Modal de selector de descriptores guardados */}
+        {showSavedSelector && companyId && (
+          <SavedJobDescriptionsSelector
+            companyId={companyId}
+            onSelect={handleSavedDescriptorSelect}
+            onClose={() => setShowSavedSelector(false)}
+          />
         )}
       </CardContent>
     </Card>
