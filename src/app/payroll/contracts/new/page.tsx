@@ -7,9 +7,10 @@ import { PayrollHeader } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { 
   ArrowLeft, Save, FileText, User, Calendar, DollarSign, 
-  Clock, MapPin, AlertCircle, Plus, Search 
+  Clock, MapPin, AlertCircle, Plus, Search, Sparkles 
 } from 'lucide-react';
 import { useCompanyId } from '@/contexts/CompanyContext';
+import { JobDescriptionAssistant } from '@/components/payroll/JobDescriptionAssistant';
 
 interface Employee {
   id: string;
@@ -65,6 +66,41 @@ export default function NewContractPage() {
       cash: ''
     }
   });
+
+  // Estado para datos del asistente de descriptores
+  const [jobDescriptionData, setJobDescriptionData] = useState<any>(null);
+
+  // Verificar si hay datos pre-llenados del asistente de descriptores
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const isPrefilled = urlParams.get('prefilled') === 'true';
+      const source = urlParams.get('source');
+      
+      if (isPrefilled && source === 'job-assistant') {
+        const savedData = sessionStorage.getItem('job_description_data');
+        if (savedData) {
+          try {
+            const data = JSON.parse(savedData);
+            setJobDescriptionData(data);
+            
+            // Pre-llenar campos del formulario
+            setFormData(prev => ({
+              ...prev,
+              position: data.position || '',
+              department: data.department || ''
+            }));
+            
+            // Limpiar sessionStorage después de usar
+            sessionStorage.removeItem('job_description_data');
+            sessionStorage.removeItem('job_description_source');
+          } catch (error) {
+            console.error('Error parsing job description data:', error);
+          }
+        }
+      }
+    }
+  }, []);
 
   // Cargar empleados activos sin contrato
   useEffect(() => {
@@ -180,6 +216,32 @@ export default function NewContractPage() {
 
       <div className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 sm:px-0">
+          {/* Banner de información cuando viene del asistente */}
+          {jobDescriptionData && (
+            <div className="mb-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0">
+                  <Sparkles className="h-5 w-5 text-indigo-600 mt-0.5" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-medium text-indigo-900 mb-1">
+                    Datos del Asistente de Descriptor de Cargo
+                  </h3>
+                  <p className="text-sm text-indigo-700 mb-2">
+                    Se han pre-llenado los campos de cargo y departamento con los datos generados por el asistente IA.
+                  </p>
+                  {jobDescriptionData.job_functions && jobDescriptionData.job_functions.length > 0 && (
+                    <div className="text-xs text-indigo-600">
+                      ✓ {jobDescriptionData.job_functions.length} funciones principales
+                      {jobDescriptionData.obligations && ` • ${jobDescriptionData.obligations.length} obligaciones`}
+                      {jobDescriptionData.prohibitions && ` • ${jobDescriptionData.prohibitions.length} prohibiciones`}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             
             {/* Selección de empleado */}
@@ -305,6 +367,37 @@ export default function NewContractPage() {
                         />
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+
+                {/* Asistente de Descriptor de Cargo */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Sparkles className="h-5 w-5 mr-2 text-purple-600" />
+                      Asistente de Descriptor de Cargo
+                    </CardTitle>
+                    <CardDescription>
+                      Genera funciones profesionales para el contrato usando IA, PDF o entrada manual
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <JobDescriptionAssistant
+                      onDataExtracted={(data) => {
+                        // Actualizar formData con las funciones extraídas
+                        console.log('Job description data extracted:', data);
+                        setJobDescriptionData(data);
+                        
+                        // Actualizar campos del formulario si están vacíos
+                        setFormData(prev => ({
+                          ...prev,
+                          position: data.position || prev.position,
+                          department: data.department || prev.department
+                        }));
+                      }}
+                      currentPosition={formData.position}
+                      currentDepartment={formData.department}
+                    />
                   </CardContent>
                 </Card>
 
