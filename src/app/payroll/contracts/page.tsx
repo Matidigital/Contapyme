@@ -159,61 +159,61 @@ export default function ContractsPage() {
   };
 
   return (
-    <div className=\"min-h-screen bg-gray-50\">
+    <div className="min-h-screen bg-gray-50">
       <PayrollHeader 
-        title=\"Gestión de Contratos\"
-        subtitle=\"Administra los contratos laborales de la empresa\"
+        title="Gestión de Contratos"
+        subtitle="Administra los contratos laborales de la empresa"
         showBackButton
       />
 
-      <div className=\"max-w-7xl mx-auto py-6 sm:px-6 lg:px-8\">
-        <div className=\"px-4 sm:px-0\">
+      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="px-4 sm:px-0">
           
           {/* Estadísticas */}
-          <div className=\"grid grid-cols-1 md:grid-cols-4 gap-6 mb-6\">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
             <Card>
-              <CardContent className=\"p-6\">
-                <div className=\"flex items-center\">
-                  <FileText className=\"h-8 w-8 text-blue-600\" />
-                  <div className=\"ml-4\">
-                    <p className=\"text-sm font-medium text-gray-600\">Total Contratos</p>
-                    <p className=\"text-2xl font-bold text-gray-900\">{stats.total}</p>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <FileText className="h-8 w-8 text-blue-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Total Contratos</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardContent className=\"p-6\">
-                <div className=\"flex items-center\">
-                  <User className=\"h-8 w-8 text-green-600\" />
-                  <div className=\"ml-4\">
-                    <p className=\"text-sm font-medium text-gray-600\">Activos</p>
-                    <p className=\"text-2xl font-bold text-gray-900\">{stats.active}</p>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <User className="h-8 w-8 text-green-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Activos</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.active}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardContent className=\"p-6\">
-                <div className=\"flex items-center\">
-                  <Edit className=\"h-8 w-8 text-yellow-600\" />
-                  <div className=\"ml-4\">
-                    <p className=\"text-sm font-medium text-gray-600\">Borradores</p>
-                    <p className=\"text-2xl font-bold text-gray-900\">{stats.draft}</p>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <Edit className="h-8 w-8 text-yellow-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Borradores</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.draft}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardContent className=\"p-6\">
-                <div className=\"flex items-center\">
-                  <Calendar className=\"h-8 w-8 text-red-600\" />
-                  <div className=\"ml-4\">
-                    <p className=\"text-sm font-medium text-gray-600\">Terminados</p>
-                    <p className=\"text-2xl font-bold text-gray-900\">{stats.terminated}</p>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <Calendar className="h-8 w-8 text-red-600" />
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Terminados</p>
+                    <p className="text-2xl font-bold text-gray-900">{stats.terminated}</p>
                   </div>
                 </div>
               </CardContent>
@@ -221,53 +221,53 @@ export default function ContractsPage() {
           </div>
 
           {/* Controles */}
-          <Card className=\"mb-6\">
-            <CardContent className=\"p-6\">
-              <div className=\"flex flex-col lg:flex-row gap-4 items-center justify-between\">
+          <Card className="mb-6">
+            <CardContent className="p-6">
+              <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
                 
                 {/* Búsqueda */}
-                <div className=\"relative flex-1 max-w-md\">
-                  <Search className=\"absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4\" />
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                   <input
-                    type=\"text\"
-                    placeholder=\"Buscar por nombre, RUT o cargo...\"
+                    type="text"
+                    placeholder="Buscar por nombre, RUT o cargo..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className=\"pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full\"
+                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
                   />
                 </div>
 
                 {/* Filtros */}
-                <div className=\"flex gap-3\">
+                <div className="flex gap-3">
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className=\"border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500\"
+                    className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value=\"all\">Todos los estados</option>
-                    <option value=\"active\">Activos</option>
-                    <option value=\"draft\">Borradores</option>
-                    <option value=\"terminated\">Terminados</option>
-                    <option value=\"expired\">Expirados</option>
+                    <option value="all">Todos los estados</option>
+                    <option value="active">Activos</option>
+                    <option value="draft">Borradores</option>
+                    <option value="terminated">Terminados</option>
+                    <option value="expired">Expirados</option>
                   </select>
 
                   <select
                     value={typeFilter}
                     onChange={(e) => setTypeFilter(e.target.value)}
-                    className=\"border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500\"
+                    className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value=\"all\">Todos los tipos</option>
-                    <option value=\"indefinido\">Indefinido</option>
-                    <option value=\"plazo_fijo\">Plazo Fijo</option>
-                    <option value=\"por_obra\">Por Obra</option>
-                    <option value=\"part_time\">Part Time</option>
+                    <option value="all">Todos los tipos</option>
+                    <option value="indefinido">Indefinido</option>
+                    <option value="plazo_fijo">Plazo Fijo</option>
+                    <option value="por_obra">Por Obra</option>
+                    <option value="part_time">Part Time</option>
                   </select>
                 </div>
 
                 {/* Botón nuevo contrato */}
-                <Link href=\"/payroll/contracts/new\">
-                  <Button variant=\"primary\" className=\"flex items-center\">
-                    <Plus className=\"h-4 w-4 mr-2\" />
+                <Link href="/payroll/contracts/new">
+                  <Button variant="primary" className="flex items-center">
+                    <Plus className="h-4 w-4 mr-2" />
                     Nuevo Contrato
                   </Button>
                 </Link>
@@ -285,55 +285,55 @@ export default function ContractsPage() {
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className=\"flex justify-center items-center py-12\">
-                  <div className=\"animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600\"></div>
-                  <span className=\"ml-3 text-gray-600\">Cargando contratos...</span>
+                <div className="flex justify-center items-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-3 text-gray-600">Cargando contratos...</span>
                 </div>
               ) : error ? (
-                <div className=\"text-center py-12\">
-                  <p className=\"text-red-600 mb-4\">{error}</p>
-                  <Button onClick={fetchContracts} variant=\"outline\">
+                <div className="text-center py-12">
+                  <p className="text-red-600 mb-4">{error}</p>
+                  <Button onClick={fetchContracts} variant="outline">
                     Intentar de nuevo
                   </Button>
                 </div>
               ) : filteredContracts.length === 0 ? (
-                <div className=\"text-center py-12\">
-                  <FileText className=\"h-16 w-16 text-gray-400 mx-auto mb-4\" />
-                  <h3 className=\"text-lg font-medium text-gray-900 mb-2\">
+                <div className="text-center py-12">
+                  <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
                     {contracts.length === 0 ? 'No hay contratos' : 'No se encontraron contratos'}
                   </h3>
-                  <p className=\"text-gray-500 mb-6\">
+                  <p className="text-gray-500 mb-6">
                     {contracts.length === 0 
                       ? 'Comienza creando el primer contrato de la empresa'
                       : 'Intenta ajustar los filtros de búsqueda'
                     }
                   </p>
                   {contracts.length === 0 && (
-                    <Link href=\"/payroll/contracts/new\">
-                      <Button variant=\"primary\">
-                        <Plus className=\"h-4 w-4 mr-2\" />
+                    <Link href="/payroll/contracts/new">
+                      <Button variant="primary">
+                        <Plus className="h-4 w-4 mr-2" />
                         Crear Primer Contrato
                       </Button>
                     </Link>
                   )}
                 </div>
               ) : (
-                <div className=\"space-y-4\">
+                <div className="space-y-4">
                   {filteredContracts.map((contract) => (
                     <div 
                       key={contract.id} 
-                      className=\"border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow\"
+                      className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
                     >
-                      <div className=\"flex items-center justify-between mb-4\">
-                        <div className=\"flex items-center space-x-4\">
-                          <div className=\"bg-blue-100 p-2 rounded-lg\">
-                            <User className=\"h-6 w-6 text-blue-600\" />
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center space-x-4">
+                          <div className="bg-blue-100 p-2 rounded-lg">
+                            <User className="h-6 w-6 text-blue-600" />
                           </div>
                           <div>
-                            <h3 className=\"text-lg font-semibold text-gray-900\">
+                            <h3 className="text-lg font-semibold text-gray-900">
                               {contract.employee_full_name}
                             </h3>
-                            <p className=\"text-sm text-gray-500\">{contract.employee_rut}</p>
+                            <p className="text-sm text-gray-500">{contract.employee_rut}</p>
                           </div>
                         </div>
                         
@@ -342,61 +342,61 @@ export default function ContractsPage() {
                         </span>
                       </div>
 
-                      <div className=\"grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-4\">
-                        <div className=\"flex items-center text-sm text-gray-600\">
-                          <DollarSign className=\"h-4 w-4 mr-2\" />
+                      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-4">
+                        <div className="flex items-center text-sm text-gray-600">
+                          <DollarSign className="h-4 w-4 mr-2" />
                           <span>Cargo: {contract.position}</span>
                         </div>
                         
-                        <div className=\"flex items-center text-sm text-gray-600\">
-                          <Calendar className=\"h-4 w-4 mr-2\" />
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Calendar className="h-4 w-4 mr-2" />
                           <span>Inicio: {formatDate(contract.start_date)}</span>
                         </div>
                         
-                        <div className=\"flex items-center text-sm text-gray-600\">
-                          <DollarSign className=\"h-4 w-4 mr-2\" />
+                        <div className="flex items-center text-sm text-gray-600">
+                          <DollarSign className="h-4 w-4 mr-2" />
                           <span>Salario: {formatCurrency(contract.total_gross_salary || contract.base_salary)}</span>
                         </div>
                         
                         {contract.weekly_hours && (
-                          <div className=\"flex items-center text-sm text-gray-600\">
-                            <Clock className=\"h-4 w-4 mr-2\" />
+                          <div className="flex items-center text-sm text-gray-600">
+                            <Clock className="h-4 w-4 mr-2" />
                             <span>{contract.weekly_hours}h/semana</span>
                           </div>
                         )}
                       </div>
 
-                      <div className=\"flex items-center justify-between\">
-                        <div className=\"text-sm text-gray-500\">
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm text-gray-500">
                           Tipo: {contract.contract_type.replace('_', ' ')}
                           {contract.end_date && ` • Fin: ${formatDate(contract.end_date)}`}
                         </div>
                         
-                        <div className=\"flex space-x-2\">
+                        <div className="flex space-x-2">
                           <Button
-                            variant=\"outline\"
-                            size=\"sm\"
+                            variant="outline"
+                            size="sm"
                             onClick={() => router.push(`/payroll/contracts/${contract.id}`)}
                           >
-                            <Eye className=\"h-4 w-4 mr-1\" />
+                            <Eye className="h-4 w-4 mr-1" />
                             Ver
                           </Button>
                           
                           <Button
-                            variant=\"outline\"
-                            size=\"sm\"
+                            variant="outline"
+                            size="sm"
                             onClick={() => router.push(`/payroll/contracts/${contract.id}/edit`)}
                           >
-                            <Edit className=\"h-4 w-4 mr-1\" />
+                            <Edit className="h-4 w-4 mr-1" />
                             Editar
                           </Button>
                           
                           <Button
-                            variant=\"outline\"
-                            size=\"sm\"
+                            variant="outline"
+                            size="sm"
                             onClick={() => generateContractPDF(contract.id)}
                           >
-                            <Download className=\"h-4 w-4 mr-1\" />
+                            <Download className="h-4 w-4 mr-1" />
                             PDF
                           </Button>
                         </div>
