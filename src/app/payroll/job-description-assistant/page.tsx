@@ -124,7 +124,7 @@ export default function JobDescriptionAssistantPage() {
 
       // Cargar datos en el estado actual
       setExtractedData({
-        position: descriptor.position,
+        position: descriptor.job_position,
         department: descriptor.department,
         job_functions: descriptor.job_functions,
         obligations: descriptor.obligations,
@@ -363,7 +363,7 @@ export default function JobDescriptionAssistantPage() {
                       <div key={descriptor.id} className="p-4 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg border border-indigo-200">
                         <div className="flex items-center justify-between mb-2">
                           <div>
-                            <h4 className="font-semibold text-gray-900">{descriptor.position}</h4>
+                            <h4 className="font-semibold text-gray-900">{descriptor.job_position}</h4>
                             <p className="text-sm text-gray-600">
                               {descriptor.department} • Usado {descriptor.times_used} veces
                             </p>
@@ -406,7 +406,7 @@ export default function JobDescriptionAssistantPage() {
                           <div key={descriptor.id} className="p-3 bg-white rounded-lg border border-gray-200">
                             <div className="flex items-center justify-between mb-2">
                               <div>
-                                <h5 className="font-medium text-gray-900 text-sm">{descriptor.position}</h5>
+                                <h5 className="font-medium text-gray-900 text-sm">{descriptor.job_position}</h5>
                                 <p className="text-xs text-gray-500">
                                   {descriptor.department} • {descriptor.times_used} usos
                                 </p>

@@ -5,7 +5,7 @@ CREATE TABLE job_descriptions (
     
     -- Información básica
     title VARCHAR(255) NOT NULL,
-    position VARCHAR(255) NOT NULL,
+    job_position VARCHAR(255) NOT NULL,
     department VARCHAR(255),
     
     -- Funciones y responsabilidades
@@ -37,7 +37,7 @@ CREATE TABLE job_descriptions (
 
 -- Crear índices para optimizar consultas
 CREATE INDEX idx_job_descriptions_company_id ON job_descriptions(company_id);
-CREATE INDEX idx_job_descriptions_position ON job_descriptions(position);
+CREATE INDEX idx_job_descriptions_job_position ON job_descriptions(job_position);
 CREATE INDEX idx_job_descriptions_department ON job_descriptions(department);
 CREATE INDEX idx_job_descriptions_created_at ON job_descriptions(created_at DESC);
 CREATE INDEX idx_job_descriptions_times_used ON job_descriptions(times_used DESC);
@@ -73,7 +73,7 @@ CREATE OR REPLACE FUNCTION get_popular_job_descriptions(company_uuid UUID, limit
 RETURNS TABLE (
     id UUID,
     title VARCHAR(255),
-    position VARCHAR(255),
+    job_position VARCHAR(255),
     department VARCHAR(255),
     times_used INTEGER,
     last_used_at TIMESTAMP WITH TIME ZONE,
@@ -84,7 +84,7 @@ BEGIN
     SELECT 
         jd.id,
         jd.title,
-        jd.position,
+        jd.job_position,
         jd.department,
         jd.times_used,
         jd.last_used_at,
@@ -100,7 +100,7 @@ $$ LANGUAGE plpgsql;
 INSERT INTO job_descriptions (
     company_id, 
     title, 
-    position, 
+    job_position, 
     department, 
     job_functions, 
     obligations, 

@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 
     // Filtros opcionales
     if (position) {
-      query = query.ilike('position', `%${position}%`);
+      query = query.ilike('job_position', `%${position}%`);
     }
     
     if (department) {
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
     const descriptionData = {
       company_id,
       title,
-      position,
+      job_position: position,
       department,
       job_functions,
       obligations,

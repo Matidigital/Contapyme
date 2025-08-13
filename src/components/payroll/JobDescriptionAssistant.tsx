@@ -256,7 +256,7 @@ export function JobDescriptionAssistant({
   // Manejar selección de descriptor guardado
   const handleSavedDescriptorSelect = (descriptor: any) => {
     const data = {
-      position: descriptor.position,
+      position: descriptor.job_position,
       department: descriptor.department,
       job_functions: descriptor.job_functions,
       obligations: descriptor.obligations,

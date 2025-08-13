@@ -7,7 +7,7 @@ import { Save, Eye, Trash2, Clock, TrendingUp, X, Loader2 } from 'lucide-react';
 interface JobDescriptor {
   id: string;
   title: string;
-  position: string;
+  job_position: string;
   department?: string;
   job_functions: string[];
   obligations: string[];
@@ -70,7 +70,7 @@ export function SavedJobDescriptionsSelector({
   };
 
   const filteredDescriptors = descriptors.filter(desc =>
-    desc.position.toLowerCase().includes(filter.toLowerCase()) ||
+    desc.job_position.toLowerCase().includes(filter.toLowerCase()) ||
     (desc.department?.toLowerCase().includes(filter.toLowerCase()))
   );
 
@@ -126,7 +126,7 @@ export function SavedJobDescriptionsSelector({
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
                       <h4 className="font-semibold text-gray-900 mb-1 group-hover:text-indigo-600">
-                        {descriptor.position}
+                        {descriptor.job_position}
                       </h4>
                       <p className="text-sm text-gray-600">
                         {descriptor.department || 'Sin departamento'}
