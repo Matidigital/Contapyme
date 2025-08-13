@@ -242,10 +242,13 @@ function generateContractHTML(contractData: any): string {
     ${job_functions.length > 0 ? `
     <div class="clause">
         <div class="clause-title">SEGUNDO:</div>
-        <p>El trabajador se obliga a desarrollar las siguientes funciones específicas de ${position.toUpperCase()}:</p>
-        <ul>
-            ${job_functions.map(func => `<li>${func}</li>`).join('')}
+        <p>El trabajador se obliga a desarrollar las siguientes funciones específicas de <strong>${position.toUpperCase()}</strong>:</p>
+        <ul style="margin: 10px 0; padding-left: 20px; line-height: 1.5;">
+            ${job_functions.map((func, index) => `<li style="margin-bottom: 8px;"><strong>${index + 1}.</strong> ${func}</li>`).join('')}
         </ul>
+        <p style="margin-top: 12px; font-style: italic; color: #555;">
+            Estas funciones han sido definidas según las mejores prácticas y normativa laboral chilena.
+        </p>
     </div>
     ` : ''}
     
@@ -306,18 +309,22 @@ function generateContractHTML(contractData: any): string {
         </p>
         
         ${obligations.length > 0 ? `
-        <p><strong>Obligaciones:</strong></p>
-        <ul>
-            ${obligations.map(obl => `<li>${obl}</li>`).join('')}
+        <p style="margin-top: 15px;"><strong>OBLIGACIONES ESPECÍFICAS:</strong></p>
+        <ul style="margin: 8px 0; padding-left: 20px; line-height: 1.5;">
+            ${obligations.map((obl, index) => `<li style="margin-bottom: 6px;"><strong>•</strong> ${obl}</li>`).join('')}
         </ul>
         ` : ''}
         
         ${prohibitions.length > 0 ? `
-        <p><strong>Prohibiciones:</strong></p>
-        <ul>
-            ${prohibitions.map(proh => `<li>${proh}</li>`).join('')}
+        <p style="margin-top: 15px;"><strong>PROHIBICIONES ESPECÍFICAS:</strong></p>
+        <ul style="margin: 8px 0; padding-left: 20px; line-height: 1.5;">
+            ${prohibitions.map((proh, index) => `<li style="margin-bottom: 6px;"><strong>•</strong> ${proh}</li>`).join('')}
         </ul>
         ` : ''}
+        
+        <p style="margin-top: 12px; font-style: italic; color: #555;">
+            Estas obligaciones y prohibiciones han sido definidas según el Código del Trabajo chileno y normativa vigente.
+        </p>
     </div>
     ` : ''}
     

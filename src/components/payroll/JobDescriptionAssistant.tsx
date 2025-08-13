@@ -604,70 +604,202 @@ export function JobDescriptionAssistant({
           </div>
         )}
 
-        {/* Mostrar resultados */}
+        {/* Mostrar resultados con previsualización detallada */}
         {result && (
-          <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center">
-                <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                <div>
-                  <p className="text-sm font-medium text-green-800">
-                    {result.message}
-                  </p>
-                  {result.confidence && (
-                    <p className="text-xs text-green-600">
-                      Confianza: {result.confidence}%
+          <div className="mt-6 space-y-4">
+            {/* Header del resultado */}
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                  <div>
+                    <p className="text-sm font-medium text-green-800">
+                      {result.message}
                     </p>
-                  )}
+                    {result.confidence && (
+                      <p className="text-xs text-green-600">
+                        Confianza: {result.confidence}%
+                      </p>
+                    )}
+                  </div>
                 </div>
+                <Button
+                  onClick={clearResults}
+                  variant="ghost"
+                  size="sm"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
-              <Button
-                onClick={clearResults}
-                variant="ghost"
-                size="sm"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            
-            <div className="text-sm text-green-700">
-              <p>✅ Funciones extraídas: {result.data.job_functions?.length || result.data.refined_functions?.length || 0}</p>
-              <p>✅ Obligaciones extraídas: {result.data.obligations?.length || result.data.refined_obligations?.length || 0}</p>
-              <p>✅ Prohibiciones extraídas: {result.data.prohibitions?.length || result.data.refined_prohibitions?.length || 0}</p>
-              {result.data.improvements_made && result.data.improvements_made.length > 0 && (
-                <p>🎯 Mejoras aplicadas: {result.data.improvements_made.length}</p>
-              )}
-              {result.data.compliance_notes && result.data.compliance_notes.length > 0 && (
-                <p>⚖️ Validaciones legales: {result.data.compliance_notes.length}</p>
+              
+              <div className="text-sm text-green-700">
+                <p>✅ Funciones extraídas: {result.data.job_functions?.length || result.data.refined_functions?.length || 0}</p>
+                <p>✅ Obligaciones extraídas: {result.data.obligations?.length || result.data.refined_obligations?.length || 0}</p>
+                <p>✅ Prohibiciones extraídas: {result.data.prohibitions?.length || result.data.refined_prohibitions?.length || 0}</p>
+                {result.data.improvements_made && result.data.improvements_made.length > 0 && (
+                  <p>🎯 Mejoras aplicadas: {result.data.improvements_made.length}</p>
+                )}
+                {result.data.compliance_notes && result.data.compliance_notes.length > 0 && (
+                  <p>⚖️ Validaciones legales: {result.data.compliance_notes.length}</p>
+                )}
+              </div>
+
+              {/* Botón refinador IA universal */}
+              {!showRefinedResult && (
+                <div className="mt-4 pt-3 border-t border-green-200">
+                  <Button
+                    onClick={handleRefineWithAI}
+                    disabled={refining}
+                    variant="primary"
+                    className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+                  >
+                    {refining ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Refinando con IA...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        ✨ Refinar con IA (Normativa Chilena)
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-green-600 text-center mt-2">
+                    Mejora automáticamente las funciones según normativa laboral chilena
+                  </p>
+                </div>
               )}
             </div>
 
-            {/* Botón refinador IA universal */}
-            {!showRefinedResult && (
-              <div className="mt-4 pt-3 border-t border-green-200">
-                <Button
-                  onClick={handleRefineWithAI}
-                  disabled={refining}
-                  variant="primary"
-                  className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
-                >
-                  {refining ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Refinando con IA...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      ✨ Refinar con IA (Normativa Chilena)
-                    </>
-                  )}
-                </Button>
-                <p className="text-xs text-green-600 text-center mt-2">
-                  Mejora automáticamente las funciones según normativa laboral chilena
+            {/* Previsualización detallada */}
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-blue-600" />
+                  Previsualización del Descriptor de Cargo
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Este contenido se incorporará automáticamente al contrato PDF
                 </p>
               </div>
-            )}
+              
+              <div className="p-6 space-y-6">
+                {/* Información básica */}
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-2">Información del Cargo</h4>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <p><strong>Cargo:</strong> {result.data.position || 'No especificado'}</p>
+                    <p><strong>Departamento:</strong> {result.data.department || 'No especificado'}</p>
+                  </div>
+                </div>
+
+                {/* Funciones principales */}
+                {(result.data.job_functions?.length > 0 || result.data.refined_functions?.length > 0) && (
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span className="text-blue-600 text-sm font-bold">
+                          {result.data.refined_functions?.length || result.data.job_functions?.length}
+                        </span>
+                      </div>
+                      Funciones Principales
+                    </h4>
+                    <div className="space-y-2">
+                      {(result.data.refined_functions || result.data.job_functions || []).map((func: string, index: number) => (
+                        <div key={index} className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
+                          <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
+                            {index + 1}
+                          </div>
+                          <p className="text-sm text-gray-800 flex-1">{func}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Obligaciones */}
+                {(result.data.obligations?.length > 0 || result.data.refined_obligations?.length > 0) && (
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
+                        <span className="text-green-600 text-sm font-bold">
+                          {result.data.refined_obligations?.length || result.data.obligations?.length}
+                        </span>
+                      </div>
+                      Obligaciones Laborales
+                    </h4>
+                    <div className="space-y-2">
+                      {(result.data.refined_obligations || result.data.obligations || []).map((obl: string, index: number) => (
+                        <div key={index} className="flex items-start gap-3 p-3 bg-green-50 rounded-lg">
+                          <div className="w-6 h-6 bg-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
+                            ✓
+                          </div>
+                          <p className="text-sm text-gray-800 flex-1">{obl}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Prohibiciones */}
+                {(result.data.prohibitions?.length > 0 || result.data.refined_prohibitions?.length > 0) && (
+                  <div>
+                    <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center">
+                        <span className="text-red-600 text-sm font-bold">
+                          {result.data.refined_prohibitions?.length || result.data.prohibitions?.length}
+                        </span>
+                      </div>
+                      Prohibiciones
+                    </h4>
+                    <div className="space-y-2">
+                      {(result.data.refined_prohibitions || result.data.prohibitions || []).map((proh: string, index: number) => (
+                        <div key={index} className="flex items-start gap-3 p-3 bg-red-50 rounded-lg">
+                          <div className="w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
+                            ✕
+                          </div>
+                          <p className="text-sm text-gray-800 flex-1">{proh}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Notas de cumplimiento legal */}
+                {result.data.compliance_notes && result.data.compliance_notes.length > 0 && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <h4 className="font-semibold text-yellow-800 mb-2 flex items-center gap-2">
+                      ⚖️ Cumplimiento Legal
+                    </h4>
+                    <ul className="space-y-1">
+                      {result.data.compliance_notes.map((note: string, index: number) => (
+                        <li key={index} className="text-sm text-yellow-700">• {note}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Nota sobre incorporación al contrato */}
+                <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0">
+                      <Sparkles className="h-5 w-5 text-indigo-600 mt-0.5" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-indigo-900 mb-1">
+                        Incorporación Automática al Contrato
+                      </h4>
+                      <p className="text-sm text-indigo-700">
+                        Estos datos se incorporarán automáticamente en la sección "SEGUNDO" del contrato PDF, 
+                        detallando las funciones específicas del cargo, y en la sección "SEXTO" con las 
+                        obligaciones y prohibiciones según la normativa laboral chilena.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

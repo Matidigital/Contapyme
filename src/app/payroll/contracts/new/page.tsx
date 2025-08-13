@@ -7,7 +7,7 @@ import { PayrollHeader } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { 
   ArrowLeft, Save, FileText, User, Calendar, DollarSign, 
-  Clock, MapPin, AlertCircle, Plus, Search, Sparkles 
+  Clock, MapPin, AlertCircle, Plus, Search, Sparkles, CheckCircle 
 } from 'lucide-react';
 import { useCompanyId } from '@/contexts/CompanyContext';
 import { JobDescriptionAssistant } from '@/components/payroll/JobDescriptionAssistant';
@@ -153,7 +153,7 @@ export default function NewContractPage() {
       const calculatedGratification = formData.gratification_amount || 
         Math.min(Number(formData.base_salary) * 0.25, 2512750);
 
-      // Preparar datos del contrato
+      // Preparar datos del contrato (incluyendo datos del asistente de descriptores)
       const contractData = {
         employee_id: selectedEmployee,
         company_id: companyId,
@@ -179,7 +179,11 @@ export default function NewContractPage() {
           meal: Number(formData.allowances.meal) || 0,
           transport: Number(formData.allowances.transport) || 0,
           cash: Number(formData.allowances.cash) || 0
-        }
+        },
+        // Incorporar datos del asistente IA si están disponibles
+        job_functions: jobDescriptionData?.job_functions || jobDescriptionData?.refined_functions || [],
+        obligations: jobDescriptionData?.obligations || jobDescriptionData?.refined_obligations || [],
+        prohibitions: jobDescriptionData?.prohibitions || jobDescriptionData?.refined_prohibitions || []
       };
 
       // Crear el contrato
@@ -193,6 +197,17 @@ export default function NewContractPage() {
 
       if (!response.ok) {
         throw new Error(result.error || 'Error al crear el contrato');
+      }
+
+      // Mostrar mensaje de éxito si se incorporaron datos del asistente
+      if (jobDescriptionData) {
+        const functionsCount = (jobDescriptionData.job_functions || jobDescriptionData.refined_functions || []).length;
+        const obligationsCount = (jobDescriptionData.obligations || jobDescriptionData.refined_obligations || []).length;
+        const prohibitionsCount = (jobDescriptionData.prohibitions || jobDescriptionData.refined_prohibitions || []).length;
+        
+        if (functionsCount > 0 || obligationsCount > 0 || prohibitionsCount > 0) {
+          console.log(`✅ Contrato creado con datos del asistente IA: ${functionsCount} funciones, ${obligationsCount} obligaciones, ${prohibitionsCount} prohibiciones`);
+        }
       }
 
       // Redirigir al contrato creado
@@ -398,6 +413,48 @@ export default function NewContractPage() {
                       currentPosition={formData.position}
                       currentDepartment={formData.department}
                     />
+
+                    {/* Indicador de datos listos para incorporar al contrato */}
+                    {jobDescriptionData && (
+                      <div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="flex-shrink-0">
+                            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                              <CheckCircle className="h-5 w-5 text-white" />
+                            </div>
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-semibold text-green-900">
+                              ✅ Datos Listos para Incorporar al Contrato
+                            </h4>
+                            <p className="text-xs text-green-700">
+                              Estos datos se incorporarán automáticamente al PDF del contrato
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                          <div className="bg-white/60 p-3 rounded-lg border border-green-100">
+                            <div className="font-semibold text-blue-700 mb-1">Funciones</div>
+                            <div className="text-blue-600">
+                              {(jobDescriptionData.job_functions || jobDescriptionData.refined_functions || []).length} definidas
+                            </div>
+                          </div>
+                          <div className="bg-white/60 p-3 rounded-lg border border-green-100">
+                            <div className="font-semibold text-green-700 mb-1">Obligaciones</div>
+                            <div className="text-green-600">
+                              {(jobDescriptionData.obligations || jobDescriptionData.refined_obligations || []).length} incluidas
+                            </div>
+                          </div>
+                          <div className="bg-white/60 p-3 rounded-lg border border-green-100">
+                            <div className="font-semibold text-red-700 mb-1">Prohibiciones</div>
+                            <div className="text-red-600">
+                              {(jobDescriptionData.prohibitions || jobDescriptionData.refined_prohibitions || []).length} establecidas
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
