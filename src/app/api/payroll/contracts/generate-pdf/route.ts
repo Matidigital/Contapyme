@@ -441,10 +441,36 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Obtener los datos completos del contrato
+    // Obtener los datos completos del contrato usando joins
     const { data: contractData, error: fetchError } = await supabase
-      .from('contract_full_details')
-      .select('*')
+      .from('employment_contracts')
+      .select(`
+        *,
+        employees!inner(
+          rut,
+          first_name,
+          middle_name,
+          last_name,
+          birth_date,
+          nationality,
+          marital_status,
+          address,
+          city,
+          email,
+          phone,
+          bank_name,
+          bank_account_type,
+          bank_account_number
+        ),
+        companies!inner(
+          name,
+          rut,
+          legal_representative_name,
+          legal_representative_rut,
+          fiscal_address,
+          fiscal_city
+        )
+      `)
       .eq('id', contract_id)
       .single();
 
@@ -456,8 +482,50 @@ export async function POST(request: NextRequest) {
       }, { status: 404 });
     }
 
+    // Adaptar datos para el generador de HTML
+    const adaptedData = {
+      // Datos de la empresa
+      company_name: contractData.companies?.name,
+      company_rut: contractData.companies?.rut,
+      legal_representative_name: contractData.companies?.legal_representative_name,
+      legal_representative_rut: contractData.companies?.legal_representative_rut,
+      company_address: contractData.companies?.fiscal_address,
+      company_city: contractData.companies?.fiscal_city,
+      
+      // Datos del trabajador
+      employee_full_name: `${contractData.employees?.first_name} ${contractData.employees?.middle_name || ''} ${contractData.employees?.last_name}`.trim(),
+      employee_rut: contractData.employees?.rut,
+      employee_address: contractData.employees?.address,
+      employee_city: contractData.employees?.city,
+      employee_nationality: contractData.employees?.nationality,
+      employee_marital_status: contractData.employees?.marital_status,
+      employee_birth_date: contractData.employees?.birth_date,
+      
+      // Datos del contrato
+      position: contractData.position,
+      department: contractData.department,
+      start_date: contractData.start_date,
+      end_date: contractData.end_date,
+      contract_type: contractData.contract_type,
+      base_salary: contractData.base_salary,
+      gratification_amount: contractData.gratification_amount,
+      bonuses: contractData.bonuses || [],
+      allowances: contractData.allowances || {},
+      workplace_address: contractData.workplace_address,
+      schedule_details: contractData.schedule_details || {},
+      job_functions: contractData.job_functions || [],
+      obligations: contractData.obligations || [],
+      prohibitions: contractData.prohibitions || [],
+      resignation_notice_days: contractData.resignation_notice_days || 30,
+      weekly_hours: contractData.weekly_hours || 45,
+      
+      // Previsión (valores por defecto)
+      afp_name: 'AFP Modelo',
+      health_insurance_name: 'Fonasa'
+    };
+
     // Generar el HTML del contrato
-    const html = generateContractHTML(contractData);
+    const html = generateContractHTML(adaptedData);
 
     // Si el formato solicitado es HTML, devolver el HTML directamente
     if (format === 'html') {

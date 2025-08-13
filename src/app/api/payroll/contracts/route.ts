@@ -19,14 +19,52 @@ export async function GET(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Usar vista con detalles completos o tabla simple
-    const tableName = includeDetails ? 'contract_full_details' : 'employment_contracts';
+    // Usar tabla principal con joins si se requieren detalles
+    const tableName = 'employment_contracts';
     
-    let query = supabase
-      .from(tableName)
-      .select('*')
-      .eq('company_id', companyId)
-      .order('created_at', { ascending: false });
+    let query;
+    
+    if (includeDetails) {
+      // Query con joins para obtener detalles completos
+      query = supabase
+        .from('employment_contracts')
+        .select(`
+          *,
+          employees!inner(
+            rut,
+            first_name,
+            middle_name,
+            last_name,
+            birth_date,
+            nationality,
+            marital_status,
+            address,
+            city,
+            email,
+            phone,
+            bank_name,
+            bank_account_type,
+            bank_account_number
+          ),
+          companies!inner(
+            name,
+            rut,
+            legal_representative_name,
+            legal_representative_rut,
+            fiscal_address,
+            fiscal_city
+          )
+        `)
+        .eq('company_id', companyId)
+        .order('created_at', { ascending: false });
+    } else {
+      // Query simple sin joins
+      query = supabase
+        .from('employment_contracts')
+        .select('*')
+        .eq('company_id', companyId)
+        .order('created_at', { ascending: false });
+    }
 
     if (employeeId) {
       query = query.eq('employee_id', employeeId);
@@ -161,20 +199,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: insertError.message }, { status: 500 });
     }
 
-    // Obtener el contrato con todos los detalles
-    const { data: fullContract, error: fetchError } = await supabase
-      .from('contract_full_details')
-      .select('*')
-      .eq('id', newContract.id)
-      .single();
-
-    if (fetchError) {
-      console.error('Error fetching contract details:', fetchError);
-    }
-
     return NextResponse.json({ 
       success: true, 
-      data: fullContract || newContract,
+      data: newContract,
       message: 'Contrato creado exitosamente'
     });
 

@@ -18,10 +18,36 @@ export async function GET(
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Obtener contrato con todos los detalles desde la vista
+    // Obtener contrato con todos los detalles usando joins
     const { data, error } = await supabase
-      .from('contract_full_details')
-      .select('*')
+      .from('employment_contracts')
+      .select(`
+        *,
+        employees!inner(
+          rut,
+          first_name,
+          middle_name,
+          last_name,
+          birth_date,
+          nationality,
+          marital_status,
+          address,
+          city,
+          email,
+          phone,
+          bank_name,
+          bank_account_type,
+          bank_account_number
+        ),
+        companies!inner(
+          name,
+          rut,
+          legal_representative_name,
+          legal_representative_rut,
+          fiscal_address,
+          fiscal_city
+        )
+      `)
       .eq('id', contractId)
       .single();
 
@@ -78,16 +104,9 @@ export async function PATCH(
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Obtener el contrato actualizado con todos los detalles
-    const { data: fullContract } = await supabase
-      .from('contract_full_details')
-      .select('*')
-      .eq('id', contractId)
-      .single();
-
     return NextResponse.json({ 
       success: true, 
-      data: fullContract || data,
+      data,
       message: 'Contrato actualizado exitosamente'
     });
 
