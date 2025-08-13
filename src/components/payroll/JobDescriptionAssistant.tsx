@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Button, Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
-import { Upload, FileText, Zap, Loader2, CheckCircle, AlertTriangle, X } from 'lucide-react';
+import { Upload, FileText, Zap, Loader2, CheckCircle, AlertTriangle, X, Sparkles } from 'lucide-react';
 
 interface JobDescriptionData {
   position?: string;
@@ -25,10 +25,12 @@ export function JobDescriptionAssistant({
   currentPosition = '',
   currentDepartment = '' 
 }: JobDescriptionAssistantProps) {
-  const [activeTab, setActiveTab] = useState<'upload' | 'ai'>('ai');
+  const [activeTab, setActiveTab] = useState<'upload' | 'ai' | 'manual'>('manual');
   const [loading, setLoading] = useState(false);
+  const [refining, setRefining] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showRefinedResult, setShowRefinedResult] = useState(false);
 
   // Estados para asistente IA
   const [aiForm, setAiForm] = useState({
@@ -41,6 +43,15 @@ export function JobDescriptionAssistant({
   // Estados para upload PDF
   const [dragActive, setDragActive] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+
+  // Estados para entrada manual
+  const [manualForm, setManualForm] = useState({
+    position: currentPosition,
+    department: currentDepartment,
+    functions: [''],
+    obligations: [''],
+    prohibitions: ['']
+  });
 
   // Manejar generación IA
   const handleAIGeneration = async () => {
@@ -136,11 +147,114 @@ export function JobDescriptionAssistant({
     }
   };
 
+  // Refinador IA universal
+  const handleRefineWithAI = async () => {
+    let dataToRefine: any = {};
+
+    // Determinar qué datos refinar según el contexto
+    if (result && result.data) {
+      // Si hay resultados previos (PDF o IA), usar esos
+      dataToRefine = {
+        position: result.data.position || aiForm.position || manualForm.position,
+        department: result.data.department || aiForm.department || manualForm.department,
+        raw_functions: result.data.job_functions || [],
+        raw_obligations: result.data.obligations || [],
+        raw_prohibitions: result.data.prohibitions || []
+      };
+    } else {
+      // Si no hay resultados previos, usar datos manuales
+      const nonEmptyFunctions = manualForm.functions.filter(f => f.trim());
+      const nonEmptyObligations = manualForm.obligations.filter(o => o.trim());
+      const nonEmptyProhibitions = manualForm.prohibitions.filter(p => p.trim());
+
+      if (!nonEmptyFunctions.length && !nonEmptyObligations.length && !nonEmptyProhibitions.length) {
+        setError('Debe tener al menos una función, obligación o prohibición para refinar');
+        return;
+      }
+
+      dataToRefine = {
+        position: manualForm.position || aiForm.position,
+        department: manualForm.department || aiForm.department,
+        raw_functions: nonEmptyFunctions,
+        raw_obligations: nonEmptyObligations,
+        raw_prohibitions: nonEmptyProhibitions,
+        company_type: aiForm.company_type,
+        additional_context: aiForm.additional_context
+      };
+    }
+
+    setRefining(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/payroll/job-description/refine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dataToRefine)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al refinar descriptor');
+      }
+
+      // Actualizar resultado con datos refinados
+      setResult({
+        ...data,
+        message: 'Descriptor refinado con IA según normativa chilena'
+      });
+      setShowRefinedResult(true);
+      
+      // Enviar datos refinados al componente padre
+      onDataExtracted({
+        position: data.data.position,
+        department: data.data.department,
+        job_functions: data.data.refined_functions,
+        obligations: data.data.refined_obligations,
+        prohibitions: data.data.refined_prohibitions
+      });
+
+    } catch (err) {
+      console.error('Error refining job description:', err);
+      setError(err instanceof Error ? err.message : 'Error desconocido');
+    } finally {
+      setRefining(false);
+    }
+  };
+
+  // Manejar cambios en formulario manual
+  const handleManualChange = (field: string, index: number, value: string) => {
+    setManualForm(prev => ({
+      ...prev,
+      [field]: field === 'position' || field === 'department' 
+        ? value 
+        : prev[field as keyof typeof prev].map((item: string, i: number) => i === index ? value : item)
+    }));
+  };
+
+  // Agregar nueva línea en formulario manual
+  const addManualLine = (field: 'functions' | 'obligations' | 'prohibitions') => {
+    setManualForm(prev => ({
+      ...prev,
+      [field]: [...prev[field], '']
+    }));
+  };
+
+  // Eliminar línea en formulario manual
+  const removeManualLine = (field: 'functions' | 'obligations' | 'prohibitions', index: number) => {
+    setManualForm(prev => ({
+      ...prev,
+      [field]: prev[field].filter((_, i) => i !== index)
+    }));
+  };
+
   // Limpiar resultados
   const clearResults = () => {
     setResult(null);
     setError(null);
     setUploadedFile(null);
+    setShowRefinedResult(false);
   };
 
   return (
@@ -157,6 +271,17 @@ export function JobDescriptionAssistant({
       <CardContent>
         {/* Tabs */}
         <div className="flex space-x-1 mb-6 bg-gray-100 p-1 rounded-lg">
+          <button
+            onClick={() => setActiveTab('manual')}
+            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'manual'
+                ? 'bg-white text-purple-600 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <FileText className="h-4 w-4 inline mr-2" />
+            Manual
+          </button>
           <button
             onClick={() => setActiveTab('ai')}
             className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
@@ -182,6 +307,142 @@ export function JobDescriptionAssistant({
         </div>
 
         {/* Contenido del tab activo */}
+        {activeTab === 'manual' && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Cargo
+                </label>
+                <input
+                  type="text"
+                  value={manualForm.position}
+                  onChange={(e) => handleManualChange('position', 0, e.target.value)}
+                  placeholder="ej: Vendedora, Contador, Desarrollador"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Departamento
+                </label>
+                <input
+                  type="text"
+                  value={manualForm.department}
+                  onChange={(e) => handleManualChange('department', 0, e.target.value)}
+                  placeholder="ej: Ventas, Contabilidad, IT"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            {/* Funciones */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Funciones del Cargo
+              </label>
+              {manualForm.functions.map((func, index) => (
+                <div key={index} className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={func}
+                    onChange={(e) => handleManualChange('functions', index, e.target.value)}
+                    placeholder="ej: Atender clientes de manera cordial"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                  {manualForm.functions.length > 1 && (
+                    <Button
+                      onClick={() => removeManualLine('functions', index)}
+                      variant="ghost"
+                      size="sm"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              <Button
+                onClick={() => addManualLine('functions')}
+                variant="outline"
+                size="sm"
+                className="mt-2"
+              >
+                + Agregar función
+              </Button>
+            </div>
+
+            {/* Obligaciones */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Obligaciones (opcional)
+              </label>
+              {manualForm.obligations.map((obl, index) => (
+                <div key={index} className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={obl}
+                    onChange={(e) => handleManualChange('obligations', index, e.target.value)}
+                    placeholder="ej: Cumplir horarios de trabajo establecidos"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                  {manualForm.obligations.length > 1 && (
+                    <Button
+                      onClick={() => removeManualLine('obligations', index)}
+                      variant="ghost"
+                      size="sm"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              <Button
+                onClick={() => addManualLine('obligations')}
+                variant="outline"
+                size="sm"
+                className="mt-2"
+              >
+                + Agregar obligación
+              </Button>
+            </div>
+
+            {/* Prohibiciones */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Prohibiciones (opcional)
+              </label>
+              {manualForm.prohibitions.map((proh, index) => (
+                <div key={index} className="flex gap-2 mb-2">
+                  <input
+                    type="text"
+                    value={proh}
+                    onChange={(e) => handleManualChange('prohibitions', index, e.target.value)}
+                    placeholder="ej: No usar teléfono personal durante horario laboral"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                  {manualForm.prohibitions.length > 1 && (
+                    <Button
+                      onClick={() => removeManualLine('prohibitions', index)}
+                      variant="ghost"
+                      size="sm"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              <Button
+                onClick={() => addManualLine('prohibitions')}
+                variant="outline"
+                size="sm"
+                className="mt-2"
+              >
+                + Agregar prohibición
+              </Button>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'ai' && (
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -370,10 +631,70 @@ export function JobDescriptionAssistant({
             </div>
             
             <div className="text-sm text-green-700">
-              <p>✅ Funciones extraídas: {result.data.job_functions?.length || 0}</p>
-              <p>✅ Obligaciones extraídas: {result.data.obligations?.length || 0}</p>
-              <p>✅ Prohibiciones extraídas: {result.data.prohibitions?.length || 0}</p>
+              <p>✅ Funciones extraídas: {result.data.job_functions?.length || result.data.refined_functions?.length || 0}</p>
+              <p>✅ Obligaciones extraídas: {result.data.obligations?.length || result.data.refined_obligations?.length || 0}</p>
+              <p>✅ Prohibiciones extraídas: {result.data.prohibitions?.length || result.data.refined_prohibitions?.length || 0}</p>
+              {result.data.improvements_made && result.data.improvements_made.length > 0 && (
+                <p>🎯 Mejoras aplicadas: {result.data.improvements_made.length}</p>
+              )}
+              {result.data.compliance_notes && result.data.compliance_notes.length > 0 && (
+                <p>⚖️ Validaciones legales: {result.data.compliance_notes.length}</p>
+              )}
             </div>
+
+            {/* Botón refinador IA universal */}
+            {!showRefinedResult && (
+              <div className="mt-4 pt-3 border-t border-green-200">
+                <Button
+                  onClick={handleRefineWithAI}
+                  disabled={refining}
+                  variant="primary"
+                  className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+                >
+                  {refining ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Refinando con IA...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      ✨ Refinar con IA (Normativa Chilena)
+                    </>
+                  )}
+                </Button>
+                <p className="text-xs text-green-600 text-center mt-2">
+                  Mejora automáticamente las funciones según normativa laboral chilena
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Botón refinador para entrada manual (cuando no hay resultados) */}
+        {!result && activeTab === 'manual' && (
+          <div className="mt-6">
+            <Button
+              onClick={handleRefineWithAI}
+              disabled={refining}
+              variant="primary"
+              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+            >
+              {refining ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Refinando con IA...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  ✨ Refinar con IA (Normativa Chilena)
+                </>
+              )}
+            </Button>
+            <p className="text-xs text-gray-600 text-center mt-2">
+              Mejora automáticamente las funciones según normativa laboral chilena
+            </p>
           </div>
         )}
       </CardContent>
