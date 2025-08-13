@@ -41,6 +41,14 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+// Función para formatear moneda como en el ejemplo (sin decimales, con puntos)
+function formatContractCurrency(amount: number): string {
+  return `$ ${new Intl.NumberFormat('es-CL', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(amount)}.-`;
+}
+
 // Función para generar el HTML del contrato
 function generateContractHTML(contractData: any): string {
   const {
@@ -89,8 +97,8 @@ function generateContractHTML(contractData: any): string {
 
   // Formatear horarios
   const scheduleText = schedule_details.entry && schedule_details.exit
-    ? `de lunes a sábado desde las ${schedule_details.entry} a las ${schedule_details.exit}`
-    : 'de lunes a sábado en horario a convenir';
+    ? `desde las ${schedule_details.entry} a las ${schedule_details.exit}`
+    : 'en horario a convenir';
   
   const lunchText = schedule_details.lunch_start && schedule_details.lunch_end
     ? `desde las ${schedule_details.lunch_start} a ${schedule_details.lunch_end} hrs`
@@ -128,15 +136,22 @@ function generateContractHTML(contractData: any): string {
         .contract-content {
             text-align: justify;
             margin-bottom: 20px;
+            line-height: 1.4;
         }
         
         .clause {
-            margin-bottom: 20px;
+            margin-bottom: 18px;
         }
         
         .clause-title {
             font-weight: bold;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            display: inline;
+        }
+        
+        .clause p {
+            display: inline;
+            margin: 0;
         }
         
         ul {
@@ -148,16 +163,14 @@ function generateContractHTML(contractData: any): string {
             margin-bottom: 5px;
         }
         
-        .salary-table {
-            margin: 15px 0;
-            padding-left: 40px;
+        .employee-info {
+            margin: 20px 0;
+            line-height: 1.6;
         }
         
-        .salary-row {
-            display: flex;
-            justify-content: space-between;
-            max-width: 400px;
-            margin-bottom: 5px;
+        .employee-info strong {
+            display: inline-block;
+            width: 180px;
         }
         
         .signatures {
@@ -193,48 +206,22 @@ function generateContractHTML(contractData: any): string {
         <p>
             En la ciudad de ${company_city || 'Punta Arenas'}, a ${formatDate(start_date)}, 
             entre <strong>${company_name}</strong> persona jurídica Rol Único Tributario 
-            N°<strong>${formatRut(company_rut)}</strong>, representada en este acto por 
+            N°${formatRut(company_rut)}, representada en este acto por 
             ${legal_representative_name || 'su representante legal'}, Chileno(a), 
             Cédula Nacional de Identidad Nº ${formatRut(legal_representative_rut || '')}, 
-            ambos domiciliados en ${company_address} en la ciudad de ${company_city || 'Punta Arenas'}, 
-            en adelante el "EMPLEADOR", y don(ña):
+            ambos domiciliados en ${company_address || 'dirección no especificada'} en la ciudad de ${company_city || 'Punta Arenas'}, 
+            en adelante el "EMPLEADOR", y don:
         </p>
         
-        <div style="margin: 20px 0; padding-left: 20px;">
-            <table style="line-height: 1.8;">
-                <tr>
-                    <td style="width: 200px;"><strong>Nombre</strong></td>
-                    <td>: ${employee_full_name}</td>
-                </tr>
-                <tr>
-                    <td><strong>Cédula de Identidad</strong></td>
-                    <td>: ${formatRut(employee_rut)}</td>
-                </tr>
-                <tr>
-                    <td><strong>Domicilio</strong></td>
-                    <td>: ${employee_address}</td>
-                </tr>
-                <tr>
-                    <td><strong>Nacionalidad</strong></td>
-                    <td>: ${employee_nationality || 'Chilena'}</td>
-                </tr>
-                <tr>
-                    <td><strong>Estado Civil</strong></td>
-                    <td>: ${employee_marital_status || 'No especificado'}</td>
-                </tr>
-                <tr>
-                    <td><strong>Fecha de Nacimiento</strong></td>
-                    <td>: ${formatDate(employee_birth_date)}</td>
-                </tr>
-                <tr>
-                    <td><strong>Sistema Previsional</strong></td>
-                    <td>: ${afp_name || 'AFP a definir'}</td>
-                </tr>
-                <tr>
-                    <td><strong>Sistema de Salud</strong></td>
-                    <td>: ${health_insurance_name || 'Fonasa'}</td>
-                </tr>
-            </table>
+        <div class="employee-info">
+            <strong>Nombre</strong> : ${employee_full_name}<br>
+            <strong>Cédula de Identidad</strong> : ${formatRut(employee_rut)}<br>
+            <strong>Domicilio</strong> : ${employee_address || 'No especificado'}<br>
+            <strong>Nacionalidad</strong> : ${employee_nationality || 'Chilena'}<br>
+            <strong>Estado Civil</strong> : ${employee_marital_status || 'No especificado'}<br>
+            <strong>Fecha de Nacimiento</strong> : ${formatDate(employee_birth_date)}<br>
+            <strong>Sistema Previsional</strong> : ${afp_name || 'AFP Modelo'}<br>
+            <strong>Sistema de Salud</strong> : ${health_insurance_name || 'Fonasa'}<br>
         </div>
         
         <p>En adelante el "TRABAJADOR"; expresan que vienen en celebrar el siguiente contrato laboral:</p>
@@ -265,7 +252,7 @@ function generateContractHTML(contractData: any): string {
     <div class="clause">
         <div class="clause-title">TERCERO:</div>
         <p>
-            Los servicios del trabajador se deben prestar en ${workplace_address || company_address}. 
+            Los servicios del trabajador se deben prestar en ${workplace_address || company_address || 'las instalaciones de la empresa'}. 
             Sin perjuicio de la facultad del empleador para modificar por causa justificada, 
             sea con consulta al trabajador y sin menoscabo de éste, el sitio en donde deban 
             prestarse los servicios, con la limitación de que el nuevo sitio o recinto quede 
@@ -276,8 +263,8 @@ function generateContractHTML(contractData: any): string {
     <div class="clause">
         <div class="clause-title">CUARTO:</div>
         <p>
-            La jornada de trabajo ordinaria será distribuida ${scheduleText}, 
-            total ${weekly_hours} horas semanales. 
+            La jornada de trabajo ordinaria será distribuida de la siguiente manera, 
+            de lunes a sábado ${scheduleText}, total ${weekly_hours} horas semanales. 
             ${weekly_hours < 45 ? 'El trabajador será contratado como part-time, ' : ''}
             teniendo como horario de colación ${lunchText}.
         </p>
@@ -286,51 +273,26 @@ function generateContractHTML(contractData: any): string {
     <div class="clause">
         <div class="clause-title">QUINTO:</div>
         <p>
-            El trabajador percibirá una remuneración bruta mensual ${formatCurrency(totalGross)}, 
-            que será afecto a los descuentos legales y pagada el último día hábil de cada mes, 
-            que será distribuida de la siguiente manera:
+            El trabajador percibirá una remuneración bruta mensual ${formatContractCurrency(totalGross)}, 
+            que será afecto a los descuentos legales y pagada el último día hábil de cada mes, ${totalAllowances > 0 ? 'en efectivo, ' : ''}que será distribuida de la siguiente manera:
         </p>
         
-        <div class="salary-table">
-            <div class="salary-row">
-                <span>Sueldo Base:</span>
-                <span>${formatCurrency(base_salary)}</span>
-            </div>
-            <div class="salary-row">
-                <span>Gratificación Legal:</span>
-                <span>${formatCurrency(gratification_amount)}</span>
-            </div>
-            ${bonuses.map((bonus: any) => `
-            <div class="salary-row">
-                <span>${bonus.description || 'Bono'}:</span>
-                <span>${formatCurrency(bonus.amount)}</span>
-            </div>
-            `).join('')}
+        <div style="margin: 15px 0;">
+            <p><strong>Sueldo Base:</strong> ${formatContractCurrency(base_salary)}<br>
+            <strong>Gratificación Legal:</strong> ${formatContractCurrency(gratification_amount)}<br>
+            ${bonuses.map((bonus: any) => `<strong>${bonus.description || 'Bono'}:</strong> ${formatContractCurrency(bonus.amount)}<br>`).join('')}</p>
         </div>
         
         ${totalAllowances > 0 ? `
         <p>Además el trabajador recibirá remuneración no imponible por los siguientes conceptos:</p>
-        <div class="salary-table">
-            ${allowances.meal ? `
-            <div class="salary-row">
-                <span>Asignación de Colación:</span>
-                <span>${formatCurrency(allowances.meal)}</span>
-            </div>
-            ` : ''}
-            ${allowances.transport ? `
-            <div class="salary-row">
-                <span>Asignación de Movilización:</span>
-                <span>${formatCurrency(allowances.transport)}</span>
-            </div>
-            ` : ''}
-            ${allowances.cash ? `
-            <div class="salary-row">
-                <span>Asignación de Caja:</span>
-                <span>${formatCurrency(allowances.cash)}</span>
-            </div>
-            ` : ''}
+        <div style="margin: 15px 0;">
+            ${allowances.meal ? `<strong>Asignación de Colación:</strong> ${formatContractCurrency(allowances.meal)}<br>` : ''}
+            ${allowances.transport ? `<strong>Asignación de Movilización:</strong> ${formatContractCurrency(allowances.transport)}<br>` : ''}
+            ${allowances.cash ? `<strong>Asignación de Caja:</strong> ${formatContractCurrency(allowances.cash)}<br>` : ''}
         </div>
         ` : ''}
+        
+        <p style="margin-top: 15px;">La remuneración se depositará en la cuenta corriente del trabajador, el primer día hábil del mes siguiente.</p>
     </div>
     
     ${obligations.length > 0 || prohibitions.length > 0 ? `
@@ -412,7 +374,7 @@ function generateContractHTML(contractData: any): string {
             <div class="signature-line">
                 <strong>${legal_representative_name || 'Representante Legal'}</strong><br>
                 ${formatRut(legal_representative_rut || company_rut)}<br>
-                EMPLEADOR(A)
+                <strong>EMPLEADOR(A)</strong>
             </div>
         </div>
         
@@ -420,7 +382,7 @@ function generateContractHTML(contractData: any): string {
             <div class="signature-line">
                 <strong>${employee_full_name}</strong><br>
                 ${formatRut(employee_rut)}<br>
-                TRABAJADOR(A)
+                <strong>TRABAJADOR(A)</strong>
             </div>
         </div>
     </div>
