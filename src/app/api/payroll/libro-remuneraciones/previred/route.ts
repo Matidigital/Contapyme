@@ -113,30 +113,30 @@ function generatePreviredFields(detail: any, employee: any, payrollConfig: any, 
   fields.push(detail.apellido_paterno || ''); // A3 - Apellido Paterno
   fields.push(detail.apellido_materno || ''); // A4 - Apellido Materno
   fields.push(detail.nombres || ''); // A5 - Nombres
-  fields.push(''); // A6 - Sexo (M/F)
-  fields.push(''); // A7 - Nacionalidad
+  fields.push('M'); // A6 - Sexo (M/F) - Por defecto M
+  fields.push('CL'); // A7 - Nacionalidad - Chile
   fields.push(''); // A8 - Fecha Nacimiento
   fields.push(''); // A9 - Fecha Inicio Contrato
-  fields.push(''); // A10 - Tipo Contrato
-  fields.push(''); // A11 - Régimen Previsional
-  fields.push(''); // A12 - Código País
+  fields.push('I'); // A10 - Tipo Contrato (I=Indefinido, F=Fijo, H=Honorarios)
+  fields.push('SIS'); // A11 - Régimen Previsional (SIS=Sistema actual, INP=Antiguo)
+  fields.push('152'); // A12 - Código País (152=Chile)
   fields.push(''); // A13 - Región
   fields.push(''); // A14 - Comuna
   fields.push(''); // A15 - Dirección
   fields.push(''); // A16 - Teléfono
   fields.push(''); // A17 - Email
   fields.push((detail.dias_trabajados || 30).toString()); // A18 - Días Trabajados
-  fields.push('N'); // A19 - Tipo Trabajador (N=Normal)
-  fields.push(''); // A20 - Código AFP
+  fields.push('A'); // A19 - Tipo Trabajador (A=Activo, P=Pensionado, N=Normal)
+  fields.push(payrollConfig.afp_code || '032'); // A20 - Código AFP (032=Habitat por defecto)
   fields.push(''); // A21 - Fecha Afiliación AFP
-  fields.push(''); // A22 - Código Salud
+  fields.push(payrollConfig.health_institution_code || '01'); // A22 - Código Salud (01=FONASA)
   fields.push(''); // A23 - Fecha Afiliación Salud
-  fields.push(''); // A24 - Código Mutual
-  fields.push(''); // A25 - Código Caja Compensación
+  fields.push('01'); // A24 - Código Mutual (01=ISL por defecto)
+  fields.push('01'); // A25 - Código Caja Compensación (01=Los Andes por defecto)
 
   // 2. DATOS AFP (Columnas Z-AM, campos 26-39)
   fields.push((detail.base_imp_prevision || 0).toString()); // Z26 - Renta Imponible AFP
-  fields.push(payrollConfig.afp_code || '02'); // AA27 - Código AFP
+  fields.push(payrollConfig.afp_code || '032'); // AA27 - Código AFP (032=Habitat)
   fields.push((detail.prevision_afp || 0).toString()); // AB28 - Cotización Obligatoria AFP
   fields.push(''); // AC29 - SIS (Seguro de Invalidez y Sobrevivencia)
   fields.push(''); // AD30 - Comisión AFP
