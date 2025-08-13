@@ -9,6 +9,7 @@ import { ArrowLeft, Save, User, Phone, Mail, Home, Calendar, AlertCircle, Calcul
 import RutInputFixed from '@/modules/remuneraciones/components/empleados/RutInputFixed';
 import { usePayrollOptions } from '@/modules/remuneraciones/hooks/useConfiguracion';
 import { useCompanyId } from '@/contexts/CompanyContext';
+import { JobDescriptionAssistant } from '@/components/payroll/JobDescriptionAssistant';
 
 interface EmployeeFormData {
   // Información Personal
@@ -46,6 +47,11 @@ interface EmployeeFormData {
   weeklyHours: string;
   healthInsurance: string;
   pensionFund: string;
+  
+  // Funciones del Cargo (nuevos campos)
+  jobFunctions: string[];
+  obligations: string[];
+  prohibitions: string[];
   
   // Gratificación Legal (Art. 50)
   hasLegalGratification: boolean;
@@ -101,6 +107,11 @@ export default function NewEmployeePage() {
     healthInsurance: '',
     pensionFund: '',
     
+    // Funciones del Cargo
+    jobFunctions: [],
+    obligations: [],
+    prohibitions: [],
+    
     // Gratificación Legal (Art. 50)
     hasLegalGratification: false,
   });
@@ -117,6 +128,27 @@ export default function NewEmployeePage() {
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
+  };
+
+  // Manejar datos extraídos del asistente de descriptor de cargo
+  const handleJobDescriptionData = (data: any) => {
+    setFormData(prev => ({
+      ...prev,
+      // Actualizar cargo y departamento si fueron extraídos
+      ...(data.position && { position: data.position }),
+      ...(data.department && { department: data.department }),
+      // Actualizar arrays de funciones
+      jobFunctions: data.job_functions || [],
+      obligations: data.obligations || [],
+      prohibitions: data.prohibitions || []
+    }));
+    
+    // Limpiar errores relacionados
+    setErrors(prev => ({
+      ...prev,
+      position: '',
+      department: ''
+    }));
   };
 
   const validateForm = () => {
@@ -217,6 +249,11 @@ export default function NewEmployeePage() {
         base_salary: parseFloat(formData.baseSalary),
         salary_type: formData.salaryType,
         weekly_hours: parseFloat(formData.weeklyHours) || 45,
+        
+        // Job description info (from AI/PDF assistant)
+        job_functions: formData.jobFunctions,
+        obligations: formData.obligations,
+        prohibitions: formData.prohibitions,
         
         // ✅ PAYROLL CONFIG DINÁMICO: Usa códigos de configuración conectada
         payroll_config: {
@@ -831,6 +868,71 @@ export default function NewEmployeePage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Asistente de Descriptor de Cargo */}
+                <JobDescriptionAssistant
+                  onDataExtracted={handleJobDescriptionData}
+                  currentPosition={formData.position}
+                  currentDepartment={formData.department}
+                />
+
+                {/* Mostrar funciones extraídas si existen */}
+                {(formData.jobFunctions.length > 0 || formData.obligations.length > 0 || formData.prohibitions.length > 0) && (
+                  <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-white/20">
+                    <div className="border-b border-white/20 p-6">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-8 h-8 bg-green-500/10 rounded-lg flex items-center justify-center">
+                          <Briefcase className="w-4 h-4 text-green-600" />
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-900">Funciones del Cargo</h3>
+                      </div>
+                      <p className="text-gray-600">Información extraída automáticamente</p>
+                    </div>
+                    <div className="p-6">
+                      {formData.jobFunctions.length > 0 && (
+                        <div className="mb-6">
+                          <h4 className="text-lg font-medium text-gray-900 mb-3">Funciones Principales</h4>
+                          <ul className="space-y-2">
+                            {formData.jobFunctions.map((func, index) => (
+                              <li key={index} className="flex items-start">
+                                <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                                <span className="text-gray-700">{func}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {formData.obligations.length > 0 && (
+                        <div className="mb-6">
+                          <h4 className="text-lg font-medium text-gray-900 mb-3">Obligaciones</h4>
+                          <ul className="space-y-2">
+                            {formData.obligations.map((obl, index) => (
+                              <li key={index} className="flex items-start">
+                                <span className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                                <span className="text-gray-700">{obl}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {formData.prohibitions.length > 0 && (
+                        <div>
+                          <h4 className="text-lg font-medium text-gray-900 mb-3">Prohibiciones</h4>
+                          <ul className="space-y-2">
+                            {formData.prohibitions.map((proh, index) => (
+                              <li key={index} className="flex items-start">
+                                <span className="w-2 h-2 bg-red-500 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                                <span className="text-gray-700">{proh}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Alert about contract creation */}
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
