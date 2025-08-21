@@ -29,6 +29,7 @@ import { Header } from '@/components/layout';
 import { exportToCSV, exportToJSON, parseCSV, downloadFile, generateCSVTemplate } from '@/lib/data/chartOfAccounts';
 import { planDeCuentasChilenoFinal } from '@/lib/data/planDeCuentasChilenoFinal';
 import { Account } from '@/types';
+import RCVTaxConfigModal from '@/components/accounting/RCVTaxConfigModal';
 
 
 // Interfaces para configuración centralizada
@@ -79,6 +80,8 @@ export default function ConfigurationPage() {
   const [editingConfig, setEditingConfig] = useState<CentralizedAccountConfig | null>(null);
   const [showConfigForm, setShowConfigForm] = useState(false);
   const [loadingConfigs, setLoadingConfigs] = useState(true);
+  const [selectedModule, setSelectedModule] = useState<string>(''); // Estado para el módulo seleccionado
+  const [showRCVTaxModal, setShowRCVTaxModal] = useState(false); // Modal específico para RCV
 
   // Estados para entidades RCV
   const [rcvEntities, setRcvEntities] = useState<RCVEntity[]>([]);
@@ -624,7 +627,11 @@ export default function ConfigurationPage() {
                         <button
                           onClick={() => {
                             setEditingConfig(config);
-                            setShowConfigForm(true);
+                            if (config.module_name === 'rcv') {
+                              setShowRCVTaxModal(true);
+                            } else {
+                              setShowConfigForm(true);
+                            }
                           }}
                           className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
                         >
@@ -1049,7 +1056,19 @@ export default function ConfigurationPage() {
           animation-delay: 4s;
         }
       `}</style>
-      {/* Modal de Configuración Centralizada */}
+      {/* Modal de Configuración de Impuestos RCV */}
+      <RCVTaxConfigModal
+        isOpen={showRCVTaxModal}
+        onClose={() => {
+          setShowRCVTaxModal(false);
+          setEditingConfig(null);
+        }}
+        editingConfig={editingConfig}
+        accounts={getDetailAccounts()}
+        onSave={saveCentralizedConfig}
+      />
+
+      {/* Modal de Configuración Centralizada General */}
       {showConfigForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -1101,6 +1120,12 @@ export default function ConfigurationPage() {
                     name="module_name"
                     required
                     defaultValue={editingConfig?.module_name || ''}
+                    onChange={(e) => {
+                      if (e.target.value === 'rcv') {
+                        setShowConfigForm(false);
+                        setShowRCVTaxModal(true);
+                      }
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                   >
                     <option value="">Seleccionar módulo...</option>
