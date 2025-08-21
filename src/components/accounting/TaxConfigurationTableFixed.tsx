@@ -15,7 +15,6 @@ interface TaxConfiguration {
   purchases_account_code?: string;
   purchases_account_name?: string;
   is_active: boolean;
-  notes?: string;
   created_at: string;
   updated_at: string;
 }
@@ -33,18 +32,18 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
 
   // Configuraciones fijas de impuestos chilenos (no editables en estructura, solo en cuentas)
   const FIXED_TAX_CONFIGURATIONS = [
-    { tax_type: 'iva_19', tax_name: 'IVA 19%', tax_rate: 19.0, notes: 'Impuesto al Valor Agregado general' },
-    { tax_type: 'iva_exento', tax_name: 'IVA Exento', tax_rate: 0.0, notes: 'Operaciones exentas de IVA' },
-    { tax_type: 'ila_20.5', tax_name: 'ILA 20.5%', tax_rate: 20.5, notes: 'Impuesto a bebidas alcohólicas (vinos, cervezas)' },
-    { tax_type: 'ila_31.5', tax_name: 'ILA 31.5%', tax_rate: 31.5, notes: 'Bebidas destiladas y analcohólicas con alto azúcar' },
-    { tax_type: 'ila_10', tax_name: 'ILA 10%', tax_rate: 10.0, notes: 'Bebidas analcohólicas con bajo contenido de azúcar' },
-    { tax_type: 'iaba_5', tax_name: 'IABA 5%', tax_rate: 5.0, notes: 'Impuesto adicional a bebidas azucaradas' },
-    { tax_type: 'diesel', tax_name: 'Impuesto al Diesel', tax_rate: null, notes: 'Impuesto específico al combustible diesel' },
-    { tax_type: 'gasolina', tax_name: 'Impuesto a la Gasolina', tax_rate: null, notes: 'Impuesto específico a las gasolinas' },
-    { tax_type: 'tabaco', tax_name: 'Impuesto al Tabaco', tax_rate: null, notes: 'Impuesto específico a productos del tabaco' },
-    { tax_type: 'lujo', tax_name: 'Impuesto a Artículos de Lujo', tax_rate: 15.0, notes: 'Impuesto a artículos suntuarios y de lujo' },
-    { tax_type: 'digital', tax_name: 'IVA Servicios Digitales', tax_rate: 19.0, notes: 'IVA para servicios digitales desde el extranjero' },
-    { tax_type: 'vehiculos', tax_name: 'Impuesto Verde Vehículos', tax_rate: null, notes: 'Impuesto verde y adicional a vehículos' }
+    { tax_type: 'iva_19', tax_name: 'IVA 19%', tax_rate: 19.0 },
+    { tax_type: 'iva_exento', tax_name: 'IVA Exento', tax_rate: 0.0 },
+    { tax_type: 'ila_20.5', tax_name: 'ILA 20.5%', tax_rate: 20.5 },
+    { tax_type: 'ila_31.5', tax_name: 'ILA 31.5%', tax_rate: 31.5 },
+    { tax_type: 'ila_10', tax_name: 'ILA 10%', tax_rate: 10.0 },
+    { tax_type: 'iaba_5', tax_name: 'IABA 5%', tax_rate: 5.0 },
+    { tax_type: 'diesel', tax_name: 'Impuesto al Diesel', tax_rate: null },
+    { tax_type: 'gasolina', tax_name: 'Impuesto a la Gasolina', tax_rate: null },
+    { tax_type: 'tabaco', tax_name: 'Impuesto al Tabaco', tax_rate: null },
+    { tax_type: 'lujo', tax_name: 'Impuesto a Artículos de Lujo', tax_rate: 15.0 },
+    { tax_type: 'digital', tax_name: 'IVA Servicios Digitales', tax_rate: 19.0 },
+    { tax_type: 'vehiculos', tax_name: 'Impuesto Verde Vehículos', tax_rate: null }
   ];
 
   // Cargar configuraciones y combinar con estructura fija
@@ -81,7 +80,6 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
             sales_account_name: '',
             purchases_account_code: '',
             purchases_account_name: '',
-            notes: fixedConfig.notes,
             is_active: true,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
@@ -104,7 +102,6 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
         sales_account_name: '',
         purchases_account_code: '',
         purchases_account_name: '',
-        notes: fixedConfig.notes,
         is_active: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -141,8 +138,7 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
       sales_account_code: config.sales_account_code || '',
       sales_account_name: config.sales_account_name || '',
       purchases_account_code: config.purchases_account_code || '',
-      purchases_account_name: config.purchases_account_name || '',
-      notes: config.notes || ''
+      purchases_account_name: config.purchases_account_name || ''
     });
   };
 
@@ -171,7 +167,6 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
         sales_account_name: editingConfig.sales_account_name,
         purchases_account_code: editingConfig.purchases_account_code,
         purchases_account_name: editingConfig.purchases_account_name,
-        notes: editingConfig.notes,
         is_active: true
       };
 
@@ -278,7 +273,6 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
                 <th className="text-left py-3 px-4 font-semibold text-gray-700">Tasa</th>
                 <th className="text-left py-3 px-4 font-semibold text-gray-700">Cuenta Ventas</th>
                 <th className="text-left py-3 px-4 font-semibold text-gray-700">Cuenta Compras</th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-700">Notas</th>
                 <th className="text-right py-3 px-4 font-semibold text-gray-700">Acciones</th>
               </tr>
             </thead>
@@ -301,7 +295,6 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
                     </td>
                     <td className="py-3 px-4">
                       <div className="font-medium text-gray-900">{config.tax_name}</div>
-                      <div className="text-xs text-gray-500">{config.notes}</div>
                     </td>
                     <td className="py-3 px-4 text-gray-700">
                       {config.tax_rate ? `${config.tax_rate}%` : 'Variable'}
@@ -356,21 +349,6 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
                         </div>
                       )}
                     </td>
-                    <td className="py-3 px-4">
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          value={editingConfig.notes || ''}
-                          onChange={(e) => setEditingConfig(prev => ({ ...prev, notes: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-300"
-                          placeholder="Notas opcionales"
-                        />
-                      ) : (
-                        <div className="text-sm text-gray-600">
-                          {config.notes || '-'}
-                        </div>
-                      )}
-                    </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end space-x-2">
                         {isEditing ? (
@@ -412,7 +390,7 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
               {/* Mensaje cuando no hay configuraciones */}
               {configurations.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-gray-500">
+                  <td colSpan={6} className="py-8 text-center text-gray-500">
                     <AlertTriangle className="w-8 h-8 mx-auto mb-2 text-gray-400" />
                     <p>Cargando configuraciones de impuestos...</p>
                   </td>

@@ -65,8 +65,7 @@ export async function POST(request: NextRequest) {
       sales_account_code,
       sales_account_name,
       purchases_account_code,
-      purchases_account_name,
-      notes
+      purchases_account_name
     } = body;
 
     // Validaciones básicas
@@ -104,7 +103,6 @@ export async function POST(request: NextRequest) {
         sales_account_name,
         purchases_account_code,
         purchases_account_name,
-        notes,
         is_active: true
       })
       .select()
@@ -146,7 +144,6 @@ export async function PUT(request: NextRequest) {
       sales_account_name,
       purchases_account_code,
       purchases_account_name,
-      notes,
       is_active
     } = body;
 
@@ -167,7 +164,6 @@ export async function PUT(request: NextRequest) {
         sales_account_name,
         purchases_account_code,
         purchases_account_name,
-        notes,
         is_active: is_active !== undefined ? is_active : true
       })
       .eq('id', id)

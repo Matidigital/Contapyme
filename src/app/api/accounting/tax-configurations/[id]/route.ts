@@ -76,7 +76,6 @@ export async function PUT(
       sales_account_name,
       purchases_account_code,
       purchases_account_name,
-      notes,
       is_active
     } = body;
 
@@ -90,7 +89,6 @@ export async function PUT(
         sales_account_name,
         purchases_account_code,
         purchases_account_name,
-        notes,
         is_active: is_active !== undefined ? is_active : true
       })
       .eq('id', id)

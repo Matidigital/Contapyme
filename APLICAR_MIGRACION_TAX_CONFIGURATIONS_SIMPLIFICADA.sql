@@ -24,7 +24,6 @@ CREATE TABLE IF NOT EXISTS tax_account_configurations (
     
     -- Metadatos
     is_active BOOLEAN DEFAULT true,
-    notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     
@@ -98,38 +97,31 @@ INSERT INTO tax_account_configurations (
     sales_account_code,
     sales_account_name,
     purchases_account_code,
-    purchases_account_name,
-    notes
+    purchases_account_name
 ) VALUES 
 -- IVA 19% General
 ('8033ee69-b420-4d91-ba0e-482f46cd6fce', 'iva_19', 'IVA 19%', 19.0,
- '2.1.4.001', 'IVA por Pagar', '1.1.4.002', 'IVA Crédito Fiscal',
- 'Configuración estándar para IVA general del 19%'),
+ '2.1.4.001', 'IVA por Pagar', '1.1.4.002', 'IVA Crédito Fiscal'),
 
 -- IVA Exento  
 ('8033ee69-b420-4d91-ba0e-482f46cd6fce', 'iva_exento', 'IVA Exento', 0.0,
- '4.1.1.001', 'Ventas Exentas', '5.1.1.001', 'Compras Exentas',
- 'Operaciones exentas de IVA'),
+ '4.1.1.001', 'Ventas Exentas', '5.1.1.001', 'Compras Exentas'),
 
 -- ILA 20.5% (Bebidas alcohólicas)
 ('8033ee69-b420-4d91-ba0e-482f46cd6fce', 'ila_20.5', 'ILA 20.5%', 20.5,
- '2.1.4.101', 'ILA por Pagar 20.5%', '1.1.4.102', 'ILA Crédito 20.5%',
- 'Impuesto a bebidas alcohólicas (vinos, cervezas)'),
+ '2.1.4.101', 'ILA por Pagar 20.5%', '1.1.4.102', 'ILA Crédito 20.5%'),
 
 -- ILA 31.5% (Bebidas destiladas y analcohólicas)
 ('8033ee69-b420-4d91-ba0e-482f46cd6fce', 'ila_31.5', 'ILA 31.5%', 31.5,
- '2.1.4.103', 'ILA por Pagar 31.5%', '1.1.4.104', 'ILA Crédito 31.5%',
- 'Bebidas destiladas y analcohólicas con alto contenido de azúcar'),
+ '2.1.4.103', 'ILA por Pagar 31.5%', '1.1.4.104', 'ILA Crédito 31.5%'),
 
 -- ILA 10% (Bebidas analcohólicas bajo azúcar)
 ('8033ee69-b420-4d91-ba0e-482f46cd6fce', 'ila_10', 'ILA 10%', 10.0,
- '2.1.4.105', 'ILA por Pagar 10%', '1.1.4.106', 'ILA Crédito 10%',
- 'Bebidas analcohólicas con bajo contenido de azúcar'),
+ '2.1.4.105', 'ILA por Pagar 10%', '1.1.4.106', 'ILA Crédito 10%'),
 
 -- IABA 5% (Impuesto adicional bebidas azucaradas)
 ('8033ee69-b420-4d91-ba0e-482f46cd6fce', 'iaba_5', 'IABA 5%', 5.0,
- '2.1.4.107', 'IABA por Pagar 5%', '1.1.4.108', 'IABA Crédito 5%',
- 'Impuesto adicional a bebidas analcohólicas azucaradas');
+ '2.1.4.107', 'IABA por Pagar 5%', '1.1.4.108', 'IABA Crédito 5%');
 
 -- Grants para el usuario de la aplicación
 GRANT ALL ON tax_account_configurations TO postgres;
