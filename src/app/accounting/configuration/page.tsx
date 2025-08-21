@@ -30,6 +30,7 @@ import { exportToCSV, exportToJSON, parseCSV, downloadFile, generateCSVTemplate 
 import { planDeCuentasChilenoFinal } from '@/lib/data/planDeCuentasChilenoFinal';
 import { Account } from '@/types';
 import RCVTaxConfigModal from '@/components/accounting/RCVTaxConfigModal';
+import TaxConfigurationTable from '@/components/accounting/TaxConfigurationTable';
 
 
 // Interfaces para configuración centralizada
@@ -554,178 +555,27 @@ export default function ConfigurationPage() {
             </CardContent>
         </Card>
 
-        {/* Panel de Configuración Centralizada de Cuentas */}
+        {/* Configuración de Impuestos RCV */}
         <Card className="bg-white/90 backdrop-blur-sm border-2 border-purple-100 hover:border-purple-200 transition-colors">
           <CardHeader className="bg-gradient-to-r from-purple-50 to-indigo-50">
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-lg flex items-center justify-center">
-                  <Target className="w-4 h-4 text-white" />
-                </div>
-                <span>Configuración Centralizada de Cuentas</span>
-                <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
-                  {centralizedConfigs.length} configuraciones
-                </span>
+            <CardTitle className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-lg flex items-center justify-center">
+                <Target className="w-4 h-4 text-white" />
               </div>
-              <Button
-                variant="primary"
-                size="sm"
-                leftIcon={<Plus className="w-4 h-4" />}
-                onClick={() => setShowConfigForm(true)}
-                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
-              >
-                Nueva Configuración
-              </Button>
+              <span>Configuración de Impuestos para RCV</span>
+              <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
+                Tabla Directa
+              </span>
             </CardTitle>
             <CardDescription>
-              Centraliza la configuración de cuentas contables por módulo para asientos automáticos
+              Configuración directa de cuentas contables para cada tipo de impuesto chileno
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {loadingConfigs ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-                <span className="ml-3 text-gray-600">Cargando configuraciones...</span>
-              </div>
-            ) : centralizedConfigs.length === 0 ? (
-              <div className="text-center py-8">
-                <Target className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No hay configuraciones</h3>
-                <p className="text-gray-600 mb-4">
-                  Crea tu primera configuración centralizada para automatizar asientos contables
-                </p>
-                <Button
-                  variant="primary"
-                  onClick={() => setShowConfigForm(true)}
-                  className="bg-gradient-to-r from-purple-600 to-indigo-600"
-                >
-                  Crear Configuración
-                </Button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {centralizedConfigs.map((config) => (
-                  <div
-                    key={config.id}
-                    className="border-2 border-purple-100 rounded-xl p-6 hover:border-purple-200 hover:shadow-lg transition-all duration-200"
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-lg flex items-center justify-center">
-                          {config.module_name === 'rcv' && <FileText className="w-5 h-5 text-white" />}
-                          {config.module_name === 'fixed_assets' && <Building2 className="w-5 h-5 text-white" />}
-                          {config.module_name === 'payroll' && <DollarSign className="w-5 h-5 text-white" />}
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{config.display_name}</h3>
-                          <p className="text-sm text-gray-600">
-                            {config.module_name.toUpperCase()} - {config.transaction_type}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => {
-                            setEditingConfig(config);
-                            if (config.module_name === 'rcv') {
-                              setShowRCVTaxModal(true);
-                            } else {
-                              setShowConfigForm(true);
-                            }
-                          }}
-                          className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => deleteCentralizedConfig(config.id)}
-                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
-                        <div className="flex items-center space-x-2">
-                          <TrendingUp className="w-4 h-4 text-green-600" />
-                          <span className="text-sm font-medium text-green-800">Cuenta de Impuesto</span>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-mono text-green-700">{config.tax_account_code}</p>
-                          <p className="text-xs text-green-600">{config.tax_account_name}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
-                        <div className="flex items-center space-x-2">
-                          <DollarSign className="w-4 h-4 text-blue-600" />
-                          <span className="text-sm font-medium text-blue-800">Cuenta de Utilidad</span>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-mono text-blue-700">{config.revenue_account_code}</p>
-                          <p className="text-xs text-blue-600">{config.revenue_account_name}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
-                        <div className="flex items-center space-x-2">
-                          <Building2 className="w-4 h-4 text-orange-600" />
-                          <span className="text-sm font-medium text-orange-800">Cuenta de Activo</span>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-mono text-orange-700">{config.asset_account_code}</p>
-                          <p className="text-xs text-orange-600">{config.asset_account_name}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 pt-3 border-t border-gray-200">
-                      <div className="flex items-center justify-between">
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          config.is_active 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {config.is_active ? '✅ Activo' : '❌ Inactivo'}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {config.created_at && new Date(config.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Información sobre configuración centralizada */}
-            <div className="mt-6 space-y-4">
-              <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-                <h4 className="font-medium text-purple-900 mb-2">💡 ¿Cómo funciona la Configuración Centralizada?</h4>
-                <div className="text-sm text-purple-800 space-y-1">
-                  <p>• <strong>Cuenta de Impuesto:</strong> Se utiliza para registrar IVA y otros impuestos</p>
-                  <p>• <strong>Cuenta de Utilidad:</strong> Registra ingresos por ventas o reducciones por compras</p>
-                  <p>• <strong>Cuenta de Activo:</strong> Para clientes en ventas o inventario en compras</p>
-                  <p>• <strong>Asientos Automáticos:</strong> El sistema usa estas cuentas al procesar transacciones de cada módulo</p>
-                </div>
-              </div>
-
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <h4 className="font-medium text-blue-900 mb-2 flex items-center space-x-2">
-                  <Target className="w-4 h-4" />
-                  <span>🔗 Integración con Libro Diario</span>
-                </h4>
-                <div className="text-sm text-blue-800 space-y-1">
-                  <p>✅ <strong>Automatización Completa:</strong> Estas configuraciones se usan automáticamente en:</p>
-                  <p className="ml-4">• <strong>Integración RCV:</strong> Al procesar registros de compra y venta</p>
-                  <p className="ml-4">• <strong>Integración Activos Fijos:</strong> Al contabilizar adquisiciones</p>
-                  <p className="ml-4">• <strong>Libro Diario:</strong> Para generar asientos contables automáticos</p>
-                  <p className="mt-3">🎯 <strong>Sin configuración adicional:</strong> Una vez creada, la integración usa estas cuentas automáticamente.</p>
-                </div>
-              </div>
-            </div>
+            <TaxConfigurationTable 
+              companyId={companyId}
+              accounts={getDetailAccounts()}
+            />
           </CardContent>
         </Card>
 
