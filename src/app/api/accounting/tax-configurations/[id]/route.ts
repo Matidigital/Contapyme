@@ -72,14 +72,10 @@ export async function PUT(
     const {
       tax_name,
       tax_rate,
-      sales_debit_account_code,
-      sales_debit_account_name,
-      sales_credit_account_code,
-      sales_credit_account_name,
-      purchases_debit_account_code,
-      purchases_debit_account_name,
-      purchases_credit_account_code,
-      purchases_credit_account_name,
+      sales_account_code,
+      sales_account_name,
+      purchases_account_code,
+      purchases_account_name,
       notes,
       is_active
     } = body;
@@ -90,14 +86,10 @@ export async function PUT(
       .update({
         tax_name,
         tax_rate: tax_rate ? parseFloat(tax_rate) : null,
-        sales_debit_account_code,
-        sales_debit_account_name,
-        sales_credit_account_code,
-        sales_credit_account_name,
-        purchases_debit_account_code,
-        purchases_debit_account_name,
-        purchases_credit_account_code,
-        purchases_credit_account_name,
+        sales_account_code,
+        sales_account_name,
+        purchases_account_code,
+        purchases_account_name,
         notes,
         is_active: is_active !== undefined ? is_active : true
       })

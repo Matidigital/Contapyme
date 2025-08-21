@@ -10,14 +10,10 @@ interface TaxConfiguration {
   tax_type: string;
   tax_name: string;
   tax_rate?: number;
-  sales_debit_account_code?: string;
-  sales_debit_account_name?: string;
-  sales_credit_account_code?: string;
-  sales_credit_account_name?: string;
-  purchases_debit_account_code?: string;
-  purchases_debit_account_name?: string;
-  purchases_credit_account_code?: string;
-  purchases_credit_account_name?: string;
+  sales_account_code?: string;
+  sales_account_name?: string;
+  purchases_account_code?: string;
+  purchases_account_name?: string;
   is_active: boolean;
   notes?: string;
   created_at: string;
@@ -41,14 +37,10 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
     tax_type: '',
     tax_name: '',
     tax_rate: '',
-    sales_debit_account_code: '',
-    sales_debit_account_name: '',
-    sales_credit_account_code: '',
-    sales_credit_account_name: '',
-    purchases_debit_account_code: '',
-    purchases_debit_account_name: '',
-    purchases_credit_account_code: '',
-    purchases_credit_account_name: '',
+    sales_account_code: '',
+    sales_account_name: '',
+    purchases_account_code: '',
+    purchases_account_name: '',
     notes: ''
   });
 
