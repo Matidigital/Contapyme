@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Edit2, Trash2, Plus, Save, X, Check, AlertTriangle, FileText } from 'lucide-react';
+import { Edit2, Save, X, FileText, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui';
 
 interface TaxConfiguration {
@@ -28,10 +28,6 @@ interface TaxConfigurationTableProps {
 export default function TaxConfigurationTable({ companyId, accounts }: TaxConfigurationTableProps) {
   const [configurations, setConfigurations] = useState<TaxConfiguration[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [stats, setStats] = useState<any>({});
-
-  // Estado para edición inline
   const [editingRow, setEditingRow] = useState<string | null>(null);
   const [editingConfig, setEditingConfig] = useState<Partial<TaxConfiguration>>({});
 
@@ -63,7 +59,6 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
       let savedConfigs: TaxConfiguration[] = [];
       if (result.success) {
         savedConfigs = result.data || [];
-        setStats(result.stats || {});
       }
       
       // Combinar configuraciones fijas con las guardadas
@@ -237,7 +232,7 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
                 {configurations.length} impuestos configurables
               </div>
               <div className="text-xs">
-                Haga clic en "Editar" para configurar cuentas
+                Haga clic en "Configurar/Editar" para asignar cuentas
               </div>
             </div>
           </div>
@@ -279,8 +274,8 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
             <thead>
               <tr className="border-b border-gray-200">
                 <th className="text-left py-3 px-4 font-semibold text-gray-700">Tipo</th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-700">Nombre</th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-700">Tasa (%)</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-700">Impuesto</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-700">Tasa</th>
                 <th className="text-left py-3 px-4 font-semibold text-gray-700">Cuenta Ventas</th>
                 <th className="text-left py-3 px-4 font-semibold text-gray-700">Cuenta Compras</th>
                 <th className="text-left py-3 px-4 font-semibold text-gray-700">Notas</th>
@@ -288,179 +283,138 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
               </tr>
             </thead>
             <tbody>
-              {/* Fila para nueva configuración */}
-              {showNewRow && (
-                <tr className="border-b border-gray-100 bg-blue-50/50">
-                  <td className="py-3 px-4">
-                    <select
-                      value={newConfig.tax_type}
-                      onChange={(e) => {
-                        const selectedType = TAX_TYPES.find(type => type.value === e.target.value);
-                        setNewConfig(prev => ({
-                          ...prev,
-                          tax_type: e.target.value,
-                          tax_name: selectedType?.label || '',
-                          tax_rate: selectedType?.rate?.toString() || ''
-                        }));
-                      }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-300"
-                    >
-                      <option value="">Seleccionar...</option>
-                      {TAX_TYPES.map(type => (
-                        <option key={type.value} value={type.value}>
-                          {type.label}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="py-3 px-4">
-                    <input
-                      type="text"
-                      value={newConfig.tax_name}
-                      onChange={(e) => setNewConfig(prev => ({ ...prev, tax_name: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-300"
-                      placeholder="Nombre del impuesto"
-                    />
-                  </td>
-                  <td className="py-3 px-4">
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={newConfig.tax_rate}
-                      onChange={(e) => setNewConfig(prev => ({ ...prev, tax_rate: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-300"
-                      placeholder="19.0"
-                    />
-                  </td>
-                  <td className="py-3 px-4">
-                    <select
-                      value={newConfig.sales_account_code}
-                      onChange={(e) => handleAccountSelect('sales_account_code', e.target.value, true)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-300"
-                    >
-                      <option value="">Seleccionar cuenta...</option>
-                      {accounts.map(account => (
-                        <option key={account.code} value={account.code}>
-                          {account.code} - {account.name}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="py-3 px-4">
-                    <select
-                      value={newConfig.purchases_account_code}
-                      onChange={(e) => handleAccountSelect('purchases_account_code', e.target.value, true)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-300"
-                    >
-                      <option value="">Seleccionar cuenta...</option>
-                      {accounts.map(account => (
-                        <option key={account.code} value={account.code}>
-                          {account.code} - {account.name}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="py-3 px-4">
-                    <input
-                      type="text"
-                      value={newConfig.notes}
-                      onChange={(e) => setNewConfig(prev => ({ ...prev, notes: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-300"
-                      placeholder="Notas opcionales"
-                    />
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <div className="flex items-center justify-end space-x-2">
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        leftIcon={<Save className="w-4 h-4" />}
-                        onClick={handleCreateConfig}
-                        disabled={!newConfig.tax_type || !newConfig.tax_name}
-                      >
-                        Guardar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        leftIcon={<X className="w-4 h-4" />}
-                        onClick={() => setShowNewRow(false)}
-                      >
-                        Cancelar
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              )}
-
-              {/* Filas de configuraciones existentes */}
-              {configurations.map((config) => (
-                <tr key={config.id} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-3 px-4">
-                    <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 font-medium">
-                      {config.tax_type}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 font-medium text-gray-900">
-                    {config.tax_name}
-                  </td>
-                  <td className="py-3 px-4 text-gray-700">
-                    {config.tax_rate ? `${config.tax_rate}%` : '-'}
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="text-sm">
-                      <div className="font-medium text-gray-900">
-                        {config.sales_account_code || '-'}
+              {/* Filas de configuraciones con edición inline */}
+              {configurations.map((config) => {
+                const isEditing = editingRow === config.tax_type;
+                const isConfigured = config.sales_account_code && config.purchases_account_code;
+                
+                return (
+                  <tr key={config.id} className={`border-b border-gray-100 hover:bg-gray-50 ${isEditing ? 'bg-blue-50/50' : ''}`}>
+                    <td className="py-3 px-4">
+                      <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                        config.tax_type.startsWith('iva') ? 'bg-blue-100 text-blue-800' :
+                        config.tax_type.startsWith('ila') ? 'bg-purple-100 text-purple-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {config.tax_type.toUpperCase()}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="font-medium text-gray-900">{config.tax_name}</div>
+                      <div className="text-xs text-gray-500">{config.notes}</div>
+                    </td>
+                    <td className="py-3 px-4 text-gray-700">
+                      {config.tax_rate ? `${config.tax_rate}%` : 'Variable'}
+                    </td>
+                    <td className="py-3 px-4">
+                      {isEditing ? (
+                        <select
+                          value={editingConfig.sales_account_code}
+                          onChange={(e) => handleAccountSelect('sales_account_code', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-300"
+                        >
+                          <option value="">Seleccionar cuenta...</option>
+                          {accounts.map(account => (
+                            <option key={account.code} value={account.code}>
+                              {account.code} - {account.name}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="text-sm">
+                          <div className={`font-medium ${isConfigured ? 'text-gray-900' : 'text-gray-400'}`}>
+                            {config.sales_account_code || 'Sin configurar'}
+                          </div>
+                          <div className="text-gray-600 text-xs">
+                            {config.sales_account_name || ''}
+                          </div>
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      {isEditing ? (
+                        <select
+                          value={editingConfig.purchases_account_code}
+                          onChange={(e) => handleAccountSelect('purchases_account_code', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-300"
+                        >
+                          <option value="">Seleccionar cuenta...</option>
+                          {accounts.map(account => (
+                            <option key={account.code} value={account.code}>
+                              {account.code} - {account.name}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="text-sm">
+                          <div className={`font-medium ${isConfigured ? 'text-gray-900' : 'text-gray-400'}`}>
+                            {config.purchases_account_code || 'Sin configurar'}
+                          </div>
+                          <div className="text-gray-600 text-xs">
+                            {config.purchases_account_name || ''}
+                          </div>
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editingConfig.notes || ''}
+                          onChange={(e) => setEditingConfig(prev => ({ ...prev, notes: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-300"
+                          placeholder="Notas opcionales"
+                        />
+                      ) : (
+                        <div className="text-sm text-gray-600">
+                          {config.notes || '-'}
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <div className="flex items-center justify-end space-x-2">
+                        {isEditing ? (
+                          <>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              leftIcon={<Save className="w-4 h-4" />}
+                              onClick={() => saveConfiguration(config)}
+                            >
+                              Guardar
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              leftIcon={<X className="w-4 h-4" />}
+                              onClick={cancelEditing}
+                            >
+                              Cancelar
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            leftIcon={<Edit2 className="w-4 h-4" />}
+                            onClick={() => startEditing(config)}
+                            className={isConfigured ? 'hover:bg-blue-50 hover:border-blue-300' : 'hover:bg-orange-50 hover:border-orange-300 border-orange-200 text-orange-700'}
+                          >
+                            {isConfigured ? 'Editar' : 'Configurar'}
+                          </Button>
+                        )}
                       </div>
-                      <div className="text-gray-600 text-xs">
-                        {config.sales_account_name || ''}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="text-sm">
-                      <div className="font-medium text-gray-900">
-                        {config.purchases_account_code || '-'}
-                      </div>
-                      <div className="text-gray-600 text-xs">
-                        {config.purchases_account_name || ''}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 text-gray-600 text-sm">
-                    {config.notes || '-'}
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <div className="flex items-center justify-end space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        leftIcon={<Edit2 className="w-4 h-4" />}
-                        onClick={() => setEditingId(config.id)}
-                      >
-                        Editar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        leftIcon={<Trash2 className="w-4 h-4" />}
-                        onClick={() => handleDeleteConfig(config.id)}
-                        className="hover:bg-red-50 hover:border-red-300 hover:text-red-700"
-                      >
-                        Eliminar
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                );
+              })}
 
               {/* Mensaje cuando no hay configuraciones */}
-              {configurations.length === 0 && !showNewRow && (
+              {configurations.length === 0 && (
                 <tr>
                   <td colSpan={7} className="py-8 text-center text-gray-500">
                     <AlertTriangle className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                    <p>No hay configuraciones de impuestos.</p>
-                    <p className="text-sm">Haz clic en "Nueva Configuración" para agregar una.</p>
+                    <p>Cargando configuraciones de impuestos...</p>
                   </td>
                 </tr>
               )}

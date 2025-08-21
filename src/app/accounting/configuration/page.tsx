@@ -30,7 +30,7 @@ import { exportToCSV, exportToJSON, parseCSV, downloadFile, generateCSVTemplate 
 import { planDeCuentasChilenoFinal } from '@/lib/data/planDeCuentasChilenoFinal';
 import { Account } from '@/types';
 import RCVTaxConfigModal from '@/components/accounting/RCVTaxConfigModal';
-import TaxConfigurationTable from '@/components/accounting/TaxConfigurationTableSimplified';
+import TaxConfigurationTable from '@/components/accounting/TaxConfigurationTableFixed';
 
 
 // Interfaces para configuración centralizada
