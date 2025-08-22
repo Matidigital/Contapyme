@@ -138,12 +138,47 @@ export default function NewContractPage() {
     }
   }, [companyId]);
 
-  // Manejar cambio de empleado
+  // Manejar cambio de empleado - CARGAR TODOS LOS DATOS DEL EMPLEADO
   const handleEmployeeChange = (employeeId: string) => {
     setSelectedEmployee(employeeId);
     const employee = employees.find(e => e.id === employeeId);
-    if (employee && employee.position) {
-      setFormData(prev => ({ ...prev, position: employee.position || '' }));
+    
+    if (employee) {
+      console.log('📋 Cargando datos del empleado:', employee);
+      
+      // Cargar todos los datos del empleado en el formulario
+      setFormData(prev => ({
+        ...prev,
+        // Datos personales del empleado
+        rut: employee.rut || '',
+        firstName: employee.first_name || '',
+        lastName: employee.last_name || '',
+        middleName: employee.middle_name || '',
+        birthDate: employee.birth_date || '',
+        gender: employee.gender || '',
+        maritalStatus: employee.marital_status || '',
+        nationality: employee.nationality || '',
+        
+        // Datos de contacto
+        email: employee.email || '',
+        phone: employee.phone || '',
+        mobilePhone: employee.mobile_phone || '',
+        address: employee.address || '',
+        city: employee.city || '',
+        region: employee.region || '',
+        postalCode: employee.postal_code || '',
+        
+        // Contacto de emergencia
+        emergencyContactName: employee.emergency_contact_name || '',
+        emergencyContactPhone: employee.emergency_contact_phone || '',
+        emergencyContactRelationship: employee.emergency_contact_relationship || '',
+        
+        // Datos de contrato si existen contratos previos
+        position: employee.employment_contracts?.[0]?.position || '',
+        department: employee.employment_contracts?.[0]?.department || '',
+      }));
+      
+      console.log('✅ Datos del empleado cargados en el formulario');
     }
   };
 
@@ -360,6 +395,67 @@ export default function NewContractPage() {
 
             {selectedEmployee && (
               <>
+                {/* 📋 DATOS DEL EMPLEADO SELECCIONADO */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <User className="h-5 w-5 mr-2 text-green-600" />
+                      Datos del Empleado Seleccionado
+                    </CardTitle>
+                    <CardDescription>
+                      Información personal del empleado (solo lectura)
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                        <div>
+                          <span className="font-medium text-green-900">RUT:</span>
+                          <span className="ml-2 text-green-800">{formData.rut || 'No especificado'}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium text-green-900">Nombre:</span>
+                          <span className="ml-2 text-green-800">
+                            {formData.firstName} {formData.middleName} {formData.lastName}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="font-medium text-green-900">Email:</span>
+                          <span className="ml-2 text-green-800">{formData.email || 'No especificado'}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium text-green-900">Teléfono:</span>
+                          <span className="ml-2 text-green-800">{formData.phone || formData.mobilePhone || 'No especificado'}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium text-green-900">Dirección:</span>
+                          <span className="ml-2 text-green-800">{formData.address ? `${formData.address}, ${formData.city}` : 'No especificada'}</span>
+                        </div>
+                        <div>
+                          <span className="font-medium text-green-900">Nacionalidad:</span>
+                          <span className="ml-2 text-green-800">{formData.nationality || 'No especificada'}</span>
+                        </div>
+                      </div>
+                      
+                      {formData.emergencyContactName && (
+                        <div className="mt-3 pt-3 border-t border-green-300">
+                          <h4 className="font-medium text-green-900 mb-2">Contacto de Emergencia:</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="font-medium text-green-700">Nombre:</span>
+                              <span className="ml-2 text-green-800">{formData.emergencyContactName}</span>
+                            </div>
+                            <div>
+                              <span className="font-medium text-green-700">Teléfono:</span>
+                              <span className="ml-2 text-green-800">{formData.emergencyContactPhone || 'No especificado'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
                 {/* Información del cargo */}
                 <Card>
                   <CardHeader>

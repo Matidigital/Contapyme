@@ -235,8 +235,6 @@ export async function POST(request: NextRequest) {
         weekly_hours: parseFloat(body.weekly_hours) || 45,
         status: 'active',
         created_by: body.created_by,
-        // 📅 AÑADIR DÍAS TRABAJADOS ESTE MES
-        worked_days_current_month: workedDaysThisMonth,
         // 🔧 AÑADIR FUNCIONES DEL CARGO (desde asistente IA)
         job_functions: body.job_functions || [],
         obligations: body.obligations || [],
