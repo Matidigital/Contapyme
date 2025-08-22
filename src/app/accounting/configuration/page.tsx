@@ -26,9 +26,6 @@ import {
 } from 'lucide-react';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { Header } from '@/components/layout';
-import { exportToCSV, exportToJSON, parseCSV, downloadFile, generateCSVTemplate } from '@/lib/data/chartOfAccounts';
-import { planDeCuentasChilenoFinal } from '@/lib/data/planDeCuentasChilenoFinal';
-import { Account } from '@/types';
 import RCVTaxConfigModal from '@/components/accounting/RCVTaxConfigModal';
 import TaxConfigurationTable from '@/components/accounting/TaxConfigurationTableFixed';
 
@@ -69,12 +66,213 @@ interface RCVEntity {
   updated_at?: string;
 }
 
+interface ChartAccount {
+  id: string;
+  code: string;
+  name: string;
+  level_type: string;
+  account_type: string;
+  parent_code?: string;
+  is_active: boolean;
+  created_at: string;
+}
+
 export default function ConfigurationPage() {
-  const [accounts, setAccounts] = useState<Account[]>(planDeCuentasChilenoFinal);
+  const [accounts, setAccounts] = useState<ChartAccount[]>([]);
+  const [filteredAccounts, setFilteredAccounts] = useState<ChartAccount[]>([]);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set(['1', '1.1', '1.2', '2', '2.1', '2.2', '2.3', '3', '3.1', '3.2', '4', '4.1', '4.2']));
   const [searchTerm, setSearchTerm] = useState('');
-  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [editingAccount, setEditingAccount] = useState<ChartAccount | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [loadingAccounts, setLoadingAccounts] = useState(true);
+  const [accountFormData, setAccountFormData] = useState({
+    code: '',
+    name: '',
+    level_type: '1er Nivel',
+    account_type: 'ACTIVO',
+    parent_code: '',
+    is_active: true
+  });
+
+  // Función para formatear automáticamente el código de cuenta (formato compatible con BD existente)
+  const formatAccountCode = (input: string, preserveOriginal = false) => {
+    // Si queremos preservar el formato original (para edición), solo limpiar algunos caracteres
+    if (preserveOriginal) {
+      // Permitir números, puntos y espacios para edición más flexible
+      return input.replace(/[^\d\.\s]/g, '').trim();
+    }
+    
+    // Remover todos los caracteres que no sean números
+    const numbersOnly = input.replace(/[^\d]/g, '');
+    
+    console.log(`🔍 Formateando: "${input}" → numbersOnly: "${numbersOnly}" (${numbersOnly.length} dígitos)`);
+    
+    // Si está vacío, retornar vacío
+    if (numbersOnly.length === 0) return '';
+    
+    // Formatear según la longitud para mantener compatibilidad con cuentas existentes
+    if (numbersOnly.length === 1) {
+      console.log('📝 Caso 1 dígito:', numbersOnly);
+      return numbersOnly; // "1"
+    } else if (numbersOnly.length === 2) {
+      const result = `${numbersOnly[0]}.${numbersOnly[1]}`;
+      console.log('📝 Caso 2 dígitos:', result);
+      return result; // "1.2"
+    } else if (numbersOnly.length === 3) {
+      const result = `${numbersOnly[0]}.${numbersOnly[1]}.${numbersOnly[2]}`;
+      console.log('📝 Caso 3 dígitos:', result);
+      return result; // "1.2.3"
+    } else if (numbersOnly.length === 4) {
+      const result = `${numbersOnly[0]}.${numbersOnly[1]}.${numbersOnly[2]}.${numbersOnly[3]}`;
+      console.log('📝 Caso 4 dígitos:', result);
+      return result; // "1.2.3.4"
+    } else if (numbersOnly.length >= 5) {
+      console.log('📝 Caso 5+ dígitos - Iniciando formateo avanzado...');
+      
+      // Para números de 5+ dígitos: 1er, 2do, 3er nivel, resto como código detalle
+      const first = numbersOnly[0];   // Nivel 1
+      const second = numbersOnly[1];  // Nivel 2  
+      const third = numbersOnly[2];   // Nivel 3
+      const detail = numbersOnly.slice(3); // Resto
+      
+      console.log(`📝 Desglose: 1er="${first}", 2do="${second}", 3er="${third}", detalle="${detail}"`);
+      
+      // Para el código detalle, siempre mantener al menos 3 dígitos
+      let finalDetail;
+      if (detail.length <= 3) {
+        finalDetail = detail.padStart(3, '0'); // "05" → "005"
+      } else {
+        // Si tiene más de 3 dígitos, mantener todos (máximo 6)
+        finalDetail = detail.substring(0, 6);
+      }
+      
+      const result = `${first}.${second}.${third}.${finalDetail}`;
+      console.log(`📝 Resultado final: "${result}"`);
+      return result;
+    }
+    
+    return numbersOnly;
+  };
+
+  // Función para formatear código manteniendo formato libre para edición
+  const formatAccountCodeForEditing = (input: string) => {
+    // En modo edición, ser MUY permisivo - solo quitar caracteres obviamente inválidos
+    let cleaned = input.replace(/[^\d\.]/g, '');
+    
+    // Evitar múltiples puntos consecutivos
+    cleaned = cleaned.replace(/\.{2,}/g, '.');
+    
+    // Evitar punto al inicio
+    if (cleaned.startsWith('.')) {
+      cleaned = cleaned.substring(1);
+    }
+    
+    // En modo edición, permitir casi cualquier cosa válida
+    return cleaned;
+  };
+
+  // Función para detectar automáticamente el padre correcto
+  const getCorrectParent = (code: string) => {
+    const parts = code.split('.');
+    if (parts.length <= 1) return ''; // No tiene padre
+    
+    // Para cuentas Imputable (4 niveles), buscar el 2do nivel que exista
+    if (parts.length >= 4) {
+      const secondLevel = `${parts[0]}.${parts[1]}`;
+      if (accounts.find(acc => acc.code === secondLevel)) {
+        return secondLevel;
+      }
+    }
+    
+    // Para 3er nivel, buscar el 2do nivel
+    if (parts.length === 3) {
+      const secondLevel = `${parts[0]}.${parts[1]}`;
+      if (accounts.find(acc => acc.code === secondLevel)) {
+        return secondLevel;
+      }
+    }
+    
+    // Para 2do nivel, buscar el 1er nivel
+    if (parts.length === 2) {
+      const firstLevel = parts[0];
+      if (accounts.find(acc => acc.code === firstLevel)) {
+        return firstLevel;
+      }
+    }
+    
+    return '';
+  };
+
+  // Estado para detectar si el usuario está editando manualmente
+  const [isManualEditing, setIsManualEditing] = useState(false);
+
+  // Handler mejorado para cambios en el código de cuenta
+  const handleAccountCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    const currentValue = accountFormData.code;
+    
+    // Detectar si el usuario está borrando o editando manualmente
+    const isDeleting = inputValue.length < currentValue.length;
+    const isTypingOnlyNumbers = /^\d+$/.test(inputValue); // Solo números sin puntos
+    
+    console.log('🔧 Debug formateo:', {
+      inputValue,
+      currentValue,
+      isDeleting,
+      isTypingOnlyNumbers,
+      isManualEditing
+    });
+    
+    let formattedCode;
+    
+    // SOLO activar modo manual cuando está BORRANDO o ya está en modo manual
+    // Si está escribiendo solo números, SIEMPRE usar formateo automático
+    if (isDeleting && !isTypingOnlyNumbers) {
+      setIsManualEditing(true);
+      formattedCode = formatAccountCodeForEditing(inputValue);
+      console.log('📝 Modo manual (borrando):', formattedCode);
+    } else if (isTypingOnlyNumbers) {
+      // Si está escribiendo solo números, FORZAR modo automático
+      setIsManualEditing(false);
+      formattedCode = formatAccountCode(inputValue);
+      console.log('🤖 Modo automático (números):', formattedCode);
+    } else {
+      // Para otros casos, mantener el modo actual
+      if (isManualEditing) {
+        formattedCode = formatAccountCodeForEditing(inputValue);
+        console.log('📝 Modo manual (mantenido):', formattedCode);
+      } else {
+        formattedCode = formatAccountCode(inputValue);
+        console.log('🤖 Modo automático (mantenido):', formattedCode);
+      }
+    }
+    
+    // Determinar el nivel automáticamente basado en la estructura del código
+    let autoLevel = '1er Nivel';
+    const numbersOnly = formattedCode.replace(/[^\d]/g, '');
+    
+    if (numbersOnly.length === 1) {
+      autoLevel = '1er Nivel';  // ej: 1
+    } else if (numbersOnly.length === 2) {
+      autoLevel = '2do Nivel';  // ej: 1.1
+    } else if (numbersOnly.length === 3) {
+      autoLevel = '3er Nivel';  // ej: 1.1.1
+    } else if (numbersOnly.length === 4) {
+      autoLevel = '3er Nivel';  // ej: 1.1.1.1 (todavía 3er nivel)
+    } else if (numbersOnly.length >= 5) {
+      autoLevel = 'Imputable';  // ej: 1.2.1.001 (cuenta detalle)
+    }
+    
+    // Detectar automáticamente el padre correcto
+    const autoParent = getCorrectParent(formattedCode);
+    
+    setAccountFormData({
+      ...accountFormData, 
+      code: formattedCode,
+      level_type: autoLevel,
+      parent_code: autoParent
+    });
+  };
   
   // Estados para configuración centralizada
   const [centralizedConfigs, setCentralizedConfigs] = useState<CentralizedAccountConfig[]>([]);
@@ -96,12 +294,189 @@ export default function ConfigurationPage() {
 
   const companyId = '8033ee69-b420-4d91-ba0e-482f46cd6fce'; // TODO: Get from auth
 
-  // Cargar configuraciones centralizadas y entidades RCV
+  // Cargar configuraciones centralizadas, entidades RCV y cuentas
   useEffect(() => {
+    loadChartOfAccounts();
     loadCentralizedConfigs();
     loadRCVEntities();
     loadSystemDiagnostics();
   }, []);
+
+  // Cargar plan de cuentas desde la API
+  const loadChartOfAccounts = async () => {
+    try {
+      setLoadingAccounts(true);
+      const response = await fetch('/api/chart-of-accounts');
+      const data = await response.json();
+
+      if (data.accounts) {
+        setAccounts(data.accounts);
+        setFilteredAccounts(data.accounts);
+      } else {
+        console.error('Error loading accounts:', data.message);
+      }
+    } catch (error) {
+      console.error('Error fetching accounts:', error);
+    } finally {
+      setLoadingAccounts(false);
+    }
+  };
+
+  // Guardar o actualizar cuenta
+  const saveAccount = async (accountData: Partial<ChartAccount>) => {
+    try {
+      // Validación del lado del cliente para códigos duplicados
+      if (!editingAccount) {
+        const existingAccount = accounts.find(acc => acc.code === accountData.code);
+        if (existingAccount) {
+          // Generar sugerencias de códigos disponibles
+          const baseCode = accountData.code.split('.').slice(0, -1).join('.');
+          const lastPart = parseInt(accountData.code.split('.').pop() || '1');
+          const suggestions = [];
+          
+          for (let i = 1; i <= 5; i++) {
+            const newLastPart = String(lastPart + i).padStart(3, '0');
+            const suggestedCode = baseCode ? `${baseCode}.${newLastPart}` : newLastPart;
+            if (!accounts.find(acc => acc.code === suggestedCode)) {
+              suggestions.push(suggestedCode);
+            }
+          }
+          
+          alert(`❌ Error: Ya existe una cuenta con el código "${accountData.code}"\n\n💡 Códigos sugeridos disponibles:\n${suggestions.slice(0, 3).map(code => `• ${code}`).join('\n')}\n\nCuenta existente:\n• ${existingAccount.code} - ${existingAccount.name}`);
+          return;
+        }
+      }
+
+      const isEditing = editingAccount !== null;
+      const url = isEditing 
+        ? `/api/chart-of-accounts/${editingAccount.id}`
+        : '/api/chart-of-accounts';
+      
+      const method = isEditing ? 'PUT' : 'POST';
+      
+      console.log('📤 Enviando datos de cuenta:', {
+        url,
+        method,
+        accountData,
+        isEditing,
+        editingAccount: editingAccount?.id
+      });
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(accountData)
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        await loadChartOfAccounts();
+        setShowAddForm(false);
+        setEditingAccount(null);
+        setAccountFormData({
+          code: '',
+          name: '',
+          level_type: '1er Nivel',
+          account_type: 'ACTIVO',
+          parent_code: '',
+          is_active: true
+        });
+        alert(`✅ ${result.message}`);
+      } else {
+        // Manejo específico de errores HTTP
+        if (response.status === 409) {
+          alert(`❌ Código duplicado: Ya existe una cuenta con el código "${accountData.code}"\n\n💡 Sugerencia: Usa un código diferente como:\n• ${accountData.code}.001\n• ${accountData.code}1\n• Revisa el plan existente para encontrar el próximo código disponible`);
+        } else if (response.status === 400) {
+          alert(`❌ Datos inválidos: ${result.error}\n\n💡 Verifica que todos los campos requeridos estén completos y en el formato correcto.`);
+        } else {
+          alert(`❌ Error ${response.status}: ${result.error || 'Error desconocido'}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error saving account:', error);
+      alert('❌ Error de conexión: No se pudo guardar la cuenta.\n\n💡 Verifica tu conexión a internet e intenta nuevamente.');
+    }
+  };
+
+  // Eliminar cuenta
+  const deleteAccount = async (account: ChartAccount) => {
+    if (!confirm(`¿Está seguro de desactivar la cuenta ${account.code} - ${account.name}?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/chart-of-accounts?id=${account.id}`, {
+        method: 'DELETE'
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        await loadChartOfAccounts();
+        alert(result.message);
+      } else {
+        alert('Error: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      alert('Error al eliminar cuenta');
+    }
+  };
+
+  // Exportar cuentas
+  const exportAccounts = async (format: 'csv' | 'json') => {
+    try {
+      const params = new URLSearchParams();
+      params.append('format', format);
+      params.append('include_inactive', 'false');
+
+      const response = await fetch(`/api/chart-of-accounts/export?${params.toString()}`);
+      
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `plan_cuentas_${new Date().toISOString().split('T')[0]}.${format}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } else {
+        const error = await response.json();
+        alert('Error al exportar: ' + error.error);
+      }
+    } catch (error) {
+      console.error('Error exporting:', error);
+      alert('Error al exportar cuentas');
+    }
+  };
+
+  // Importar cuentas
+  const importAccounts = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/chart-of-accounts/import', {
+        method: 'POST',
+        body: formData
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        await loadChartOfAccounts();
+        alert(`✅ Importación exitosa: ${result.message}`);
+      } else {
+        alert('❌ Error en importación: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error importing:', error);
+      alert('Error al importar archivo');
+    }
+  };
 
   const loadCentralizedConfigs = async () => {
     try {
@@ -267,23 +642,26 @@ export default function ConfigurationPage() {
     }
   }, [entitySearchTerm, entityTypeFilter]);
 
-  // Filtrar cuentas imputables (nivel 4) para los selectores
+  // Filtrar cuentas imputables para los selectores
   const getDetailAccounts = () => {
-    const flattenAccounts = (accounts: Account[]): Account[] => {
-      let result: Account[] = [];
-      accounts.forEach(account => {
-        if (account.is_detail) {
-          result.push(account);
-        }
-        if (account.children) {
-          result = result.concat(flattenAccounts(account.children));
-        }
-      });
-      return result;
-    };
-    
-    return flattenAccounts(accounts).sort((a, b) => a.code.localeCompare(b.code));
+    return accounts
+      .filter(account => account.level_type === 'Imputable' && account.is_active)
+      .sort((a, b) => a.code.localeCompare(b.code));
   };
+
+  // Aplicar filtros de búsqueda
+  useEffect(() => {
+    let filtered = [...accounts];
+
+    if (searchTerm) {
+      filtered = filtered.filter(account => 
+        account.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        account.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    setFilteredAccounts(filtered);
+  }, [accounts, searchTerm]);
 
   // Toggle expand/collapse
   const toggleExpand = (accountId: string) => {
@@ -296,81 +674,85 @@ export default function ConfigurationPage() {
     setExpandedNodes(newExpanded);
   };
 
-  // Renderizar cuenta con sus hijos
-  const renderAccount = (account: Account) => {
-    const hasChildren = account.children && account.children.length > 0;
-    const isExpanded = expandedNodes.has(account.id);
-    
-    // Aplicar filtro de búsqueda
-    if (searchTerm && !account.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
-        !account.code.includes(searchTerm)) {
-      return null;
-    }
-
+  // Renderizar cuenta en formato de tabla
+  const renderAccountRow = (account: ChartAccount) => {
     const accountTypeColors = {
-      asset: 'text-blue-600 bg-blue-50',
-      liability: 'text-red-600 bg-red-50',
-      equity: 'text-purple-600 bg-purple-50',
-      income: 'text-green-600 bg-green-50',
-      expense: 'text-orange-600 bg-orange-50'
+      'ACTIVO': 'text-blue-600 bg-blue-50',
+      'PASIVO': 'text-red-600 bg-red-50',
+      'PATRIMONIO': 'text-purple-600 bg-purple-50',
+      'INGRESO': 'text-green-600 bg-green-50',
+      'GASTO': 'text-orange-600 bg-orange-50'
+    };
+
+    const levelColors = {
+      '1er Nivel': 'text-gray-800 bg-gray-100',
+      '2do Nivel': 'text-amber-800 bg-amber-100',
+      '3er Nivel': 'text-purple-800 bg-purple-100',
+      'Imputable': 'text-blue-800 bg-blue-100'
     };
 
     return (
-      <div key={account.id} className="mb-1">
-        <div 
-          className={`flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg cursor-pointer ${
-            account.level === 1 ? 'font-semibold' : ''
-          }`}
-          style={{ paddingLeft: `${(account.level - 1) * 2}rem` }}
-        >
-          <div className="flex items-center flex-1">
-            {hasChildren && (
-              <button
-                onClick={() => toggleExpand(account.id)}
-                className="mr-2 text-gray-500 hover:text-gray-700"
-              >
-                {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-              </button>
-            )}
-            {!hasChildren && <div className="w-6 mr-2" />}
-            
-            <span className="text-gray-600 mr-3 font-mono text-sm">{account.code}</span>
-            <span className="flex-1">{account.name}</span>
-            
-            <span className={`px-2 py-1 text-xs rounded-full ${accountTypeColors[account.account_type]}`}>
-              {account.account_type === 'asset' && 'Activo'}
-              {account.account_type === 'liability' && 'Pasivo'}
-              {account.account_type === 'equity' && 'Patrimonio'}
-              {account.account_type === 'income' && 'Ingreso'}
-              {account.account_type === 'expense' && 'Gasto'}
-            </span>
-            
-            {account.is_detail && (
-              <span className="ml-2 text-xs text-gray-500">(Detalle)</span>
-            )}
-          </div>
-          
-          <div className="flex items-center space-x-2">
+      <tr key={account.id} className="border-t border-gray-200 hover:bg-gray-50">
+        <td className="py-3 px-4">
+          <span className="font-mono text-sm font-medium text-gray-900">
+            {account.code}
+          </span>
+        </td>
+        <td className="py-3 px-4">
+          <div className="font-medium text-gray-900">{account.name}</div>
+        </td>
+        <td className="py-3 px-4">
+          <span className={`px-2 py-1 text-xs rounded-full font-medium ${levelColors[account.level_type] || 'bg-gray-100 text-gray-800'}`}>
+            {account.level_type}
+          </span>
+        </td>
+        <td className="py-3 px-4">
+          <span className={`px-2 py-1 text-xs rounded-full font-medium ${accountTypeColors[account.account_type] || 'bg-gray-100 text-gray-800'}`}>
+            {account.account_type}
+          </span>
+        </td>
+        <td className="py-3 px-4">
+          <span className="text-sm text-gray-600 font-mono">
+            {account.parent_code || '-'}
+          </span>
+        </td>
+        <td className="py-3 px-4">
+          <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+            account.is_active 
+              ? 'bg-green-100 text-green-800' 
+              : 'bg-gray-100 text-gray-800'
+          }`}>
+            {account.is_active ? 'Activa' : 'Inactiva'}
+          </span>
+        </td>
+        <td className="py-3 px-4 text-right">
+          <div className="flex items-center justify-end space-x-2">
             <button 
-              onClick={() => setEditingAccount(account)}
-              className="p-1 text-gray-400 hover:text-blue-600"
+              onClick={() => {
+                setEditingAccount(account);
+                setShowAddForm(true);
+                setAccountFormData({
+                  code: account.code,
+                  name: account.name,
+                  level_type: account.level_type,
+                  account_type: account.account_type,
+                  parent_code: account.parent_code || '',
+                  is_active: account.is_active
+                });
+              }}
+              className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
             >
               <Edit2 className="w-4 h-4" />
             </button>
-            {account.level > 1 && (
-              <button className="p-1 text-gray-400 hover:text-red-600">
-                <Trash2 className="w-4 h-4" />
-              </button>
-            )}
+            <button 
+              onClick={() => deleteAccount(account)}
+              className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
           </div>
-        </div>
-        
-        {hasChildren && isExpanded && (
-          <div className="ml-4">
-            {account.children!.map(child => renderAccount(child))}
-          </div>
-        )}
-      </div>
+        </td>
+      </tr>
     );
   };
 
@@ -422,7 +804,7 @@ export default function ConfigurationPage() {
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-600">Total: {accounts.length} cuentas</span>
                 <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                <span className="text-sm text-green-600">Sistema activo</span>
+                <span className="text-sm text-green-600">{loadingAccounts ? 'Cargando...' : 'Sistema activo'}</span>
               </div>
               <div className="flex flex-wrap gap-2">
                 <div className="relative group">
@@ -431,37 +813,22 @@ export default function ConfigurationPage() {
                     size="sm"
                     leftIcon={<Download className="w-4 h-4" />}
                     className="border-green-200 hover:bg-green-50 hover:border-green-300"
+                    disabled={loadingAccounts}
                   >
                     Exportar
                   </Button>
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border-2 border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
                     <button
-                      onClick={() => {
-                        const csv = exportToCSV(accounts);
-                        downloadFile(csv, 'plan_de_cuentas.csv', 'text/csv');
-                      }}
+                      onClick={() => exportAccounts('csv')}
                       className="block w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors rounded-t-xl"
                     >
                       📄 Exportar como CSV
                     </button>
                     <button
-                      onClick={() => {
-                        const json = exportToJSON(accounts);
-                        downloadFile(json, 'plan_de_cuentas.json', 'application/json');
-                      }}
-                      className="block w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                      onClick={() => exportAccounts('json')}
+                      className="block w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors rounded-b-xl"
                     >
                       📁 Exportar como JSON
-                    </button>
-                    <div className="border-t border-gray-100 my-1"></div>
-                    <button
-                      onClick={() => {
-                        const template = generateCSVTemplate();
-                        downloadFile(template, 'template_plan_de_cuentas.csv', 'text/csv');
-                      }}
-                      className="block w-full text-left px-4 py-3 text-sm text-purple-700 hover:bg-purple-50 font-medium transition-colors rounded-b-xl"
-                    >
-                      📋 Descargar Template CSV
                     </button>
                   </div>
                 </div>
@@ -476,19 +843,13 @@ export default function ConfigurationPage() {
                     input.onchange = async (e) => {
                       const file = (e.target as HTMLInputElement).files?.[0];
                       if (file) {
-                        const content = await file.text();
-                        if (file.name.endsWith('.csv')) {
-                          const parsed = parseCSV(content);
-                          setAccounts(parsed);
-                        } else if (file.name.endsWith('.json')) {
-                          const parsed = JSON.parse(content);
-                          setAccounts(parsed);
-                        }
+                        await importAccounts(file);
                       }
                     };
                     input.click();
                   }}
                   className="border-blue-200 hover:bg-blue-50 hover:border-blue-300"
+                  disabled={loadingAccounts}
                 >
                   Importar
                 </Button>
@@ -496,8 +857,19 @@ export default function ConfigurationPage() {
                   variant="primary"
                   size="sm"
                   leftIcon={<Plus className="w-4 h-4" />}
-                  onClick={() => setShowAddForm(true)}
+                  onClick={() => {
+                    setShowAddForm(true);
+                    setAccountFormData({
+                      code: '',
+                      name: '',
+                      level_type: '1er Nivel',
+                      account_type: 'ACTIVO',
+                      parent_code: '',
+                      is_active: true
+                    });
+                  }}
                   className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  disabled={loadingAccounts}
                 >
                   Nueva Cuenta
                 </Button>
@@ -509,6 +881,8 @@ export default function ConfigurationPage() {
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
+                  id="search-accounts"
+                  name="search-accounts"
                   type="text"
                   placeholder="Buscar por código o nombre de cuenta..."
                   className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-300 transition-all duration-300 bg-white/80 backdrop-blur-sm"
@@ -526,11 +900,50 @@ export default function ConfigurationPage() {
               </div>
             </div>
 
-            {/* Chart of Accounts Tree Modernizado */}
-            <div className="border-2 border-blue-100 rounded-xl p-6 max-h-[600px] overflow-y-auto bg-gradient-to-br from-white to-blue-50/30">
-              <div className="space-y-1">
-                {accounts.map(account => renderAccount(account))}
-              </div>
+            {/* Chart of Accounts Table */}
+            <div className="border-2 border-blue-100 rounded-xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30">
+              {loadingAccounts ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-3 text-gray-600">Cargando plan de cuentas...</span>
+                </div>
+              ) : filteredAccounts.length === 0 ? (
+                <div className="text-center py-12">
+                  <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No se encontraron cuentas</h3>
+                  <p className="text-gray-600 mb-4">
+                    {searchTerm ? 'No hay cuentas que coincidan con tu búsqueda' : 'No hay cuentas configuradas en el sistema'}
+                  </p>
+                  {!searchTerm && (
+                    <Button
+                      variant="primary"
+                      onClick={() => setShowAddForm(true)}
+                      className="bg-gradient-to-r from-blue-600 to-purple-600"
+                    >
+                      Crear Primera Cuenta
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <div className="max-h-[600px] overflow-y-auto">
+                  <table className="w-full">
+                    <thead className="bg-gradient-to-r from-blue-50 to-purple-50 sticky top-0">
+                      <tr>
+                        <th className="text-left py-4 px-4 font-semibold text-gray-700 border-b border-blue-200">Código</th>
+                        <th className="text-left py-4 px-4 font-semibold text-gray-700 border-b border-blue-200">Nombre</th>
+                        <th className="text-left py-4 px-4 font-semibold text-gray-700 border-b border-blue-200">Nivel</th>
+                        <th className="text-left py-4 px-4 font-semibold text-gray-700 border-b border-blue-200">Tipo</th>
+                        <th className="text-left py-4 px-4 font-semibold text-gray-700 border-b border-blue-200">Padre</th>
+                        <th className="text-left py-4 px-4 font-semibold text-gray-700 border-b border-blue-200">Estado</th>
+                        <th className="text-right py-4 px-4 font-semibold text-gray-700 border-b border-blue-200">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredAccounts.map(account => renderAccountRow(account))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
               {/* Info Box */}
@@ -1182,61 +1595,278 @@ export default function ConfigurationPage() {
         </div>
       )}
     
-    {/* Modal de Edición */}
-      {editingAccount && (
+      {/* Modal de Crear/Editar Cuenta */}
+      {(showAddForm || editingAccount) && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">Editar Cuenta</h3>
-            <form className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Código</label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  defaultValue={editingAccount.code}
-                />
+          <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold flex items-center space-x-2">
+                <FileText className="w-6 h-6 text-blue-600" />
+                <span>{editingAccount ? 'Editar Cuenta' : 'Nueva Cuenta'}</span>
+              </h3>
+              <button
+                onClick={() => {
+                  setShowAddForm(false);
+                  setEditingAccount(null);
+                  setAccountFormData({
+                    code: '',
+                    name: '',
+                    level_type: '1er Nivel',
+                    account_type: 'ACTIVO',
+                    parent_code: '',
+                    is_active: true
+                  });
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                saveAccount(accountFormData);
+              }}
+              className="space-y-6"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="account-code" className="block text-sm font-medium text-gray-700 mb-2">
+                    Código de Cuenta *
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="account-code"
+                      name="account-code"
+                      type="text"
+                      required
+                      value={accountFormData.code}
+                      onChange={handleAccountCodeChange}
+                      onKeyDown={(e) => {
+                        // Si presiona Delete o Backspace, activar modo manual
+                        if (e.key === 'Backspace' || e.key === 'Delete') {
+                          setIsManualEditing(true);
+                        }
+                      }}
+                      onFocus={() => {
+                        // Si el campo ya tiene puntos, activar modo manual
+                        if (accountFormData.code.includes('.')) {
+                          setIsManualEditing(true);
+                        }
+                      }}
+                      placeholder="ej: 12105 → 1.2.1.005"
+                      maxLength={15}
+                      className="w-full px-3 py-2 pr-20 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                    />
+                    {isManualEditing && accountFormData.code && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsManualEditing(false);
+                          const autoFormatted = formatAccountCode(accountFormData.code);
+                          setAccountFormData({...accountFormData, code: autoFormatted});
+                        }}
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"
+                        title="Volver al formateo automático"
+                      >
+                        Auto
+                      </button>
+                    )}
+                  </div>
+                  <div className="mt-1 text-xs text-gray-500">
+                    {isManualEditing ? (
+                      <span className="text-blue-600">
+                        ✏️ Modo edición manual - Puedes editar libremente (ej: borrar ceros, cambiar dígitos)
+                      </span>
+                    ) : (
+                      <span>
+                        💡 Formateo automático: 12105 → 1.2.1.005 | Borra caracteres para editar manualmente
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="account-name" className="block text-sm font-medium text-gray-700 mb-2">
+                    Nombre de la Cuenta *
+                  </label>
+                  <input
+                    id="account-name"
+                    name="account-name"
+                    type="text"
+                    required
+                    value={accountFormData.name}
+                    onChange={(e) => setAccountFormData({...accountFormData, name: e.target.value})}
+                    placeholder="ej: Caja y Bancos"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  defaultValue={editingAccount.name}
-                />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="account-level" className="block text-sm font-medium text-gray-700 mb-2">
+                    Nivel Jerárquico * <span className="text-xs text-green-600">(Auto-detectado)</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      id="account-level"
+                      name="account-level"
+                      required
+                      value={accountFormData.level_type}
+                      onChange={(e) => setAccountFormData({...accountFormData, level_type: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+                      disabled={accountFormData.code.length > 0}
+                    >
+                      <option value="1er Nivel">1er Nivel</option>
+                      <option value="2do Nivel">2do Nivel</option>
+                      <option value="3er Nivel">3er Nivel</option>
+                      <option value="Imputable">Imputable (Detalle)</option>
+                    </select>
+                    {accountFormData.code.length > 0 && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full">
+                          Auto
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-1 text-xs text-gray-500">
+                    🤖 Se detecta automáticamente según el código ingresado
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="account-type" className="block text-sm font-medium text-gray-700 mb-2">
+                    Tipo de Cuenta *
+                  </label>
+                  <select
+                    id="account-type"
+                    name="account-type"
+                    required
+                    value={accountFormData.account_type}
+                    onChange={(e) => setAccountFormData({...accountFormData, account_type: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="ACTIVO">ACTIVO</option>
+                    <option value="PASIVO">PASIVO</option>
+                    <option value="PATRIMONIO">PATRIMONIO</option>
+                    <option value="INGRESO">INGRESO</option>
+                    <option value="GASTO">GASTO</option>
+                  </select>
+                </div>
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Cuenta</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-md">
-                  <option value="asset">Activo</option>
-                  <option value="liability">Pasivo</option>
-                  <option value="equity">Patrimonio</option>
-                  <option value="income">Ingreso</option>
-                  <option value="expense">Gasto</option>
-                </select>
+                <label htmlFor="parent-account" className="block text-sm font-medium text-gray-700 mb-2">
+                  Cuenta Padre <span className="text-xs text-green-600">(Auto-detectado)</span>
+                </label>
+                <div className="relative">
+                  <select
+                    id="parent-account"
+                    name="parent-account"
+                    value={accountFormData.parent_code}
+                    onChange={(e) => setAccountFormData({...accountFormData, parent_code: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+                    disabled={accountFormData.code.length > 0}
+                  >
+                    <option value="">Sin cuenta padre</option>
+                    {accounts
+                      .filter(acc => acc.level_type !== 'Imputable' && acc.is_active)
+                      .map((account) => (
+                      <option key={account.id} value={account.code}>
+                        {account.code} - {account.name}
+                      </option>
+                    ))}
+                  </select>
+                  {accountFormData.code.length > 0 && accountFormData.parent_code && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full">
+                        Auto
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-1 text-xs text-gray-500">
+                  🤖 Se detecta automáticamente el padre más cercano que existe en la BD
+                </div>
+                {accountFormData.parent_code && (
+                  <div className="mt-1 text-xs text-green-700">
+                    ✅ Padre detectado: {accountFormData.parent_code} - {accounts.find(acc => acc.code === accountFormData.parent_code)?.name}
+                  </div>
+                )}
               </div>
+
               <div className="flex items-center">
                 <input
                   type="checkbox"
-                  id="is_detail"
-                  className="mr-2"
-                  defaultChecked={editingAccount.is_detail}
+                  id="is_active_account"
+                  name="is_active_account"
+                  checked={accountFormData.is_active}
+                  onChange={(e) => setAccountFormData({...accountFormData, is_active: e.target.checked})}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 mr-3"
                 />
-                <label htmlFor="is_detail" className="text-sm text-gray-700">
-                  Es cuenta de detalle (permite asientos)
+                <label htmlFor="is_active_account" className="text-sm text-gray-700">
+                  Cuenta activa (disponible para asientos contables)
                 </label>
               </div>
-              <div className="flex justify-end space-x-2 pt-4">
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-medium text-blue-900 mb-2">🤖 Detección Automática de Niveles:</h4>
+                <div className="text-sm text-blue-800 space-y-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="bg-white rounded p-2">
+                      <p><strong>1 dígito:</strong> <code className="bg-gray-100 px-1 rounded">1</code> → 1er Nivel</p>
+                      <p className="text-xs text-gray-600">Categorías principales (ACTIVO, PASIVO)</p>
+                    </div>
+                    <div className="bg-white rounded p-2">
+                      <p><strong>2 dígitos:</strong> <code className="bg-gray-100 px-1 rounded">11</code> → <code>1.1</code> → 2do Nivel</p>
+                      <p className="text-xs text-gray-600">Subcategorías (Activo Corriente)</p>
+                    </div>
+                    <div className="bg-white rounded p-2">
+                      <p><strong>3-4 dígitos:</strong> <code className="bg-gray-100 px-1 rounded">121</code> → <code>1.2.1</code> → 3er Nivel</p>
+                      <p className="text-xs text-gray-600">Grupos específicos (Prop. Planta y Equipo)</p>
+                    </div>
+                    <div className="bg-white rounded p-2">
+                      <p><strong>5+ dígitos:</strong> <code className="bg-gray-100 px-1 rounded">12105</code> → <code>1.2.1.005</code> → Imputable</p>
+                      <p className="text-xs text-gray-600">Cuentas detalle (permiten asientos)</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 p-2 bg-green-100 rounded border-l-4 border-green-400">
+                  <p className="text-xs text-green-700">
+                    <strong>💡 Funcionalidad inteligente:</strong> Solo escribe números y el sistema detecta automáticamente el nivel jerárquico
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-6">
                 <Button
+                  type="button"
                   variant="outline"
-                  onClick={() => setEditingAccount(null)}
+                  onClick={() => {
+                    setShowAddForm(false);
+                    setEditingAccount(null);
+                    setAccountFormData({
+                      code: '',
+                      name: '',
+                      level_type: '1er Nivel',
+                      account_type: 'ACTIVO',
+                      parent_code: '',
+                      is_active: true
+                    });
+                  }}
                 >
                   Cancelar
                 </Button>
                 <Button
+                  type="submit"
                   variant="primary"
-                  leftIcon={<Save className="w-4 h-4" />}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600"
                 >
-                  Guardar
+                  <Save className="w-4 h-4 mr-2" />
+                  {editingAccount ? 'Actualizar' : 'Crear'} Cuenta
                 </Button>
               </div>
             </form>

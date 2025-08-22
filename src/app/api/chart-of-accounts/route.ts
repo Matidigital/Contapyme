@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar que el código no exista
-    const checkQuery = `SELECT id FROM chart_of_accounts WHERE code = $1`;
+    const checkQuery = `SELECT id, code FROM chart_of_accounts WHERE code = $1`;
     const { data: existing } = await databaseSimple.query(checkQuery, [body.code]);
     
     if (existing && existing.length > 0) {

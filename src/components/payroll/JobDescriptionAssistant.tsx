@@ -59,8 +59,8 @@ export function JobDescriptionAssistant({
 
   // Manejar generación IA
   const handleAIGeneration = async () => {
-    if (!aiForm.position.trim()) {
-      setError('El cargo es requerido para generar el descriptor');
+    if (!currentPosition.trim()) {
+      setError('El cargo es requerido para generar el descriptor. Completa el campo "Cargo" en el formulario principal.');
       return;
     }
 
@@ -69,10 +69,18 @@ export function JobDescriptionAssistant({
     setResult(null);
 
     try {
+      // Usar valores del formulario principal
+      const requestData = {
+        position: currentPosition,
+        department: currentDepartment,
+        company_type: aiForm.company_type,
+        additional_context: aiForm.additional_context
+      };
+
       const response = await fetch('/api/payroll/job-description/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(aiForm)
+        body: JSON.stringify(requestData)
       });
 
       const data = await response.json();
@@ -348,31 +356,25 @@ export function JobDescriptionAssistant({
         {/* Contenido del tab activo */}
         {activeTab === 'manual' && (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Cargo
-                </label>
-                <input
-                  type="text"
-                  value={manualForm.position}
-                  onChange={(e) => handleManualChange('position', 0, e.target.value)}
-                  placeholder="ej: Vendedora, Contador, Desarrollador"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
+            {/* Información de contexto usando valores del formulario principal */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle className="h-5 w-5 text-blue-600" />
+                <h4 className="text-sm font-medium text-blue-900">Información del Cargo</h4>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Departamento
-                </label>
-                <input
-                  type="text"
-                  value={manualForm.department}
-                  onChange={(e) => handleManualChange('department', 0, e.target.value)}
-                  placeholder="ej: Ventas, Contabilidad, IT"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-blue-700 font-medium">Cargo:</span> 
+                  <span className="ml-2 text-blue-800">{currentPosition || 'No especificado'}</span>
+                </div>
+                <div>
+                  <span className="text-blue-700 font-medium">Departamento:</span> 
+                  <span className="ml-2 text-blue-800">{currentDepartment || 'No especificado'}</span>
+                </div>
               </div>
+              <p className="text-xs text-blue-600 mt-2">
+                💡 Los campos de cargo y departamento se toman del formulario principal arriba
+              </p>
             </div>
 
             {/* Funciones */}
@@ -479,36 +481,65 @@ export function JobDescriptionAssistant({
                 + Agregar prohibición
               </Button>
             </div>
+
+            {/* Botón para usar datos manuales */}
+            <Button
+              onClick={() => {
+                const data = {
+                  position: currentPosition,
+                  department: currentDepartment,
+                  job_functions: manualForm.functions.filter(f => f.trim()),
+                  obligations: manualForm.obligations.filter(o => o.trim()),
+                  prohibitions: manualForm.prohibitions.filter(p => p.trim())
+                };
+                
+                setResult({
+                  success: true,
+                  data,
+                  message: 'Datos manuales aplicados correctamente',
+                  confidence: null
+                });
+                
+                onDataExtracted(data);
+              }}
+              variant="primary"
+              className="w-full"
+              disabled={!currentPosition.trim()}
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Aplicar Información Manual
+            </Button>
+            
+            {!currentPosition.trim() && (
+              <p className="text-sm text-amber-600 mt-2 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Completa el campo "Cargo" arriba para aplicar la información
+              </p>
+            )}
           </div>
         )}
 
         {activeTab === 'ai' && (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Cargo *
-                </label>
-                <input
-                  type="text"
-                  value={aiForm.position}
-                  onChange={(e) => setAiForm(prev => ({ ...prev, position: e.target.value }))}
-                  placeholder="ej: Vendedora, Contador, Desarrollador"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
+            {/* Información de contexto usando valores del formulario principal */}
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="h-5 w-5 text-purple-600" />
+                <h4 className="text-sm font-medium text-purple-900">Información del Cargo para IA</h4>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Departamento
-                </label>
-                <input
-                  type="text"
-                  value={aiForm.department}
-                  onChange={(e) => setAiForm(prev => ({ ...prev, department: e.target.value }))}
-                  placeholder="ej: Ventas, Contabilidad, IT"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-purple-700 font-medium">Cargo:</span> 
+                  <span className="ml-2 text-purple-800">{currentPosition || 'No especificado'}</span>
+                </div>
+                <div>
+                  <span className="text-purple-700 font-medium">Departamento:</span> 
+                  <span className="ml-2 text-purple-800">{currentDepartment || 'No especificado'}</span>
+                </div>
               </div>
+              <p className="text-xs text-purple-600 mt-2">
+                🤖 La IA usará esta información del formulario principal para generar el descriptor
+              </p>
             </div>
             
             <div>
@@ -548,7 +579,7 @@ export function JobDescriptionAssistant({
 
             <Button
               onClick={handleAIGeneration}
-              disabled={loading || !aiForm.position.trim()}
+              disabled={loading || !currentPosition.trim()}
               variant="primary"
               className="w-full"
             >
@@ -564,6 +595,13 @@ export function JobDescriptionAssistant({
                 </>
               )}
             </Button>
+            
+            {!currentPosition.trim() && (
+              <p className="text-sm text-amber-600 mt-2 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Completa el campo "Cargo" arriba para generar el descriptor
+              </p>
+            )}
           </div>
         )}
 

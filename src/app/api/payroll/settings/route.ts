@@ -42,7 +42,22 @@ const DEFAULT_SETTINGS = {
   },
   company_info: {
     mutual_code: 'ACHS',
-    caja_compensacion_code: ''
+    caja_compensacion_code: '',
+    company_name: 'ContaPyme',
+    company_rut: '76.123.456-7',
+    company_address: 'Las Malvas 2775',
+    company_city: 'Santiago',
+    company_phone: '+56 9 1234 5678',
+    company_email: 'contacto@contapyme.cl',
+    legal_representative: {
+      full_name: 'MIGUEL ANGEL RODRIGUEZ CABRERA',
+      rut: '18.282.415-1',
+      position: 'GERENTE GENERAL',
+      profession: 'INGENIERO COMERCIAL',
+      nationality: 'CHILENA',
+      civil_status: 'SOLTERO',
+      address: 'Las Malvas 2775'
+    }
   }
 };
 

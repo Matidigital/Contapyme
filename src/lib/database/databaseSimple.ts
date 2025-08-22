@@ -566,11 +566,47 @@ export const databaseSimple = {
         return { data: [], error: null };
       }
       
+      // Handle INSERT INTO chart_of_accounts FIRST
+      if (sql.includes('INSERT INTO chart_of_accounts') && params.length >= 6) {
+        console.log(`💾 Creating chart of accounts with code: "${params[0]}"`);
+        
+        const { data, error } = await supabase
+          .from('chart_of_accounts')
+          .insert({
+            code: params[0],
+            name: params[1], 
+            level_type: params[2],
+            account_type: params[3],
+            parent_code: params[4] || null,
+            is_active: params[5]
+          })
+          .select()
+          .single();
+        
+        console.log(`✅ Chart of accounts created:`, data);
+        return { data: data ? [data] : [], error };
+      }
+      
       // Chart of accounts queries
       if (sql.includes('FROM chart_of_accounts')) {
         console.log('🏦 Chart of accounts query detected');
+        console.log('📋 SQL:', sql);
+        console.log('📋 Params:', params);
         
-        // Usar la nueva función robusta de plan de cuentas
+        // Handle specific duplicate check query
+        if (sql.includes('WHERE code = $1') && params.length === 1) {
+          console.log(`🔍 Duplicate check query for code: "${params[0]}"`);
+          
+          const { data, error } = await supabase
+            .from('chart_of_accounts')
+            .select('id, code')
+            .eq('code', params[0]);
+          
+          console.log(`📊 Duplicate check result for "${params[0]}":`, data);
+          return { data, error };
+        }
+        
+        // Handle general chart of accounts queries
         const filters: any = {};
         
         // Mapear parámetros SQL a filtros

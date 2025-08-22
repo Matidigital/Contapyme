@@ -69,6 +69,9 @@ export default function NewContractPage() {
 
   // Estado para datos del asistente de descriptores
   const [jobDescriptionData, setJobDescriptionData] = useState<any>(null);
+  
+  // Estado para datos de la empresa (representante legal)
+  const [companySettings, setCompanySettings] = useState<any>(null);
 
   // Verificar si hay datos pre-llenados del asistente de descriptores
   useEffect(() => {
@@ -102,7 +105,7 @@ export default function NewContractPage() {
     }
   }, []);
 
-  // Cargar empleados activos sin contrato
+  // Cargar empleados activos sin contrato y configuración de empresa
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
@@ -116,8 +119,22 @@ export default function NewContractPage() {
       }
     };
 
+    const fetchCompanySettings = async () => {
+      try {
+        const response = await fetch(`/api/payroll/settings?company_id=${companyId}`);
+        const data = await response.json();
+        if (data.success && data.data?.company_info) {
+          setCompanySettings(data.data.company_info);
+          console.log('✅ Datos del representante legal cargados:', data.data.company_info.legal_representative);
+        }
+      } catch (error) {
+        console.error('Error fetching company settings:', error);
+      }
+    };
+
     if (companyId) {
       fetchEmployees();
+      fetchCompanySettings();
     }
   }, [companyId]);
 
@@ -183,7 +200,15 @@ export default function NewContractPage() {
         // Incorporar datos del asistente IA si están disponibles
         job_functions: jobDescriptionData?.job_functions || jobDescriptionData?.refined_functions || [],
         obligations: jobDescriptionData?.obligations || jobDescriptionData?.refined_obligations || [],
-        prohibitions: jobDescriptionData?.prohibitions || jobDescriptionData?.refined_prohibitions || []
+        prohibitions: jobDescriptionData?.prohibitions || jobDescriptionData?.refined_prohibitions || [],
+        // Datos automáticos de la empresa y representante legal
+        company_info: companySettings ? {
+          company_name: companySettings.company_name,
+          company_rut: companySettings.company_rut,
+          company_address: companySettings.company_address,
+          company_city: companySettings.company_city,
+          legal_representative: companySettings.legal_representative
+        } : undefined
       };
 
       // Crear el contrato
@@ -231,6 +256,30 @@ export default function NewContractPage() {
 
       <div className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 sm:px-0">
+          {/* Banner de información del representante legal */}
+          {companySettings?.legal_representative && (
+            <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0">
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-medium text-green-900 mb-1">
+                    Representante Legal - {companySettings.company_name}
+                  </h3>
+                  <p className="text-sm text-green-700 mb-2">
+                    Los datos del empleador se incluirán automáticamente en el contrato:
+                  </p>
+                  <div className="text-xs text-green-600 space-y-1">
+                    <div>✓ <strong>{companySettings.legal_representative.full_name}</strong> - RUT: {companySettings.legal_representative.rut}</div>
+                    <div>✓ {companySettings.legal_representative.profession} - {companySettings.legal_representative.position}</div>
+                    <div>✓ Dirección: {companySettings.legal_representative.address}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Banner de información cuando viene del asistente */}
           {jobDescriptionData && (
             <div className="mb-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl">
