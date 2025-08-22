@@ -345,9 +345,10 @@ export async function POST(request: NextRequest) {
         payroll_book_id: newBook.id,
         employee_id: liquidation.employee_id,
         employee_rut: employee?.rut || 'N/A',
-        apellido_paterno: employee?.last_name || '',
-        apellido_materno: employee?.middle_name || '',
-        nombres: employee?.first_name || '',
+        // ✅ MAPEO CORREGIDO PARA NORMATIVA CHILENA
+        apellido_paterno: employee?.last_name || '',                                    // Apellido paterno
+        apellido_materno: '',                                                          // TODO: Agregar campo apellido_materno a tabla employees
+        nombres: `${employee?.first_name || ''} ${employee?.middle_name || ''}`.trim(), // Primer nombre + segundo nombre
         cargo: 'Empleado', // Valor por defecto ya que no tenemos contratos
         area: 'General', // Valor por defecto ya que no tenemos contratos  
         centro_costo: 'GENERAL',
