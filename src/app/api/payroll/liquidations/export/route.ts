@@ -338,7 +338,13 @@ function generateLiquidationHTML(liquidation: any, employee: any, company: any) 
             <div class="signature-box">
                 <div class="signature-line">
                     <div>Empleador</div>
-                    <div style="font-size: 10px; margin-top: 5px;">Firma y Timbre</div>
+                    ${company.legal_representative_name ? `
+                    <div style="font-size: 10px; margin-top: 5px;">
+                        ${company.legal_representative_name}<br>
+                        RUT: ${company.legal_representative_rut}<br>
+                        ${company.legal_representative_position}
+                    </div>` : `
+                    <div style="font-size: 10px; margin-top: 5px;">Firma y Timbre</div>`}
                 </div>
             </div>
             <div class="signature-box">
@@ -426,15 +432,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Obtener información de la empresa
+    // Obtener información básica de la empresa
     const { data: company } = await supabase
       .from('companies')
       .select('name, rut, address')
       .eq('id', companyId)
       .single();
 
+    // Obtener configuración de empresa desde payroll_settings
+    const { data: payrollSettings } = await supabase
+      .from('payroll_settings')
+      .select('settings')
+      .eq('company_id', companyId)
+      .single();
+
+    // Combinar datos de empresa con configuración de payroll_settings
+    let finalCompanyData = company || {};
+    
+    if (payrollSettings?.settings?.company_info) {
+      const companyInfo = payrollSettings.settings.company_info;
+      const legalRep = companyInfo.legal_representative;
+      
+      finalCompanyData = {
+        ...finalCompanyData,
+        name: companyInfo.company_name || finalCompanyData.name,
+        rut: companyInfo.company_rut || finalCompanyData.rut,
+        address: companyInfo.company_address || finalCompanyData.address,
+        city: companyInfo.company_city,
+        phone: companyInfo.company_phone,
+        email: companyInfo.company_email,
+        legal_representative_name: legalRep?.full_name,
+        legal_representative_rut: legalRep?.rut,
+        legal_representative_position: legalRep?.position || 'GERENTE GENERAL'
+      };
+      
+      console.log('✅ Liquidación usando representante legal de payroll_settings:', legalRep?.full_name);
+    } else {
+      console.log('⚠️ Liquidación usando datos básicos de companies table');
+    }
+
     // Generar HTML
-    const html = generateLiquidationHTML(liquidation, employee, company || {});
+    const html = generateLiquidationHTML(liquidation, employee, finalCompanyData);
 
     return NextResponse.json({
       success: true,
