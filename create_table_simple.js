@@ -10,37 +10,29 @@ async function createTableAndData() {
   try {
     console.log('🚀 Creando tabla y datos de prueba...');
     
-    // Datos de ejemplo para insertar directamente
+    // Datos de ejemplo para insertar directamente (sin campo notes, sin IDs predefinidos)
     const testData = [
       {
-        id: 'test-iva-19',
         company_id: '8033ee69-b420-4d91-ba0e-482f46cd6fce',
-        tax_type: 'iva_19',
-        tax_name: 'IVA 19%',
+        tax_type: 'iva_19_test',
+        tax_name: 'IVA 19% Test',
         tax_rate: 19.0,
         sales_account_code: '2.1.4.001',
         sales_account_name: 'IVA por Pagar',
         purchases_account_code: '1.1.4.002',
         purchases_account_name: 'IVA Crédito Fiscal',
-        notes: 'Configuración estándar para IVA general del 19%',
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        is_active: true
       },
       {
-        id: 'test-iva-exento',
         company_id: '8033ee69-b420-4d91-ba0e-482f46cd6fce',
-        tax_type: 'iva_exento',
-        tax_name: 'IVA Exento',
+        tax_type: 'iva_exento_test',
+        tax_name: 'IVA Exento Test',
         tax_rate: 0.0,
         sales_account_code: '4.1.1.001',
         sales_account_name: 'Ventas Exentas',
         purchases_account_code: '5.1.1.001',
         purchases_account_name: 'Compras Exentas',
-        notes: 'Operaciones exentas de IVA',
-        is_active: true,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        is_active: true
       }
     ];
 
