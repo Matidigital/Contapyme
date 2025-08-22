@@ -190,7 +190,9 @@ export default function LibroRemuneracionesPage() {
 
   const downloadPrevired = async (book: PayrollBook) => {
     try {
-      const response = await fetch(`/api/payroll/libro-remuneraciones/previred?company_id=${companyId}&period=${book.period}`);
+      console.log('🔄 Generando archivo Previred para período:', book.period);
+      
+      const response = await fetch(`/api/payroll/previred-export?company_id=${companyId}&period=${book.period}`);
       
       if (response.ok) {
         const blob = await response.blob();
@@ -198,17 +200,21 @@ export default function LibroRemuneracionesPage() {
         const a = document.createElement('a');
         a.href = url;
         const [year, month] = book.period.split('-');
-        a.download = `previred_${month}${year}.txt`;
+        a.download = `previred_${month}${year}_${book.company_rut?.replace(/[.\-]/g, '') || 'empresa'}.txt`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
+        
+        console.log('✅ Archivo Previred descargado exitosamente');
       } else {
-        alert('Error descargando archivo Previred');
+        const errorData = await response.json();
+        console.error('Error en API Previred:', errorData);
+        alert(`Error al generar archivo Previred: ${errorData.error || 'Error desconocido'}`);
       }
     } catch (error) {
-      console.error('Error descargando archivo Previred:', error);
-      alert('Error descargando archivo Previred');
+      console.error('Error downloading Previred:', error);
+      alert('Error al descargar archivo Previred');
     }
   };
 
