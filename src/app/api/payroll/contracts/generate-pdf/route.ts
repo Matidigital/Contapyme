@@ -443,6 +443,13 @@ export async function POST(request: NextRequest) {
       .eq('id', contract_id)
       .single();
 
+    // Obtener configuración de empresa desde payroll_settings
+    const { data: payrollSettings } = await supabase
+      .from('payroll_settings')
+      .select('settings')
+      .eq('company_id', contractData?.company_id)
+      .single();
+
     if (fetchError) {
       console.error('Error fetching contract:', fetchError);
       return NextResponse.json({ 
@@ -451,15 +458,23 @@ export async function POST(request: NextRequest) {
       }, { status: 404 });
     }
 
+    // Extraer datos de la configuración de empresa
+    const companyInfo = payrollSettings?.settings?.company_info;
+    const legalRep = companyInfo?.legal_representative;
+
+    // Log para debug
+    console.log('🔍 Payroll Settings:', payrollSettings?.settings?.company_info?.legal_representative);
+    console.log('🔍 Companies data:', contractData.companies?.legal_representative_name);
+
     // Adaptar datos para el generador de HTML
     const adaptedData = {
-      // Datos de la empresa
-      company_name: contractData.companies?.name,
-      company_rut: contractData.companies?.rut,
-      legal_representative_name: contractData.companies?.legal_representative_name,
-      legal_representative_rut: contractData.companies?.legal_representative_rut,
-      company_address: contractData.companies?.fiscal_address,
-      company_city: contractData.companies?.fiscal_city,
+      // Datos de la empresa desde payroll_settings (más actualizado)
+      company_name: companyInfo?.company_name || contractData.companies?.name,
+      company_rut: companyInfo?.company_rut || contractData.companies?.rut,
+      legal_representative_name: legalRep?.full_name || contractData.companies?.legal_representative_name,
+      legal_representative_rut: legalRep?.rut || contractData.companies?.legal_representative_rut,
+      company_address: companyInfo?.company_address || contractData.companies?.fiscal_address,
+      company_city: companyInfo?.company_city || contractData.companies?.fiscal_city,
       
       // Datos del trabajador
       employee_full_name: `${contractData.employees?.first_name} ${contractData.employees?.middle_name || ''} ${contractData.employees?.last_name}`.trim(),

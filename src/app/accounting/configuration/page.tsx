@@ -47,6 +47,59 @@ interface CentralizedAccountConfig {
   updated_at?: string;
 }
 
+// Interface para configuración de empresa
+interface CompanySettings {
+  company_info: {
+    mutual_code: string;
+    caja_compensacion_code: string;
+    company_name: string;
+    company_rut: string;
+    company_address: string;
+    company_city: string;
+    company_phone: string;
+    company_email: string;
+    legal_representative: {
+      full_name: string;
+      rut: string;
+      position: string;
+      profession: string;
+      nationality: string;
+      civil_status: string;
+      address: string;
+    };
+  };
+  afp_configs: Array<{
+    id: string;
+    name: string;
+    code: string;
+    commission_percentage: number;
+    sis_percentage: number;
+    active: boolean;
+  }>;
+  health_configs: Array<{
+    id: string;
+    name: string;
+    code: string;
+    plan_percentage: number;
+    active: boolean;
+  }>;
+  income_limits: {
+    uf_limit: number;
+    minimum_wage: number;
+    family_allowance_limit: number;
+  };
+  family_allowances: {
+    tramo_a: number;
+    tramo_b: number;
+    tramo_c: number;
+  };
+  contributions: {
+    unemployment_insurance_fixed: number;
+    unemployment_insurance_indefinite: number;
+    social_security_percentage: number;
+  };
+}
+
 // Interface para entidades RCV
 interface RCVEntity {
   id?: string;
@@ -282,6 +335,12 @@ export default function ConfigurationPage() {
   const [selectedModule, setSelectedModule] = useState<string>(''); // Estado para el módulo seleccionado
   const [showRCVTaxModal, setShowRCVTaxModal] = useState(false); // Modal específico para RCV
 
+  // Estados para configuración de empresa
+  const [companySettings, setCompanySettings] = useState<CompanySettings | null>(null);
+  const [showCompanyForm, setShowCompanyForm] = useState(false);
+  const [loadingCompanySettings, setLoadingCompanySettings] = useState(true);
+  const [savingCompanySettings, setSavingCompanySettings] = useState(false);
+
   // Estados para entidades RCV
   const [rcvEntities, setRcvEntities] = useState<RCVEntity[]>([]);
   const [editingEntity, setEditingEntity] = useState<RCVEntity | null>(null);
@@ -300,6 +359,7 @@ export default function ConfigurationPage() {
     loadCentralizedConfigs();
     loadRCVEntities();
     loadSystemDiagnostics();
+    loadCompanySettings();
   }, []);
 
   // Cargar plan de cuentas desde la API
@@ -557,6 +617,52 @@ export default function ConfigurationPage() {
       console.error('Error loading RCV entities:', error);
     } finally {
       setLoadingEntities(false);
+    }
+  };
+
+  // Cargar configuración de empresa
+  const loadCompanySettings = async () => {
+    try {
+      setLoadingCompanySettings(true);
+      const response = await fetch(`/api/payroll/settings?company_id=${companyId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setCompanySettings(data.data);
+      }
+    } catch (error) {
+      console.error('Error loading company settings:', error);
+    } finally {
+      setLoadingCompanySettings(false);
+    }
+  };
+
+  // Guardar configuración de empresa
+  const saveCompanySettings = async (settings: CompanySettings) => {
+    try {
+      setSavingCompanySettings(true);
+      const response = await fetch(`/api/payroll/settings?company_id=${companyId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settings),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setCompanySettings(data.data);
+        setShowCompanyForm(false);
+        alert('✅ Configuración de empresa guardada exitosamente');
+      } else {
+        alert('❌ Error al guardar la configuración');
+      }
+    } catch (error) {
+      console.error('Error saving company settings:', error);
+      alert('❌ Error al guardar la configuración');
+    } finally {
+      setSavingCompanySettings(false);
     }
   };
 
@@ -1260,7 +1366,10 @@ export default function ConfigurationPage() {
 
         {/* Other Configuration Options Modernizadas */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card className="bg-white/90 backdrop-blur-sm border-2 border-green-100 hover:border-green-200 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer">
+          <Card 
+            className="bg-white/90 backdrop-blur-sm border-2 border-green-100 hover:border-green-200 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer"
+            onClick={() => setShowCompanyForm(true)}
+          >
             <CardContent className="p-6">
               <div className="flex items-center space-x-3 mb-3">
                 <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
@@ -1268,7 +1377,12 @@ export default function ConfigurationPage() {
                 </div>
                 <h3 className="font-semibold text-gray-900">Datos de la Empresa</h3>
               </div>
-              <p className="text-sm text-gray-600">Configura la información básica de tu empresa y parámetros fiscales</p>
+              <p className="text-sm text-gray-600">Configura la información básica de tu empresa, representante legal y parámetros previsionales</p>
+              {companySettings && (
+                <div className="mt-3 text-xs text-green-600 font-medium">
+                  ✅ {companySettings.company_info.company_name} - {companySettings.company_info.legal_representative.full_name}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -2097,6 +2211,335 @@ export default function ConfigurationPage() {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Configuración de Empresa */}
+      {showCompanyForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-6xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold flex items-center space-x-2">
+                <Building className="w-6 h-6 text-green-600" />
+                <span>Configuración de Empresa</span>
+              </h3>
+              <button
+                onClick={() => setShowCompanyForm(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {loadingCompanySettings ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+                <span className="ml-3 text-gray-600">Cargando configuración...</span>
+              </div>
+            ) : (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.currentTarget);
+                  
+                  const settings: CompanySettings = {
+                    company_info: {
+                      company_name: formData.get('company_name') as string,
+                      company_rut: formData.get('company_rut') as string,
+                      company_address: formData.get('company_address') as string,
+                      company_city: formData.get('company_city') as string,
+                      company_phone: formData.get('company_phone') as string,
+                      company_email: formData.get('company_email') as string,
+                      mutual_code: formData.get('mutual_code') as string,
+                      caja_compensacion_code: formData.get('caja_compensacion_code') as string,
+                      legal_representative: {
+                        full_name: formData.get('rep_full_name') as string,
+                        rut: formData.get('rep_rut') as string,
+                        position: formData.get('rep_position') as string,
+                        profession: formData.get('rep_profession') as string,
+                        nationality: formData.get('rep_nationality') as string,
+                        civil_status: formData.get('rep_civil_status') as string,
+                        address: formData.get('rep_address') as string,
+                      }
+                    },
+                    afp_configs: companySettings?.afp_configs || [],
+                    health_configs: companySettings?.health_configs || [],
+                    income_limits: companySettings?.income_limits || {
+                      uf_limit: 83.4,
+                      minimum_wage: 500000,
+                      family_allowance_limit: 1000000
+                    },
+                    family_allowances: companySettings?.family_allowances || {
+                      tramo_a: 13596,
+                      tramo_b: 8397,
+                      tramo_c: 2798
+                    },
+                    contributions: companySettings?.contributions || {
+                      unemployment_insurance_fixed: 3.0,
+                      unemployment_insurance_indefinite: 0.6,
+                      social_security_percentage: 10.0
+                    }
+                  };
+                  
+                  saveCompanySettings(settings);
+                }}
+                className="space-y-6"
+              >
+                {/* Información de la Empresa */}
+                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-green-800 mb-4 flex items-center space-x-2">
+                    <Building className="w-5 h-5" />
+                    <span>Información de la Empresa</span>
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nombre de la Empresa *
+                      </label>
+                      <input
+                        type="text"
+                        name="company_name"
+                        required
+                        defaultValue={companySettings?.company_info.company_name || ''}
+                        placeholder="ej: ContaPyme Ltda."
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        RUT de la Empresa *
+                      </label>
+                      <input
+                        type="text"
+                        name="company_rut"
+                        required
+                        defaultValue={companySettings?.company_info.company_rut || ''}
+                        placeholder="XX.XXX.XXX-X"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Dirección *
+                      </label>
+                      <input
+                        type="text"
+                        name="company_address"
+                        required
+                        defaultValue={companySettings?.company_info.company_address || ''}
+                        placeholder="ej: Las Malvas 2775"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Ciudad *
+                      </label>
+                      <input
+                        type="text"
+                        name="company_city"
+                        required
+                        defaultValue={companySettings?.company_info.company_city || ''}
+                        placeholder="ej: Santiago"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Teléfono *
+                      </label>
+                      <input
+                        type="tel"
+                        name="company_phone"
+                        required
+                        defaultValue={companySettings?.company_info.company_phone || ''}
+                        placeholder="ej: +56 9 1234 5678"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Email *
+                      </label>
+                      <input
+                        type="email"
+                        name="company_email"
+                        required
+                        defaultValue={companySettings?.company_info.company_email || ''}
+                        placeholder="ej: contacto@empresa.cl"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Mutual de Seguridad
+                      </label>
+                      <select
+                        name="mutual_code"
+                        defaultValue={companySettings?.company_info.mutual_code || 'ACHS'}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      >
+                        <option value="ACHS">ACHS</option>
+                        <option value="MUTUAL">Mutual de Seguridad</option>
+                        <option value="IST">IST</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Caja de Compensación
+                      </label>
+                      <input
+                        type="text"
+                        name="caja_compensacion_code"
+                        defaultValue={companySettings?.company_info.caja_compensacion_code || ''}
+                        placeholder="ej: CCCHC"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Representante Legal */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                  <h4 className="text-lg font-semibold text-blue-800 mb-4 flex items-center space-x-2">
+                    <UserCheck className="w-5 h-5" />
+                    <span>Representante Legal</span>
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nombre Completo *
+                      </label>
+                      <input
+                        type="text"
+                        name="rep_full_name"
+                        required
+                        defaultValue={companySettings?.company_info.legal_representative.full_name || ''}
+                        placeholder="ej: Miguel Angel Rodriguez Cabrera"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        RUT *
+                      </label>
+                      <input
+                        type="text"
+                        name="rep_rut"
+                        required
+                        defaultValue={companySettings?.company_info.legal_representative.rut || ''}
+                        placeholder="XX.XXX.XXX-X"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Cargo *
+                      </label>
+                      <input
+                        type="text"
+                        name="rep_position"
+                        required
+                        defaultValue={companySettings?.company_info.legal_representative.position || ''}
+                        placeholder="ej: Gerente General"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Profesión *
+                      </label>
+                      <input
+                        type="text"
+                        name="rep_profession"
+                        required
+                        defaultValue={companySettings?.company_info.legal_representative.profession || ''}
+                        placeholder="ej: Ingeniero Comercial"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Nacionalidad *
+                      </label>
+                      <select
+                        name="rep_nationality"
+                        required
+                        defaultValue={companySettings?.company_info.legal_representative.nationality || 'CHILENA'}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="CHILENA">Chilena</option>
+                        <option value="EXTRANJERA">Extranjera</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Estado Civil *
+                      </label>
+                      <select
+                        name="rep_civil_status"
+                        required
+                        defaultValue={companySettings?.company_info.legal_representative.civil_status || 'SOLTERO'}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="SOLTERO">Soltero(a)</option>
+                        <option value="CASADO">Casado(a)</option>
+                        <option value="VIUDO">Viudo(a)</option>
+                        <option value="DIVORCIADO">Divorciado(a)</option>
+                      </select>
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Dirección *
+                      </label>
+                      <input
+                        type="text"
+                        name="rep_address"
+                        required
+                        defaultValue={companySettings?.company_info.legal_representative.address || ''}
+                        placeholder="ej: Las Malvas 2775"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-6">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowCompanyForm(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    disabled={savingCompanySettings}
+                    className="bg-gradient-to-r from-green-600 to-emerald-600"
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    {savingCompanySettings ? 'Guardando...' : 'Guardar Configuración'}
+                  </Button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
