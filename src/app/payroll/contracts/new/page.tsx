@@ -2,12 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { PayrollHeader } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { 
   ArrowLeft, Save, FileText, User, Calendar, DollarSign, 
-  Clock, MapPin, AlertCircle, Plus, Search, Sparkles, CheckCircle 
+  Clock, MapPin, AlertCircle, Search, Sparkles, CheckCircle 
 } from 'lucide-react';
 import { useCompanyId } from '@/contexts/CompanyContext';
 import { JobDescriptionAssistant } from '@/components/payroll/JobDescriptionAssistant';
@@ -362,14 +361,11 @@ export default function NewContractPage() {
                       No hay empleados disponibles
                     </h3>
                     <p className="text-gray-500 mb-4">
-                      Necesitas tener empleados registrados para crear contratos
+                      Necesitas tener empleados registrados para crear contratos.
                     </p>
-                    <Link href="/payroll/employees/new">
-                      <Button variant="primary">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Crear Empleado
-                      </Button>
-                    </Link>
+                    <p className="text-sm text-gray-400">
+                      Ve a la sección "Empleados" del módulo de remuneraciones para crear empleados primero.
+                    </p>
                   </div>
                 ) : (
                   <div>
