@@ -204,13 +204,23 @@ export default function NewEmployeePage() {
   const calculateWorkedDays = (startDate: string) => {
     if (!startDate) return null;
     
-    const start = new Date(startDate);
+    // 🔧 CORREGIR PARSEO DE FECHA: Usar formato YYYY-MM-DD directamente
+    const dateParts = startDate.split('-');
+    if (dateParts.length !== 3) return null;
+    
+    const year = parseInt(dateParts[0]);
+    const month = parseInt(dateParts[1]) - 1; // JavaScript months are 0-indexed
+    const day = parseInt(dateParts[2]);
+    
+    const start = new Date(year, month, day);
     const current = new Date();
     
     if (start.getMonth() === current.getMonth() && start.getFullYear() === current.getFullYear()) {
       const totalDaysInMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
       const startDay = start.getDate();
       const workedDays = totalDaysInMonth - startDay + 1;
+      
+      console.log(`📅 DEBUG: Fecha ${startDate} → Día ${startDay}, Trabajados: ${workedDays}`);
       
       return {
         workedDays,

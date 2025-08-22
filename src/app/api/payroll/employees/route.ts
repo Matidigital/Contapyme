@@ -147,17 +147,29 @@ export async function POST(request: NextRequest) {
     }
 
     // 📅 CALCULAR DÍAS TRABAJADOS DEL MES ACTUAL
-    const startDate = new Date(body.start_date);
-    const currentDate = new Date();
     let workedDaysThisMonth = 0;
+    let startDay = 0;
     
-    if (startDate.getMonth() === currentDate.getMonth() && startDate.getFullYear() === currentDate.getFullYear()) {
-      // Si empezó este mes, calcular días trabajados
-      const totalDaysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
-      const startDay = startDate.getDate();
-      workedDaysThisMonth = totalDaysInMonth - startDay + 1;
-      
-      console.log(`📅 Empleado inicia el día ${startDay} de ${totalDaysInMonth} días del mes. Días trabajados: ${workedDaysThisMonth}`);
+    if (body.start_date) {
+      // 🔧 CORREGIR PARSEO DE FECHA: Usar formato YYYY-MM-DD directamente
+      const dateParts = body.start_date.split('-');
+      if (dateParts.length === 3) {
+        const year = parseInt(dateParts[0]);
+        const month = parseInt(dateParts[1]) - 1; // JavaScript months are 0-indexed
+        const day = parseInt(dateParts[2]);
+        
+        const startDate = new Date(year, month, day);
+        const currentDate = new Date();
+        
+        if (startDate.getMonth() === currentDate.getMonth() && startDate.getFullYear() === currentDate.getFullYear()) {
+          // Si empezó este mes, calcular días trabajados
+          const totalDaysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+          startDay = startDate.getDate();
+          workedDaysThisMonth = totalDaysInMonth - startDay + 1;
+          
+          console.log(`📅 Empleado inicia el día ${startDay} de ${totalDaysInMonth} días del mes. Días trabajados: ${workedDaysThisMonth}`);
+        }
+      }
     }
     
     // 1. CREAR EMPLEADO
@@ -293,7 +305,8 @@ export async function POST(request: NextRequest) {
       worked_days_info: workedDaysThisMonth > 0 ? {
         worked_days_this_month: workedDaysThisMonth,
         start_date: body.start_date,
-        calculation_note: `Empleado inicia el ${startDate.getDate()} del mes, trabajará ${workedDaysThisMonth} días de este período`
+        start_day: startDay,
+        calculation_note: `Empleado inicia el ${startDay} del mes, trabajará ${workedDaysThisMonth} días de este período`
       } : null,
       mode: 'supabase_database'
     }, { status: 201 });
