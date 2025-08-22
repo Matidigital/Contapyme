@@ -101,6 +101,64 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // ✅ Obtener conexión a Supabase
+    const supabase = getDatabaseConnection();
+    if (!supabase) {
+      return NextResponse.json(
+        { error: 'Error de configuración de base de datos', success: false },
+        { status: 503 }
+      );
+    }
+
+    // 🔍 VERIFICAR SI EL RUT YA EXISTE Y PRECARGAR DATOS
+    const { data: existingEmployee } = await supabase
+      .from('employees')
+      .select('*')
+      .eq('rut', body.rut)
+      .single();
+
+    if (existingEmployee && body.preload_existing !== true) {
+      // Si existe y no se solicita explícitamente precargar, devolver datos para precarga
+      return NextResponse.json({
+        exists: true,
+        existing_data: {
+          rut: existingEmployee.rut,
+          first_name: existingEmployee.first_name,
+          last_name: existingEmployee.last_name,
+          middle_name: existingEmployee.middle_name,
+          birth_date: existingEmployee.birth_date,
+          gender: existingEmployee.gender,
+          marital_status: existingEmployee.marital_status,
+          nationality: existingEmployee.nationality,
+          email: existingEmployee.email,
+          phone: existingEmployee.phone,
+          mobile_phone: existingEmployee.mobile_phone,
+          address: existingEmployee.address,
+          city: existingEmployee.city,
+          region: existingEmployee.region,
+          postal_code: existingEmployee.postal_code,
+          emergency_contact_name: existingEmployee.emergency_contact_name,
+          emergency_contact_phone: existingEmployee.emergency_contact_phone,
+          emergency_contact_relationship: existingEmployee.emergency_contact_relationship
+        },
+        message: 'Empleado encontrado con este RUT. ¿Deseas precargar sus datos?'
+      }, { status: 409 });
+    }
+
+    // 📅 CALCULAR DÍAS TRABAJADOS DEL MES ACTUAL
+    const startDate = new Date(body.start_date);
+    const currentDate = new Date();
+    let workedDaysThisMonth = 0;
+    
+    if (startDate.getMonth() === currentDate.getMonth() && startDate.getFullYear() === currentDate.getFullYear()) {
+      // Si empezó este mes, calcular días trabajados
+      const totalDaysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+      const startDay = startDate.getDate();
+      workedDaysThisMonth = totalDaysInMonth - startDay + 1;
+      
+      console.log(`📅 Empleado inicia el día ${startDay} de ${totalDaysInMonth} días del mes. Días trabajados: ${workedDaysThisMonth}`);
+    }
     
     // 1. CREAR EMPLEADO
     const { data: employee, error: employeeError } = await supabase
@@ -149,25 +207,33 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Empleado creado:', employee.id);
 
-    // 2. CREAR CONTRATO (si se proporcionaron datos)
+    // 2. CREAR CONTRATO COMPLETO (si se proporcionaron datos)
     let contract = null;
     if (body.position && body.base_salary) {
-      const { data: contractData, error: contractError } = await supabase
+      const contractData = {
+        employee_id: employee.id,
+        company_id: body.company_id,
+        position: body.position,
+        department: body.department,
+        contract_type: body.contract_type || 'indefinido',
+        start_date: body.start_date,
+        end_date: body.contract_type === 'indefinido' ? null : body.end_date,
+        base_salary: parseFloat(body.base_salary) || 0,
+        salary_type: body.salary_type || 'monthly',
+        weekly_hours: parseFloat(body.weekly_hours) || 45,
+        status: 'active',
+        created_by: body.created_by,
+        // 📅 AÑADIR DÍAS TRABAJADOS ESTE MES
+        worked_days_current_month: workedDaysThisMonth,
+        // 🔧 AÑADIR FUNCIONES DEL CARGO (desde asistente IA)
+        job_functions: body.job_functions || [],
+        obligations: body.obligations || [],
+        prohibitions: body.prohibitions || []
+      };
+
+      const { data: createdContract, error: contractError } = await supabase
         .from('employment_contracts')
-        .insert({
-          employee_id: employee.id,
-          company_id: body.company_id,
-          position: body.position,
-          department: body.department,
-          contract_type: body.contract_type || 'indefinido',
-          start_date: body.start_date,
-          end_date: body.contract_type === 'indefinido' ? null : body.end_date,
-          base_salary: parseFloat(body.base_salary) || 0,
-          salary_type: body.salary_type || 'monthly',
-          weekly_hours: parseFloat(body.weekly_hours) || 45,
-          status: 'active',
-          created_by: body.created_by
-        })
+        .insert(contractData)
         .select()
         .single();
 
@@ -175,8 +241,13 @@ export async function POST(request: NextRequest) {
         console.error('⚠️ Error creando contrato:', contractError);
         // No cancelar la creación del empleado, solo avisar
       } else {
-        contract = contractData;
+        contract = createdContract;
         console.log('✅ Contrato creado:', contract.id);
+        
+        // 📊 Log de días trabajados para debugging
+        if (workedDaysThisMonth > 0) {
+          console.log(`✅ Contrato incluye ${workedDaysThisMonth} días trabajados este mes`);
+        }
       }
     }
 
@@ -202,7 +273,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 4. RESPUESTA EXITOSA
+    // 4. RESPUESTA EXITOSA CON INFORMACIÓN ADICIONAL
+    let message = 'Empleado creado exitosamente';
+    if (contract) {
+      message += ' con contrato incluido';
+      if (workedDaysThisMonth > 0) {
+        message += ` (${workedDaysThisMonth} días trabajados este mes)`;
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -210,7 +289,12 @@ export async function POST(request: NextRequest) {
         employment_contracts: contract ? [contract] : [],
         payroll_config: payrollConfig ? [payrollConfig] : []
       },
-      message: 'Empleado creado exitosamente',
+      message,
+      worked_days_info: workedDaysThisMonth > 0 ? {
+        worked_days_this_month: workedDaysThisMonth,
+        start_date: body.start_date,
+        calculation_note: `Empleado inicia el ${startDate.getDate()} del mes, trabajará ${workedDaysThisMonth} días de este período`
+      } : null,
       mode: 'supabase_database'
     }, { status: 201 });
 
@@ -237,6 +321,15 @@ export async function PATCH(request: NextRequest) {
     }
 
     console.log('🔍 Actualizando empleado:', id, 'con datos:', updateData);
+
+    // ✅ Obtener conexión a Supabase
+    const supabase = getDatabaseConnection();
+    if (!supabase) {
+      return NextResponse.json(
+        { error: 'Error de configuración de base de datos', success: false },
+        { status: 503 }
+      );
+    }
 
     // Actualizar en Supabase
     const { data: updatedEmployee, error: updateError } = await supabase
@@ -297,6 +390,15 @@ export async function DELETE(request: NextRequest) {
     }
 
     console.log('🔍 Desactivando empleado:', id, 'de empresa:', companyId);
+
+    // ✅ Obtener conexión a Supabase
+    const supabase = getDatabaseConnection();
+    if (!supabase) {
+      return NextResponse.json(
+        { error: 'Error de configuración de base de datos', success: false },
+        { status: 503 }
+      );
+    }
 
     // Desactivar en Supabase (soft delete)
     const { data: updatedEmployee, error: deleteError } = await supabase

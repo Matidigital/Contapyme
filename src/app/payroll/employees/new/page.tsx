@@ -65,6 +65,12 @@ export default function NewEmployeePage() {
   const [isRutValid, setIsRutValid] = useState(false);
   const [showPayrollConfig, setShowPayrollConfig] = useState(false);
   
+  // 🔄 NUEVAS FUNCIONALIDADES
+  const [rutCheckLoading, setRutCheckLoading] = useState(false);
+  const [showPreloadModal, setShowPreloadModal] = useState(false);
+  const [existingEmployeeData, setExistingEmployeeData] = useState<any>(null);
+  const [workedDaysInfo, setWorkedDaysInfo] = useState<any>(null);
+  
   // 🔗 NUEVA FUNCIONALIDAD: Opciones dinámicas de AFP e ISAPRE
   // ✅ Usar company ID dinámico desde contexto
   const companyId = useCompanyId();
@@ -151,6 +157,71 @@ export default function NewEmployeePage() {
     }));
   };
 
+  // 🔍 VERIFICAR SI RUT YA EXISTE
+  const checkExistingRut = async (rut: string) => {
+    if (!rut || !isRutValid) return;
+    
+    setRutCheckLoading(true);
+    try {
+      const response = await fetch('/api/payroll/employees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          company_id: companyId,
+          rut,
+          first_name: 'temp',
+          last_name: 'temp',
+          email: 'temp@temp.com'
+        })
+      });
+
+      const result = await response.json();
+      
+      if (response.status === 409 && result.exists) {
+        setExistingEmployeeData(result.existing_data);
+        setShowPreloadModal(true);
+      }
+    } catch (error) {
+      console.error('Error checking RUT:', error);
+    } finally {
+      setRutCheckLoading(false);
+    }
+  };
+
+  // 📋 PRECARGAR DATOS EXISTENTES
+  const preloadExistingData = () => {
+    if (existingEmployeeData) {
+      setFormData(prev => ({
+        ...prev,
+        ...existingEmployeeData
+      }));
+      setShowPreloadModal(false);
+      setActiveTab('contract'); // Mover a la pestaña de contrato
+    }
+  };
+
+  // 📅 CALCULAR DÍAS TRABAJADOS DEL MES
+  const calculateWorkedDays = (startDate: string) => {
+    if (!startDate) return null;
+    
+    const start = new Date(startDate);
+    const current = new Date();
+    
+    if (start.getMonth() === current.getMonth() && start.getFullYear() === current.getFullYear()) {
+      const totalDaysInMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
+      const startDay = start.getDate();
+      const workedDays = totalDaysInMonth - startDay + 1;
+      
+      return {
+        workedDays,
+        totalDays: totalDaysInMonth,
+        startDay,
+        note: `Inicia el día ${startDay}, trabajará ${workedDays} días de ${totalDaysInMonth} días del mes`
+      };
+    }
+    return null;
+  };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     
@@ -216,6 +287,9 @@ export default function NewEmployeePage() {
         company_id: companyId,
         created_by: '550e8400-e29b-41d4-a716-446655440000',
         
+        // 🔄 FLAG PARA PERMITIR CREACIÓN CON RUT EXISTENTE
+        preload_existing: true,
+        
         // Employee data
         rut: formData.rut,
         first_name: formData.firstName,
@@ -250,7 +324,7 @@ export default function NewEmployeePage() {
         salary_type: formData.salaryType,
         weekly_hours: parseFloat(formData.weeklyHours) || 45,
         
-        // Job description info (from AI/PDF assistant)
+        // 🔧 FUNCIONES DEL CARGO (desde asistente IA)
         job_functions: formData.jobFunctions,
         obligations: formData.obligations,
         prohibitions: formData.prohibitions,
@@ -280,6 +354,12 @@ export default function NewEmployeePage() {
       }
 
       console.log('Empleado creado:', result.data);
+      
+      // 📅 Mostrar información de días trabajados si está disponible
+      if (result.worked_days_info) {
+        setWorkedDaysInfo(result.worked_days_info);
+        alert(`✅ Empleado creado exitosamente!\n\n${result.worked_days_info.calculation_note}`);
+      }
       
       // Redirigir a la lista de empleados
       router.push('/payroll?tab=employees');
@@ -397,13 +477,26 @@ export default function NewEmployeePage() {
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         RUT *
                       </label>
-                      <RutInputFixed
-                        value={formData.rut}
-                        onChange={(value) => setFormData(prev => ({ ...prev, rut: value }))}
-                        onValidChange={setIsRutValid}
-                        required
-                        className={errors.rut ? 'border-red-500' : ''}
-                      />
+                      <div className="relative">
+                        <RutInputFixed
+                          value={formData.rut}
+                          onChange={(value) => {
+                            setFormData(prev => ({ ...prev, rut: value }));
+                            // Verificar RUT cuando cambie y sea válido
+                            if (value && value.length >= 9) {
+                              setTimeout(() => checkExistingRut(value), 500);
+                            }
+                          }}
+                          onValidChange={setIsRutValid}
+                          required
+                          className={errors.rut ? 'border-red-500' : ''}
+                        />
+                        {rutCheckLoading && (
+                          <div className="absolute right-3 top-3">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div>
@@ -802,13 +895,43 @@ export default function NewEmployeePage() {
                           type="date"
                           name="startDate"
                           value={formData.startDate}
-                          onChange={handleInputChange}
+                          onChange={(e) => {
+                            handleInputChange(e);
+                            // Calcular días trabajados cuando cambie la fecha
+                            const workInfo = calculateWorkedDays(e.target.value);
+                            setWorkedDaysInfo(workInfo);
+                          }}
                           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                             errors.startDate ? 'border-red-500' : 'border-gray-300'
                           }`}
                         />
                         {errors.startDate && (
                           <p className="mt-1 text-sm text-red-600">{errors.startDate}</p>
+                        )}
+                        
+                        {/* 📅 INFORMACIÓN DE DÍAS TRABAJADOS */}
+                        {workedDaysInfo && (
+                          <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Calendar className="h-4 w-4 text-blue-600" />
+                              <span className="text-sm font-medium text-blue-900">Días trabajados este mes</span>
+                            </div>
+                            <p className="text-sm text-blue-700">{workedDaysInfo.note}</p>
+                            <div className="grid grid-cols-3 gap-2 mt-2 text-xs">
+                              <div className="text-center p-2 bg-white rounded border">
+                                <div className="text-blue-600 font-medium">{workedDaysInfo.startDay}</div>
+                                <div className="text-gray-500">Día inicio</div>
+                              </div>
+                              <div className="text-center p-2 bg-white rounded border">
+                                <div className="text-green-600 font-medium">{workedDaysInfo.workedDays}</div>
+                                <div className="text-gray-500">Días trabajados</div>
+                              </div>
+                              <div className="text-center p-2 bg-white rounded border">
+                                <div className="text-gray-600 font-medium">{workedDaysInfo.totalDays}</div>
+                                <div className="text-gray-500">Total mes</div>
+                              </div>
+                            </div>
+                          </div>
                         )}
                       </div>
 
@@ -1335,6 +1458,56 @@ export default function NewEmployeePage() {
           </form>
         </div>
       </div>
+
+      {/* 📋 MODAL DE PRECARGA DE DATOS EXISTENTES */}
+      {showPreloadModal && existingEmployeeData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <User className="h-6 w-6 text-blue-600" />
+              <h3 className="text-lg font-semibold text-gray-900">Empleado Encontrado</h3>
+            </div>
+            
+            <p className="text-gray-600 mb-4">
+              Ya existe un empleado con el RUT <strong>{existingEmployeeData.rut}</strong>:
+            </p>
+            
+            <div className="bg-gray-50 rounded-lg p-4 mb-4">
+              <p className="font-medium text-gray-900">
+                {existingEmployeeData.first_name} {existingEmployeeData.middle_name} {existingEmployeeData.last_name}
+              </p>
+              <p className="text-sm text-gray-600">Email: {existingEmployeeData.email}</p>
+              {existingEmployeeData.phone && (
+                <p className="text-sm text-gray-600">Teléfono: {existingEmployeeData.phone}</p>
+              )}
+              {existingEmployeeData.address && (
+                <p className="text-sm text-gray-600">Dirección: {existingEmployeeData.address}</p>
+              )}
+            </div>
+            
+            <p className="text-sm text-gray-600 mb-6">
+              ¿Deseas precargar estos datos en el formulario? Podrás crear un nuevo contrato para este empleado.
+            </p>
+            
+            <div className="flex gap-3">
+              <Button
+                onClick={() => setShowPreloadModal(false)}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={preloadExistingData}
+                variant="primary"
+                className="flex-1"
+              >
+                Precargar Datos
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
