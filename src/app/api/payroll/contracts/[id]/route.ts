@@ -59,6 +59,35 @@ export async function GET(
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    // Obtener configuración de empresa desde payroll_settings
+    const { data: payrollSettings } = await supabase
+      .from('payroll_settings')
+      .select('settings')
+      .eq('company_id', data?.company_id)
+      .single();
+
+    // Si hay configuración en payroll_settings, usar esos datos para el representante legal
+    if (payrollSettings?.settings?.company_info?.legal_representative) {
+      const legalRep = payrollSettings.settings.company_info.legal_representative;
+      
+      // Actualizar los datos de la empresa con la información de payroll_settings
+      data.companies = {
+        ...data.companies,
+        legal_representative_name: legalRep.full_name || data.companies?.legal_representative_name,
+        legal_representative_rut: legalRep.rut || data.companies?.legal_representative_rut,
+        legal_representative_position: legalRep.position || 'GERENTE GENERAL',
+        legal_representative_profession: legalRep.profession || 'INGENIERO COMERCIAL',
+        legal_representative_nationality: legalRep.nationality || 'CHILENA',
+        legal_representative_civil_status: legalRep.civil_status || 'SOLTERO',
+        legal_representative_address: legalRep.address || data.companies?.fiscal_address
+      };
+      
+      // Log para debug
+      console.log('✅ Usando representante legal de payroll_settings:', legalRep.full_name);
+    } else {
+      console.log('⚠️ Usando representante legal de companies table');
+    }
+
     return NextResponse.json({ 
       success: true, 
       data 

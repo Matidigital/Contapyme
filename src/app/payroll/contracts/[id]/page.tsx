@@ -53,6 +53,11 @@ interface ContractDetails {
     rut: string;
     legal_representative_name?: string;
     legal_representative_rut?: string;
+    legal_representative_position?: string;
+    legal_representative_profession?: string;
+    legal_representative_nationality?: string;
+    legal_representative_civil_status?: string;
+    legal_representative_address?: string;
     fiscal_address?: string;
     fiscal_city?: string;
   };
@@ -477,10 +482,24 @@ export default function ContractDetailPage({ params }: { params: { id: string } 
                       <p className="text-gray-900">{company.rut}</p>
                     </div>
                     {company.legal_representative_name && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-600">Representante Legal</label>
-                        <p className="text-gray-900">{company.legal_representative_name}</p>
-                      </div>
+                      <>
+                        <div className="pt-2 border-t">
+                          <label className="text-sm font-medium text-gray-600">Representante Legal</label>
+                          <p className="text-gray-900 font-medium">{company.legal_representative_name}</p>
+                        </div>
+                        {company.legal_representative_rut && (
+                          <div>
+                            <label className="text-sm font-medium text-gray-600">RUT Rep. Legal</label>
+                            <p className="text-gray-900">{company.legal_representative_rut}</p>
+                          </div>
+                        )}
+                        {company.legal_representative_position && (
+                          <div>
+                            <label className="text-sm font-medium text-gray-600">Cargo</label>
+                            <p className="text-gray-900">{company.legal_representative_position}</p>
+                          </div>
+                        )}
+                      </>
                     )}
                   </CardContent>
                 </Card>
