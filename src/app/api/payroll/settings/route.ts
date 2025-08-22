@@ -209,17 +209,52 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// Endpoint para actualizar desde Previred (futuro)
+// Endpoint para forzar actualización de configuración (incluye representante legal)
 export async function POST(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const companyId = searchParams.get('company_id');
+    const forceUpdate = searchParams.get('force_update');
 
     if (!companyId) {
       return NextResponse.json(
         { success: false, error: 'company_id es requerido' },
         { status: 400 }
       );
+    }
+
+    // Si force_update=true, actualizar con configuración por defecto
+    if (forceUpdate === 'true') {
+      console.log('🔄 Forzando actualización de configuración con DEFAULT_SETTINGS');
+      
+      const { data: updated, error: updateError } = await supabase
+        .from('payroll_settings')
+        .upsert({
+          company_id: companyId,
+          settings: DEFAULT_SETTINGS,
+          updated_at: new Date().toISOString(),
+          last_previred_sync: new Date().toISOString()
+        }, {
+          onConflict: 'company_id'
+        })
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('Error forcing update:', updateError);
+        return NextResponse.json(
+          { success: false, error: 'Error al forzar actualización' },
+          { status: 500 }
+        );
+      }
+
+      console.log('✅ Configuración forzada exitosamente:', updated.settings.company_info.legal_representative);
+
+      return NextResponse.json({
+        success: true,
+        data: updated.settings,
+        message: 'Configuración actualizada con representante legal correcto: ' + DEFAULT_SETTINGS.company_info.legal_representative.full_name
+      });
     }
 
     // TODO: Implementar actualización desde API de Previred
