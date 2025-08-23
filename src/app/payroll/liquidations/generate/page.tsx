@@ -6,6 +6,7 @@ import { PayrollHeader } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { LivePayrollPreview } from '@/modules/remuneraciones/components/liquidaciones/LivePayrollPreview';
 import { useLivePayrollCalculation } from '@/modules/remuneraciones/hooks/useCalculadora';
+import PreviredAdditionalDataForm from '@/components/payroll/PreviredAdditionalDataForm';
 import { 
   Calculator, 
   Users, 
@@ -71,6 +72,24 @@ export default function GenerateLiquidationPage() {
     apply_legal_gratification: false
   });
 
+  // ✅ NUEVO: Estado para datos adicionales Previred
+  const [previredData, setPreviredData] = useState({
+    start_work_date: '',
+    end_work_date: '',
+    incorporation_workplace_amount: 0,
+    sick_leave_days: 0,
+    sick_leave_start_date: '',
+    sick_leave_end_date: '',
+    sick_leave_amount: 0,
+    vacation_days: 0,
+    vacation_amount: 0,
+    partial_period_reason: '',
+    previred_notes: '',
+    movement_code: '0',
+    worker_type_code: '0',
+    has_special_regime: false
+  });
+
   // Obtener empleado seleccionado
   const selectedEmployee = useMemo(() => {
     const emp = employees.find(e => e.id === selectedEmployeeId);
@@ -134,9 +153,17 @@ export default function GenerateLiquidationPage() {
   // Usar resultado directo de la calculadora (ya maneja gratificación correctamente)
   const result = hookResult;
 
+  // ✅ OPTIMIZACIÓN: Cargar empleados solo una vez
   useEffect(() => {
-    fetchEmployees();
-  }, []);
+    let mounted = true;
+    const loadEmployees = async () => {
+      if (mounted && employees.length === 0) {
+        await fetchEmployees();
+      }
+    };
+    loadEmployees();
+    return () => { mounted = false; };
+  }, []); // ✅ Sin dependencias
 
   // ✅ Auto-marcar checkbox si empleado tiene gratificación configurada
   useEffect(() => {
@@ -325,7 +352,25 @@ export default function GenerateLiquidationPage() {
         net_salary: result.net_salary || 0,
         
         // Configuración usada (snapshot)
-        calculation_config: result.calculation_config || {}
+        calculation_config: result.calculation_config || {},
+        
+        // ✅ NUEVO: Datos adicionales Previred (solo si hay período parcial)
+        ...((formData.days_worked < 30) ? {
+          start_work_date: previredData.start_work_date || null,
+          end_work_date: previredData.end_work_date || null,
+          incorporation_workplace_amount: previredData.incorporation_workplace_amount || 0,
+          sick_leave_days: previredData.sick_leave_days || 0,
+          sick_leave_start_date: previredData.sick_leave_start_date || null,
+          sick_leave_end_date: previredData.sick_leave_end_date || null,
+          sick_leave_amount: previredData.sick_leave_amount || 0,
+          vacation_days: previredData.vacation_days || 0,
+          vacation_amount: previredData.vacation_amount || 0,
+          partial_period_reason: previredData.partial_period_reason || `Período parcial: ${formData.days_worked} días`,
+          previred_notes: previredData.previred_notes || '',
+          movement_code: previredData.movement_code || '5', // Default: Incorporación lugar trabajo
+          worker_type_code: previredData.worker_type_code || '0',
+          has_special_regime: previredData.has_special_regime || false
+        } : {})
       };
 
       // Guardar en la base de datos usando la nueva API
@@ -830,6 +875,28 @@ export default function GenerateLiquidationPage() {
                 </div>
               </div>
             </div>
+
+            {/* ✅ NUEVO: Datos adicionales Previred para períodos parciales */}
+            <PreviredAdditionalDataForm
+              companyId={COMPANY_ID}
+              employeeId={selectedEmployeeId}
+              daysWorked={formData.days_worked}
+              baseSalary={selectedEmployee?.base_salary || 0}
+              data={previredData}
+              onChange={setPreviredData}
+              onApplyConcepts={(concepts) => {
+                // Aplicar conceptos calculados automáticamente al formulario principal
+                concepts.forEach(concept => {
+                  if (concept.concept_code === 'INCORP_WORKPLACE') {
+                    setFormData(prev => ({ ...prev, bonuses: prev.bonuses + concept.amount }));
+                  } else if (concept.concept_code === 'SICK_LEAVE_SUBSIDY') {
+                    setFormData(prev => ({ ...prev, food_allowance: prev.food_allowance + concept.amount }));
+                  } else if (concept.concept_code === 'VACATION_BONUS') {
+                    setFormData(prev => ({ ...prev, gratification: prev.gratification + concept.amount }));
+                  }
+                });
+              }}
+            />
 
             {/* Botón de acción principal */}
             <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 border border-white/20 space-y-4">

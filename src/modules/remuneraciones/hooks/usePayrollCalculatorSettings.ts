@@ -57,7 +57,7 @@ export function usePayrollCalculatorSettings(companyId: string): UsePayrollCalcu
           
           income_limits: {
             uf_limit: rawSettings.income_limits?.uf_limit || 83.4,
-            minimum_wage: rawSettings.income_limits?.minimum_wage || 500000,
+            minimum_wage: rawSettings.income_limits?.minimum_wage || 529000,
             family_allowance_limit: rawSettings.income_limits?.family_allowance_limit || 1000000
           }
         };
@@ -91,7 +91,7 @@ export function usePayrollCalculatorSettings(companyId: string): UsePayrollCalcu
         },
         income_limits: {
           uf_limit: 83.4,
-          minimum_wage: 500000,
+          minimum_wage: 529000,
           family_allowance_limit: 1000000
         }
       };

@@ -1,4 +1,7 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, memo } from 'react';
+
+// ✅ OPTIMIZACIÓN: Cache de componentes lazy
+const componentCache = new Map<string, React.ComponentType<any>>();
 
 interface LazyLoaderProps {
   children: React.ReactNode;

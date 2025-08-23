@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1. Obtener datos del empleado
+    // 1. Obtener datos del empleado con información AFP del contrato
     const { data: employee, error: employeeError } = await supabase
       .from('employees')
       .select(`
@@ -82,7 +82,10 @@ export async function POST(request: NextRequest) {
           position,
           base_salary,
           contract_type,
-          status
+          status,
+          afp_name,
+          health_institution,
+          isapre_plan
         ),
         payroll_config (
           afp_code,
@@ -123,12 +126,16 @@ export async function POST(request: NextRequest) {
     let payrollSettings;
     if (settingsError || !settingsData) {
       console.log('⚠️ No se encontró configuración específica, usando configuración por defecto');
-      // Usar configuración por defecto estática
+      // Usar configuración por defecto con datos oficiales Previred 2025
       payrollSettings = {
         afp_configs: [
-          { code: 'HABITAT', commission_percentage: 1.27, sis_percentage: 1.88 },
-          { code: 'PROVIDA', commission_percentage: 1.45, sis_percentage: 1.88 },
-          { code: 'MODELO', commission_percentage: 0.77, sis_percentage: 1.88 }
+          { code: 'CAPITAL', commission_percentage: 1.44, sis_percentage: 1.88 }, // 11.44% total
+          { code: 'CUPRUM', commission_percentage: 1.44, sis_percentage: 1.88 },  // 11.44% total
+          { code: 'HABITAT', commission_percentage: 1.27, sis_percentage: 1.88 }, // 11.27% total
+          { code: 'MODELO', commission_percentage: 0.58, sis_percentage: 1.88 },  // 10.58% total
+          { code: 'PLANVITAL', commission_percentage: 1.16, sis_percentage: 1.88 }, // 11.16% total
+          { code: 'PROVIDA', commission_percentage: 1.45, sis_percentage: 1.88 }, // 11.45% total
+          { code: 'UNO', commission_percentage: 0.49, sis_percentage: 1.88 }      // 10.49% total
         ],
         family_allowances: {
           tramo_a: 15000,
@@ -136,7 +143,8 @@ export async function POST(request: NextRequest) {
           tramo_c: 5000
         },
         income_limits: {
-          uf_limit: 84.6,
+          uf_limit: 87.8, // Límite AFP afiliados según Previred 2025
+          uf_value: 39383.07, // Valor UF agosto 31, 2025
           minimum_wage: 529000,
           family_allowance_limit: 470148
         }
@@ -148,6 +156,15 @@ export async function POST(request: NextRequest) {
     // 3. Preparar datos para el calculador
     const payrollConfig = employee.payroll_config || {};
 
+    // PRIORIDAD: Usar configuración individual payroll_config primero, luego contrato como fallback
+    const contractAfpName = activeContract.afp_name;
+    const contractHealthInstitution = activeContract.health_institution;
+    
+    console.log('🔍 RECÁLCULO - AFP desde contrato:', contractAfpName);
+    console.log('🔍 RECÁLCULO - AFP desde payroll_config:', payrollConfig.afp_code);
+    console.log('🔍 RECÁLCULO - Salud desde contrato:', contractHealthInstitution);
+    console.log('🔍 RECÁLCULO - Salud desde payroll_config:', payrollConfig.health_institution_code);
+    
     const employeeData = {
       id: employee.id,
       rut: employee.rut,
@@ -155,8 +172,8 @@ export async function POST(request: NextRequest) {
       last_name: employee.last_name,
       base_salary: activeContract.base_salary,
       contract_type: activeContract.contract_type,
-      afp_code: payrollConfig.afp_code || 'HABITAT',
-      health_institution_code: payrollConfig.health_institution_code || 'FONASA',
+      afp_code: payrollConfig.afp_code || contractAfpName || 'MODELO', // PRIORIDAD: configuración individual primero
+      health_institution_code: payrollConfig.health_institution_code || contractHealthInstitution || 'FONASA',
       family_allowances: payrollConfig.family_allowances || 0,
       legal_gratification_type: payrollConfig.legal_gratification_type || 'none'
     };
@@ -173,7 +190,7 @@ export async function POST(request: NextRequest) {
     const calculator = new PayrollCalculator(payrollSettings);
 
     // 5. Calcular liquidación
-    const liquidationResult = calculator.calculateLiquidation(
+    const liquidationResult = await calculator.calculateLiquidation(
       employeeData,
       periodData,
       additional_income,
@@ -308,7 +325,10 @@ export async function PUT(request: NextRequest) {
           last_name,
           employment_contracts!inner (
             base_salary,
-            contract_type
+            contract_type,
+            afp_name,
+            health_institution,
+            isapre_plan
           ),
           payroll_config (
             afp_code,
@@ -334,6 +354,15 @@ export async function PUT(request: NextRequest) {
     const contract = employee.employment_contracts[0];
     const payrollConfig = employee.payroll_config || {};
 
+    // PRIORIDAD: Usar configuración individual payroll_config primero, luego contrato como fallback
+    const contractAfpName = contract.afp_name;
+    const contractHealthInstitution = contract.health_institution;
+    
+    console.log('🔍 RECÁLCULO - AFP desde contrato:', contractAfpName);
+    console.log('🔍 RECÁLCULO - AFP desde payroll_config:', payrollConfig.afp_code);
+    console.log('🔍 RECÁLCULO - Salud desde contrato:', contractHealthInstitution);
+    console.log('🔍 RECÁLCULO - Salud desde payroll_config:', payrollConfig.health_institution_code);
+
     const employeeData = {
       id: existingLiquidation.employee_id,
       rut: employee.rut,
@@ -341,8 +370,8 @@ export async function PUT(request: NextRequest) {
       last_name: employee.last_name,
       base_salary: contract.base_salary,
       contract_type: contract.contract_type,
-      afp_code: payrollConfig.afp_code || 'HABITAT',
-      health_institution_code: payrollConfig.health_institution_code || 'FONASA',
+      afp_code: payrollConfig.afp_code || contractAfpName || 'MODELO', // PRIORIDAD: configuración individual primero
+      health_institution_code: payrollConfig.health_institution_code || contractHealthInstitution || 'FONASA',
       family_allowances: payrollConfig.family_allowances || 0,
       legal_gratification_type: payrollConfig.legal_gratification_type || 'none'
     };
@@ -367,23 +396,37 @@ export async function PUT(request: NextRequest) {
     if (settingsError || !settingsData) {
       payrollSettings = {
         afp_configs: [
-          { code: 'HABITAT', commission_percentage: 1.27, sis_percentage: 1.88 },
-          { code: 'PROVIDA', commission_percentage: 1.45, sis_percentage: 1.88 }
+          { code: 'CAPITAL', commission_percentage: 1.44, sis_percentage: 1.88 }, // 11.44% total
+          { code: 'CUPRUM', commission_percentage: 1.44, sis_percentage: 1.88 },  // 11.44% total
+          { code: 'HABITAT', commission_percentage: 1.27, sis_percentage: 1.88 }, // 11.27% total
+          { code: 'MODELO', commission_percentage: 0.58, sis_percentage: 1.88 },  // 10.58% total
+          { code: 'PLANVITAL', commission_percentage: 1.16, sis_percentage: 1.88 }, // 11.16% total
+          { code: 'PROVIDA', commission_percentage: 1.45, sis_percentage: 1.88 }, // 11.45% total
+          { code: 'UNO', commission_percentage: 0.49, sis_percentage: 1.88 }      // 10.49% total
         ],
         family_allowances: { tramo_a: 15000, tramo_b: 10000, tramo_c: 5000 },
-        income_limits: { uf_limit: 84.6, minimum_wage: 529000, family_allowance_limit: 470148 }
+        income_limits: { 
+          uf_limit: 87.8, // Límite AFP afiliados según Previred 2025
+          uf_value: 39383.07, // Valor UF agosto 31, 2025
+          minimum_wage: 529000, 
+          family_allowance_limit: 470148 
+        }
       };
     } else {
       payrollSettings = settingsData.settings;
     }
 
     const calculator = new PayrollCalculator(payrollSettings);
-    const liquidationResult = calculator.calculateLiquidation(
+    const liquidationResult = await calculator.calculateLiquidation(
       employeeData,
       periodData,
       additional_income,
       additional_deductions
     );
+
+    console.log('🔍 liquidationResult.afp_commission_percentage:', liquidationResult.afp_commission_percentage);
+    console.log('🔍 liquidationResult.afp_percentage:', liquidationResult.afp_percentage);
+    console.log('🔍 liquidationResult.afp_commission_amount:', liquidationResult.afp_commission_amount);
 
     // Actualizar liquidación
     const { data: updated, error: updateError } = await supabase
@@ -403,10 +446,14 @@ export async function PUT(request: NextRequest) {
         family_allowance: liquidationResult.family_allowance,
         total_non_taxable_income: liquidationResult.total_non_taxable_income,
         
+        afp_percentage: liquidationResult.afp_percentage,
+        afp_commission_percentage: liquidationResult.afp_commission_percentage,
         afp_amount: liquidationResult.afp_amount,
         afp_commission_amount: liquidationResult.afp_commission_amount,
         sis_amount: liquidationResult.sis_amount,
+        health_percentage: liquidationResult.health_percentage,
         health_amount: liquidationResult.health_amount,
+        unemployment_percentage: liquidationResult.unemployment_percentage,
         unemployment_amount: liquidationResult.unemployment_amount,
         income_tax_amount: liquidationResult.income_tax_amount,
         

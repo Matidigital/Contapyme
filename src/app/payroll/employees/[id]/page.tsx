@@ -26,6 +26,9 @@ interface Employee {
     start_date: string;
     end_date?: string;
     contract_type: string;
+    afp_name?: string;
+    health_institution?: string;
+    isapre_plan?: string;
   }>;
   payroll_config?: {
     id: string;
@@ -75,6 +78,23 @@ export default function EmployeeDetailPage() {
       currency: 'CLP',
       minimumFractionDigits: 0
     }).format(amount);
+  };
+
+  // Obtener contrato activo y su información previsional
+  const getActiveContract = (employee: Employee) => {
+    return employee.employment_contracts?.find(contract => contract.status === 'active');
+  };
+
+  const getAfpInfo = (employee: Employee) => {
+    const activeContract = getActiveContract(employee);
+    // TEMPORAL: Solo usar configuración individual hasta que se ejecute la migración
+    return employee.payroll_config?.afp_code || 'No definida';
+  };
+
+  const getHealthInfo = (employee: Employee) => {
+    const activeContract = getActiveContract(employee);
+    // TEMPORAL: Solo usar configuración individual hasta que se ejecute la migración
+    return employee.payroll_config?.health_institution_code || 'No definida';
   };
 
   const formatDate = (dateString: string) => {
@@ -351,14 +371,24 @@ export default function EmployeeDetailPage() {
                       <label className="block text-xs font-medium text-gray-500 mb-1">
                         AFP
                       </label>
-                      <p className="text-sm text-gray-900">{employee.payroll_config.afp_code}</p>
+                      <div>
+                        <p className="text-sm text-gray-900">{getAfpInfo(employee)}</p>
+                        <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-md">
+                          Configuración individual
+                        </span>
+                      </div>
                     </div>
                     
                     <div>
                       <label className="block text-xs font-medium text-gray-500 mb-1">
                         Institución de Salud
                       </label>
-                      <p className="text-sm text-gray-900">{employee.payroll_config.health_institution_code}</p>
+                      <div>
+                        <p className="text-sm text-gray-900">{getHealthInfo(employee)}</p>
+                        <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-md mt-1 inline-block">
+                          Configuración individual
+                        </span>
+                      </div>
                     </div>
                     
                     <div>

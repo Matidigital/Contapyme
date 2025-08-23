@@ -6,16 +6,17 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Configuración por defecto basada en valores reales de Chile (Enero 2025)
+// Configuración por defecto basada en datos oficiales Previred (Agosto 2025)
+// Fuente: https://www.previred.com/indicadores-previsionales/
 const DEFAULT_SETTINGS = {
   afp_configs: [
-    { id: 'afp-capital', name: 'AFP Capital', code: 'CAPITAL', commission_percentage: 1.44, sis_percentage: 1.15, active: true },
-    { id: 'afp-cuprum', name: 'AFP Cuprum', code: 'CUPRUM', commission_percentage: 1.48, sis_percentage: 1.15, active: true },
-    { id: 'afp-habitat', name: 'AFP Hábitat', code: 'HABITAT', commission_percentage: 1.27, sis_percentage: 1.15, active: true },
-    { id: 'afp-planvital', name: 'AFP PlanVital', code: 'PLANVITAL', commission_percentage: 1.16, sis_percentage: 1.15, active: true },
-    { id: 'afp-provida', name: 'AFP ProVida', code: 'PROVIDA', commission_percentage: 1.69, sis_percentage: 1.15, active: true },
-    { id: 'afp-modelo', name: 'AFP Modelo', code: 'MODELO', commission_percentage: 0.58, sis_percentage: 1.15, active: true },
-    { id: 'afp-uno', name: 'AFP Uno', code: 'UNO', commission_percentage: 0.69, sis_percentage: 1.15, active: true }
+    { id: 'afp-capital', name: 'AFP Capital', code: 'CAPITAL', commission_percentage: 1.44, sis_percentage: 1.88, active: true }, // 11.44% total
+    { id: 'afp-cuprum', name: 'AFP Cuprum', code: 'CUPRUM', commission_percentage: 1.44, sis_percentage: 1.88, active: true }, // 11.44% total
+    { id: 'afp-habitat', name: 'AFP Hábitat', code: 'HABITAT', commission_percentage: 1.27, sis_percentage: 1.88, active: true }, // 11.27% total
+    { id: 'afp-planvital', name: 'AFP PlanVital', code: 'PLANVITAL', commission_percentage: 1.16, sis_percentage: 1.88, active: true }, // 11.16% total
+    { id: 'afp-provida', name: 'AFP ProVida', code: 'PROVIDA', commission_percentage: 1.45, sis_percentage: 1.88, active: true }, // 11.45% total
+    { id: 'afp-modelo', name: 'AFP Modelo', code: 'MODELO', commission_percentage: 0.58, sis_percentage: 1.88, active: true }, // 10.58% total
+    { id: 'afp-uno', name: 'AFP Uno', code: 'UNO', commission_percentage: 0.49, sis_percentage: 1.88, active: true } // 10.49% total
   ],
   health_configs: [
     { id: 'fonasa', name: 'FONASA', code: 'FONASA', plan_percentage: 7.0, active: true },
@@ -26,8 +27,10 @@ const DEFAULT_SETTINGS = {
     { id: 'colmena', name: 'Colmena Golden Cross', code: 'COLMENA', plan_percentage: 8.6, active: true }
   ],
   income_limits: {
-    uf_limit: 83.4, // Tope imponible AFP/Salud en UF
-    minimum_wage: 500000, // Sueldo mínimo en CLP
+    uf_limit: 87.8, // Tope imponible AFP en UF (Previred 2025)
+    uf_value: 39383.07, // Valor UF al 31 agosto 2025
+    health_uf_limit: 83.3, // Tope imponible Salud en UF 
+    minimum_wage: 529000, // Sueldo mínimo 2025 (oficial Previred) - para tope gratificación $209,396
     family_allowance_limit: 1000000 // Límite superior para asignación familiar
   },
   family_allowances: {

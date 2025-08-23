@@ -32,7 +32,7 @@ export function useLivePayrollCalculation(data: LiveCalculationData): LiveCalcul
   const [errors, setErrors] = useState<string[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
 
-  // ✅ NUEVO: Obtener configuración dinámica
+  // ✅ OPTIMIZACIÓN: Cache de configuración
   const companyId = useCompanyId();
   const { settings: dynamicSettings, loading: settingsLoading, error: settingsError } = usePayrollCalculatorSettings(companyId);
 
@@ -153,7 +153,7 @@ export function useLivePayrollCalculation(data: LiveCalculationData): LiveCalcul
       };
       
       runCalculation().catch(console.error);
-    }, 300); // Debounce de 300ms
+    }, 500); // ✅ OPTIMIZACIÓN: Debounce aumentado a 500ms
 
     return () => clearTimeout(timeoutId);
   }, [calculateLiquidation, validationResult.isValid]);

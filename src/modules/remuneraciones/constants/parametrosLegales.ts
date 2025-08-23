@@ -13,7 +13,7 @@ export const CHILEAN_OFFICIAL_VALUES = {
   UTM: 68923, // Diciembre 2024 (actualizar mensualmente)
   
   // Salarios y límites
-  MINIMUM_WAGE: 529000, // Sueldo mínimo 2025
+  MINIMUM_WAGE: 529000, // Sueldo mínimo 2025 (oficial Previred)
   FAMILY_ALLOWANCE_BASE: 15000, // Asignación familiar base
   
   // 📊 DESCUENTOS PREVISIONALES OBLIGATORIOS

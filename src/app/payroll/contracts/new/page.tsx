@@ -64,7 +64,12 @@ export default function NewContractPage() {
       meal: '',
       transport: '',
       cash: ''
-    }
+    },
+    // NUEVOS CAMPOS PREVISIONALES
+    afp_name: 'MODELO',
+    health_institution: 'FONASA',
+    isapre_plan: '',
+    afp_auto_detected: false // Flag para indicar si se detectó automáticamente
   });
 
   // Estado para datos del asistente de descriptores
@@ -138,10 +143,51 @@ export default function NewContractPage() {
     }
   }, [companyId]);
 
+  // Función para consultar AFP automáticamente
+  const consultarAfpEmpleado = async (employeeRut: string) => {
+    try {
+      console.log('🔍 Consultando AFP para empleado:', employeeRut);
+      
+      const response = await fetch('/api/external/sii/consulta-afp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rut: employeeRut })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('✅ AFP encontrada:', data.data);
+        
+        // Actualizar formulario con datos previsionales
+        setFormData(prev => ({
+          ...prev,
+          afp_name: data.data.afp_name,
+          health_institution: data.data.health_institution,
+          isapre_plan: data.data.isapre_plan || '',
+          afp_auto_detected: true
+        }));
+        
+        return data.data;
+      } else {
+        console.log('⚠️ No se pudo obtener AFP:', data.error);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error consultando AFP:', error);
+      return null;
+    }
+  };
+
   // Manejar cambio de empleado - CARGAR TODOS LOS DATOS DEL EMPLEADO
-  const handleEmployeeChange = (employeeId: string) => {
+  const handleEmployeeChange = async (employeeId: string) => {
     setSelectedEmployee(employeeId);
     const employee = employees.find(e => e.id === employeeId);
+    
+    if (employee) {
+      // Consultar AFP automáticamente
+      await consultarAfpEmpleado(employee.rut);
+    }
     
     if (employee) {
       console.log('📋 Cargando datos del empleado:', employee);
@@ -733,6 +779,115 @@ export default function NewContractPage() {
                           placeholder="0"
                           min="0"
                         />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Información Previsional */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
+                      Información Previsional
+                      {formData.afp_auto_detected && (
+                        <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          ✨ Detectada automáticamente
+                        </span>
+                      )}
+                    </CardTitle>
+                    <CardDescription>
+                      Configuración de AFP e institución de salud del trabajador
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          AFP *
+                        </label>
+                        <select
+                          value={formData.afp_name}
+                          onChange={(e) => setFormData(prev => ({ 
+                            ...prev, 
+                            afp_name: e.target.value,
+                            afp_auto_detected: false // Se cambió manualmente
+                          }))}
+                          className={`w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 ${
+                            formData.afp_auto_detected 
+                              ? 'border-green-300 bg-green-50' 
+                              : 'border-gray-300'
+                          }`}
+                        >
+                          <option value="CAPITAL">AFP Capital</option>
+                          <option value="CUPRUM">AFP Cuprum</option>
+                          <option value="HABITAT">AFP Habitat</option>
+                          <option value="MODELO">AFP Modelo</option>
+                          <option value="PLANVITAL">AFP PlanVital</option>
+                          <option value="PROVIDA">AFP ProVida</option>
+                          <option value="UNO">AFP Uno</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Institución de Salud *
+                        </label>
+                        <select
+                          value={formData.health_institution}
+                          onChange={(e) => setFormData(prev => ({ 
+                            ...prev, 
+                            health_institution: e.target.value,
+                            isapre_plan: e.target.value === 'FONASA' ? '' : prev.isapre_plan,
+                            afp_auto_detected: false // Se cambió manualmente
+                          }))}
+                          className={`w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 ${
+                            formData.afp_auto_detected 
+                              ? 'border-green-300 bg-green-50' 
+                              : 'border-gray-300'
+                          }`}
+                        >
+                          <option value="FONASA">FONASA</option>
+                          <option value="BANMEDICA">Banmédica</option>
+                          <option value="CONSALUD">Consalud</option>
+                          <option value="CRUZ_BLANCA">Cruz Blanca</option>
+                          <option value="COLMENA">Colmena Golden Cross</option>
+                          <option value="VIDA_TRES">Vida Tres</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Campo Isapre Plan - Solo si no es FONASA */}
+                    {formData.health_institution !== 'FONASA' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Plan Isapre
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.isapre_plan}
+                          onChange={(e) => setFormData(prev => ({ 
+                            ...prev, 
+                            isapre_plan: e.target.value,
+                            afp_auto_detected: false
+                          }))}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500"
+                          placeholder="Ej: Plan Base, Plan Premium"
+                        />
+                      </div>
+                    )}
+
+                    {/* Información adicional */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex">
+                        <AlertCircle className="h-5 w-5 text-blue-600 mr-2 mt-0.5" />
+                        <div className="text-sm text-blue-700">
+                          <p className="font-medium mb-1">Información Automática</p>
+                          <p>
+                            Esta información se detecta automáticamente al seleccionar un empleado.
+                            Los datos se utilizarán para generar liquidaciones y archivos Previred sin errores.
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </CardContent>

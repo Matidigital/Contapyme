@@ -358,7 +358,7 @@ export class PayrollCalculator {
     const gratificationBase = baseImponible * 0.25; // 25% de la base imponible
     const minimumWage = this.settings.income_limits.minimum_wage || CHILE_TAX_VALUES.SUELDO_MINIMO_2025;
     const gratificationCapAnnual = minimumWage * 4.75; // Tope anual: 4.75 × sueldo mínimo
-    const gratificationCapMonthly = gratificationCapAnnual / 12; // Tope mensual
+    const gratificationCapMonthly = Math.round(gratificationCapAnnual / 12); // Tope mensual redondeado
     
     const finalGratification = Math.min(gratificationBase, gratificationCapMonthly);
     
@@ -387,7 +387,7 @@ export class PayrollCalculator {
     
     const gratificationBase = baseSalary * 0.25; // 25% del sueldo base mensual
     const gratificationCapAnnual = 529000 * 4.75; // Tope anual: 4.75 × sueldo mínimo 2025
-    const gratificationCapMonthly = gratificationCapAnnual / 12; // Tope mensual
+    const gratificationCapMonthly = Math.round(gratificationCapAnnual / 12); // Tope mensual redondeado
     
     const finalGratification = Math.min(gratificationBase, gratificationCapMonthly);
     
