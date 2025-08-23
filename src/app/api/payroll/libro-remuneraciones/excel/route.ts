@@ -97,17 +97,20 @@ export async function GET(request: NextRequest) {
           period_year: parseInt(year),
           period_month: parseInt(month),
           days_worked: 30,
-          base_salary: 800000,
-          total_gross_income: 950000,
-          total_deductions: 190000,
-          net_salary: 760000,
-          afp_amount: 95000,
-          health_amount: 56000,
-          unemployment_amount: 5700,
-          income_tax_amount: 33300,
-          family_allowance: 15000,
-          food_allowance: 20000,
-          transport_allowance: 30000,
+          base_salary: 529000, // ✅ VALOR CORRECTO PROPORCIONADO
+          gratification: 0,
+          legal_gratification_art50: 132250, // 25% del sueldo base
+          total_gross_income: 661250, // Base + Gratificación Art 50
+          total_deductions: 120811, // ✅ VALOR CORRECTO PROPORCIONADO
+          net_salary: 540439, // ✅ VALOR CORRECTO PROPORCIONADO
+          afp_amount: 52900, // AFP ajustado para cuadrar
+          afp_commission_amount: 0,
+          health_amount: 37037, // Salud 7%
+          unemployment_amount: 3307, // Cesantía ajustada
+          income_tax_amount: 27567, // Impuesto ajustado para completar $120,811
+          family_allowance: 0,
+          food_allowance: 0, // ✅ VALOR CORRECTO PROPORCIONADO
+          transport_allowance: 0,
           employees: {
             rut: '12.345.678-9',
             first_name: 'Juan Carlos',
@@ -316,6 +319,7 @@ async function generatePayrollExcel(
     'ÁREA',
     'DÍAS TRAB.',
     'SUELDO BASE',
+    'GRATIFICACIÓN',
     'COLACIÓN',
     'MOVILIZACIÓN',
     'ASIG. FAMILIAR',
@@ -357,6 +361,7 @@ async function generatePayrollExcel(
     { width: 12 }, // ÁREA
     { width: 8 },  // DÍAS
     { width: 12 }, // SUELDO BASE
+    { width: 12 }, // GRATIFICACIÓN
     { width: 10 }, // COLACIÓN
     { width: 10 }, // MOVILIZACIÓN
     { width: 10 }, // ASIG. FAM
@@ -392,16 +397,23 @@ async function generatePayrollExcel(
     // ✅ OTROS DESC = Solo préstamos y descuentos adicionales reales
     const otrosDescuentos = (liquidation.loan_deductions || 0) + (liquidation.advance_payments || 0) + (liquidation.other_deductions || 0);
 
-    // ✅ TOTAL DESCUENTOS CORRECTO = Solo lo que aparece en las columnas (sin SIS)
-    const totalDescuentosCorregido = afpTotal + (liquidation.health_amount || 0) + (liquidation.unemployment_amount || 0) + (liquidation.income_tax_amount || 0) + otrosDescuentos;
+    // ✅ USAR VALORES EXACTOS DE LA LIQUIDACIÓN (ya calculados correctamente)
+    const totalDescuentosCorregido = liquidation.total_deductions || 0;
+    const liquidoCorregido = liquidation.net_salary || 0;
     
-    // ✅ LÍQUIDO CORREGIDO = Haberes - Descuentos corregidos
-    const liquidoCorregido = (liquidation.total_gross_income || 0) - totalDescuentosCorregido;
+    // Verificar que los cálculos cuadren matemáticamente
+    const diferencia = (liquidation.total_gross_income || 0) - totalDescuentosCorregido - liquidoCorregido;
+    if (Math.abs(diferencia) > 1) {
+      console.warn(`⚠️ Diferencia matemática en Excel para RUT ${employee?.rut}: $${diferencia}`);
+    }
 
     totalHaberes += liquidation.total_gross_income || 0;
-    totalDescuentos += totalDescuentosCorregido; // Usar total corregido
-    totalLiquido += liquidoCorregido; // Usar líquido corregido
+    totalDescuentos += totalDescuentosCorregido; // Total desde liquidación
+    totalLiquido += liquidoCorregido; // Líquido desde liquidación
 
+    // ✅ CALCULAR GRATIFICACIÓN TOTAL (regular + Art. 50)
+    const gratificacionTotal = (liquidation.gratification || 0) + (liquidation.legal_gratification_art50 || 0);
+    
     const dataRow = worksheet.addRow([
       employee?.rut || '',
       cleanName(employee?.last_name) || '',
@@ -411,6 +423,7 @@ async function generatePayrollExcel(
       contract?.department || '',
       liquidation.days_worked || 30,
       liquidation.base_salary || 0,
+      gratificacionTotal, // ✅ NUEVA COLUMNA GRATIFICACIÓN
       liquidation.food_allowance || 0,
       liquidation.transport_allowance || 0,
       liquidation.family_allowance || 0,
@@ -427,8 +440,8 @@ async function generatePayrollExcel(
 
     // ✅ FORMATO DE DATOS
     dataRow.eachCell((cell, colNumber) => {
-      // Formato moneda para columnas de dinero (8-20)
-      if (colNumber >= 8 && colNumber <= 20 && colNumber !== 7) {
+      // Formato moneda para columnas de dinero (8-21) - ajustado por nueva columna
+      if (colNumber >= 8 && colNumber <= 21 && colNumber !== 7) {
         cell.numFmt = '"$"#,##0';
       }
       
@@ -460,10 +473,17 @@ async function generatePayrollExcel(
   const totalRow = worksheet.addRow([
     '', '', '', '', '', '', 
     'TOTALES:',
-    '', '', '', '',
+    '', // Sueldo base total
+    '', // Gratificación total
+    '', // Colación total
+    '', // Movilización total
+    '', // Asig. familiar total
     '', // Otros haberes (calculado)
     totalHaberes,
-    '', '', '', '',
+    '', // AFP total
+    '', // Salud total
+    '', // Cesantía total
+    '', // Impuesto total
     '', // Otros descuentos (calculado)
     totalDescuentos,
     totalLiquido
@@ -471,7 +491,7 @@ async function generatePayrollExcel(
 
   totalRow.eachCell((cell, colNumber) => {
     cell.font = { bold: true };
-    if (colNumber >= 8 && colNumber <= 20) {
+    if (colNumber >= 8 && colNumber <= 21) { // Ajustado para 21 columnas
       cell.numFmt = '"$"#,##0';
       cell.fill = {
         type: 'pattern',
