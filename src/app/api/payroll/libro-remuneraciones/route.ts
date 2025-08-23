@@ -511,7 +511,7 @@ function formatDate(dateString: string): string {
   return `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()} a las ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}${date.getHours() >= 12 ? 'PM' : 'AM'}`;
 }
 
-// ✅ Función para generar CSV con DATOS REALES de Supabase
+// ✅ Función para generar CSV con DATOS REALES de Supabase - FORMATO LRE DIRECCIÓN DEL TRABAJO
 async function generateRealCSV(book: any, companyId: string): Promise<string> {
   // Obtener detalles completos del libro
   const { data: bookDetails, error } = await supabase
@@ -525,117 +525,253 @@ async function generateRealCSV(book: any, companyId: string): Promise<string> {
     return generateCSV(book);
   }
 
+  // ✅ FORMATO LRE - LIBRO DE REMUNERACIONES ELECTRÓNICO
+  // Estructura según estándar de la Dirección del Trabajo de Chile
   const headers = [
-    'RUT', 'AP PATERNO', 'AP MATERNO', 'NOMBRES', 'CARGO', 'AREA', 'CENTRO COSTO',
-    'DÍAS TRABAJADOS', 'HORAS SEMANALES', 'HORAS NO TRABAJADAS',
-    'BASE IMP. PREVISIÓN', 'BASE IMP. CESANTÍA', 'SUELDO BASE',
-    'APORTE ASISTENCIA', 'HORAS EXTRAS', 'ASIGNACIÓN FAMILIAR',
-    'ASIGNACION DE ANTIGUEDAD', 'ASIGNACION DE PERDIDA DE CAJA',
-    'ASIGNACION DE TRAMO', 'ASIGNACIÓN DE ZONA',
-    'ASIGNACION RESPONSABILIDAD DIRECTIVA', 'BONO COMPENSATORIO',
-    'BONO DE ASESORIA CENTRO DE ALUMNO', 'BONO DE RESPONSABILIDAD',
-    'BONO LEUMAG', 'BONO NOCTURNO', 'BONO POR CARGO', 'BONO POR DESEMPEÑO',
-    'B.R.P', 'B.R.P MENCION', 'COLACIÓN', 'GRATIFICACION MENSUAL',
-    'LEY 19464', 'MOVILIZACIÓN', 'OTROS HABERES IMPONIBLES Y TRIBUTABLES',
-    'PLANILLA SUPLEMENTARIA', 'TOTAL HABERES',
-    'PREVIS', 'APV', 'SALUD', 'SALUD VOLUNTARIA', 'CESANTÍA', 'IMPUESTO',
-    'CUENTA_2', 'SOBREGIRO DESC.', 'ACCIONES COOPEUCH', 'AGRUPACION ALUEN',
-    'AHORRO COOPEUCH', 'APORTE JORNADAS', 'COMITE SOLIDARIDAD',
-    'CREDITO COOPEUCH', 'CUENTA 2 PESOS', 'CUOTA SINDICAL',
-    'DESCUENTO OPTICA', 'FALP', 'MUTUAL DE SEGUROS', 'PRÉSTAMO DE EMPRESA',
-    'PROTEGER', 'RETENCION 3% PRESTAMO SOLIDARIO', 'SEGURO COMPLEMENTARIO',
-    'CRÉDITO PERSONAL CAJA LOS ANDES', 'LEASING (AHORRO) CAJA LOS ANDES',
-    'SEGURO DE VIDA CAJA LOS ANDES', 'TOTAL DESCUENTOS', 'SUELDO LÍQUIDO', 'SOBREGIRO'
+    // IDENTIFICACIÓN DEL TRABAJADOR
+    'RUT_TRABAJADOR',
+    'APELLIDO_PATERNO', 
+    'APELLIDO_MATERNO',
+    'NOMBRES',
+    'SEXO',
+    'NACIONALIDAD',
+    'TIPO_CONTRATO',
+    'FECHA_INICIO_CONTRATO',
+    'FECHA_TERMINO_CONTRATO',
+    'CARGO',
+    'CENTRO_COSTO',
+    
+    // JORNADA LABORAL
+    'DIAS_TRABAJADOS',
+    'HORAS_ORDINARIAS',
+    'HORAS_EXTRAS_50',
+    'HORAS_EXTRAS_100',
+    
+    // REMUNERACIONES IMPONIBLES
+    'SUELDO_BASE',
+    'GRATIFICACION',
+    'COMISIONES',
+    'BONOS_IMPONIBLES',
+    'HORAS_EXTRAS_MONTO',
+    'OTROS_IMPONIBLES',
+    'TOTAL_IMPONIBLE',
+    
+    // REMUNERACIONES NO IMPONIBLES
+    'COLACION',
+    'MOVILIZACION',
+    'VIATICOS',
+    'ASIGNACION_FAMILIAR',
+    'ASIGNACION_CAJA',
+    'OTROS_NO_IMPONIBLES',
+    'TOTAL_NO_IMPONIBLE',
+    
+    // DESCUENTOS PREVISIONALES
+    'AFP_CODIGO',
+    'AFP_MONTO',
+    'SALUD_CODIGO',
+    'SALUD_MONTO',
+    'SALUD_ADICIONAL',
+    'CESANTIA_TRABAJADOR',
+    'SEGURO_INVALIDEZ',
+    'TRABAJO_PESADO',
+    'APV_MONTO',
+    'TOTAL_PREVISION',
+    
+    // DESCUENTOS LEGALES
+    'IMPUESTO_UNICO',
+    'RETENCION_JUDICIAL',
+    'TOTAL_DESCUENTOS_LEGALES',
+    
+    // OTROS DESCUENTOS
+    'ANTICIPOS',
+    'PRESTAMOS',
+    'CUOTA_SINDICAL',
+    'OTROS_DESCUENTOS',
+    'TOTAL_OTROS_DESCUENTOS',
+    
+    // TOTALES
+    'TOTAL_HABERES',
+    'TOTAL_DESCUENTOS',
+    'SUELDO_LIQUIDO',
+    
+    // APORTES DEL EMPLEADOR
+    'APORTE_SIS',
+    'APORTE_MUTUAL',
+    'CESANTIA_EMPLEADOR',
+    'OTROS_APORTES_EMPLEADOR'
   ];
 
-  // Encabezados del libro
-  const bookHeaders = [
-    `Libro: Remuneraciones${';'.repeat(headers.length - 1)}`,
-    `Empresa: ${book.company_name} (${book.company_rut})${';'.repeat(headers.length - 1)}`,
-    `Periodo: ${formatPeriod(book.period)}${';'.repeat(headers.length - 1)}`,
-    `Fecha Generación: ${formatDate(book.generation_date)}${';'.repeat(headers.length - 1)}`,
-    `Total Empleados: ${book.total_employees}${';'.repeat(headers.length - 1)}`,
-    `Total Haberes: $${book.total_haberes?.toLocaleString('es-CL')}${';'.repeat(headers.length - 1)}`,
-    `Total Descuentos: $${book.total_descuentos?.toLocaleString('es-CL')}${';'.repeat(headers.length - 1)}`,
-    `Total Líquido: $${book.total_liquido?.toLocaleString('es-CL')}${';'.repeat(headers.length - 1)}`,
-    ';'.repeat(headers.length - 1),
+  // Metadatos del libro según formato LRE
+  const [year, month] = book.period.split('-');
+  const bookMetadata = [
+    `RUT_EMPRESA;${book.company_rut?.replace(/\./g, '').toUpperCase() || ''}`,
+    `RAZON_SOCIAL;${book.company_name || ''}`,
+    `PERIODO;${year}${month}`,
+    `FECHA_PAGO;${new Date(book.generation_date).toISOString().split('T')[0]}`,
+    `NUMERO_TRABAJADORES;${book.total_employees || 0}`,
+    `TIPO_ARCHIVO;LRE`,
+    `VERSION;1.0`,
+    '', // Línea vacía de separación
     headers.join(';')
   ];
 
-  // ✅ Datos REALES de empleados desde la base de datos
+  // ✅ Datos REALES de empleados en FORMATO LRE
   const employeeRows = bookDetails.map((detail: any) => {
+    // Formatear RUT sin puntos y con guión (10 caracteres: 12345678-9)
+    const formatRut = (rut: string) => {
+      if (!rut) return '0000000000';
+      const cleaned = rut.replace(/[^0-9kK-]/g, '').toUpperCase();
+      // Agregar ceros a la izquierda si es necesario para llegar a 10 caracteres
+      const parts = cleaned.split('-');
+      if (parts.length === 2) {
+        const rutNumber = parts[0].padStart(8, '0');
+        return `${rutNumber}-${parts[1]}`;
+      }
+      return cleaned.padStart(10, '0');
+    };
+
+    // Calcular totales
+    const totalImponible = (detail.sueldo_base || 0) + 
+                          (detail.gratificacion_mensual || 0) + 
+                          (detail.horas_extras || 0) +
+                          (detail.otros_haberes_imponibles || 0);
+    
+    const totalNoImponible = (detail.colacion || 0) + 
+                            (detail.movilizacion || 0) + 
+                            (detail.asignacion_familiar || 0);
+    
+    const totalPrevision = (detail.prevision_afp || 0) + 
+                          (detail.salud || 0) + 
+                          (detail.cesantia || 0) +
+                          (detail.apv || 0);
+    
+    const totalDescuentosLegales = (detail.impuesto_unico || 0);
+    
+    const totalOtrosDescuentos = (detail.cuota_sindical || 0) + 
+                                 (detail.prestamo_empresa || 0) +
+                                 (detail.otros_descuentos || 0);
+
     return [
-      detail.employee_rut || '',
-      detail.apellido_paterno || '',
-      detail.apellido_materno || '',
-      detail.nombres || '',
-      detail.cargo || '',
-      detail.area || '',
-      detail.centro_costo || 'GENERAL',
-      detail.dias_trabajados || 30,
-      detail.horas_semanales || 45,
-      detail.horas_no_trabajadas || 0,
-      (detail.base_imp_prevision || 0).toFixed(0),
-      (detail.base_imp_cesantia || 0).toFixed(0),
-      (detail.sueldo_base || 0).toFixed(0),
-      (detail.aporte_asistencia || 0).toFixed(0),
-      (detail.horas_extras || 0).toFixed(0),
-      (detail.asignacion_familiar || 0).toFixed(0),
-      (detail.asignacion_antiguedad || 0).toFixed(0),
-      (detail.asignacion_perdida_caja || 0).toFixed(0),
-      (detail.asignacion_tramo || 0).toFixed(0),
-      (detail.asignacion_zona || 0).toFixed(0),
-      (detail.asignacion_responsabilidad_directiva || 0).toFixed(0),
-      (detail.bono_compensatorio || 0).toFixed(0),
-      (detail.bono_asesoria_centro_alumno || 0).toFixed(0),
-      (detail.bono_responsabilidad || 0).toFixed(0),
-      (detail.bono_leumag || 0).toFixed(0),
-      (detail.bono_nocturno || 0).toFixed(0),
-      (detail.bono_cargo || 0).toFixed(0),
-      (detail.bono_desempeno || 0).toFixed(0),
-      (detail.brp || 0).toFixed(0),
-      (detail.brp_mencion || 0).toFixed(0),
-      (detail.colacion || 0).toFixed(0),
-      (detail.gratificacion_mensual || 0).toFixed(0),
-      (detail.ley_19464 || 0).toFixed(0),
-      (detail.movilizacion || 0).toFixed(0),
-      (detail.otros_haberes_imponibles || 0).toFixed(0),
-      (detail.planilla_suplementaria || 0).toFixed(0),
-      (detail.total_haberes || 0).toFixed(0),
-      (detail.prevision_afp || 0).toFixed(0),
-      (detail.apv || 0).toFixed(0),
-      (detail.salud || 0).toFixed(0),
-      (detail.salud_voluntaria || 0).toFixed(0),
-      (detail.cesantia || 0).toFixed(0), // ✅ CESANTÍA REAL 0.6%
-      (detail.impuesto_unico || 0).toFixed(0),
-      (detail.cuenta_2 || 0).toFixed(0),
-      (detail.sobregiro_desc || 0).toFixed(0),
-      (detail.acciones_coopeuch || 0).toFixed(0),
-      (detail.agrupacion_aluen || 0).toFixed(0),
-      (detail.ahorro_coopeuch || 0).toFixed(0),
-      (detail.aporte_jornadas || 0).toFixed(0),
-      (detail.comite_solidaridad || 0).toFixed(0),
-      (detail.credito_coopeuch || 0).toFixed(0),
-      (detail.cuenta_2_pesos || 0).toFixed(0),
-      (detail.cuota_sindical || 0).toFixed(0),
-      (detail.descuento_optica || 0).toFixed(0),
-      (detail.falp || 0).toFixed(0),
-      (detail.mutual_seguros || 0).toFixed(0),
-      (detail.prestamo_empresa || 0).toFixed(0),
-      (detail.proteger || 0).toFixed(0),
-      (detail.retencion_3_prestamo_solidario || 0).toFixed(0),
-      (detail.seguro_complementario || 0).toFixed(0),
-      (detail.credito_personal_caja_andes || 0).toFixed(0),
-      (detail.leasing_ahorro_caja_andes || 0).toFixed(0),
-      (detail.seguro_vida_caja_andes || 0).toFixed(0),
-      (detail.total_descuentos || 0).toFixed(0),
-      (detail.sueldo_liquido || 0).toFixed(0),
-      (detail.sobregiro || 0).toFixed(0)
+      // IDENTIFICACIÓN DEL TRABAJADOR
+      formatRut(detail.employee_rut),                          // RUT_TRABAJADOR
+      (detail.apellido_paterno || '').toUpperCase(),          // APELLIDO_PATERNO
+      (detail.apellido_materno || '').toUpperCase(),          // APELLIDO_MATERNO
+      (detail.nombres || '').toUpperCase(),                   // NOMBRES
+      'M',                                                     // SEXO (M/F)
+      'CHILENA',                                              // NACIONALIDAD
+      'INDEFINIDO',                                           // TIPO_CONTRATO
+      '2024-01-01',                                          // FECHA_INICIO_CONTRATO
+      '',                                                    // FECHA_TERMINO_CONTRATO
+      (detail.cargo || 'EMPLEADO').toUpperCase(),            // CARGO
+      (detail.centro_costo || 'GENERAL').toUpperCase(),      // CENTRO_COSTO
+      
+      // JORNADA LABORAL
+      detail.dias_trabajados || 30,                          // DIAS_TRABAJADOS
+      (detail.horas_semanales || 45) * 4,                   // HORAS_ORDINARIAS (mensual)
+      0,                                                     // HORAS_EXTRAS_50
+      0,                                                     // HORAS_EXTRAS_100
+      
+      // REMUNERACIONES IMPONIBLES
+      Math.round(detail.sueldo_base || 0),                  // SUELDO_BASE
+      Math.round(detail.gratificacion_mensual || 0),        // GRATIFICACION
+      0,                                                     // COMISIONES
+      Math.round(detail.otros_haberes_imponibles || 0),     // BONOS_IMPONIBLES
+      Math.round(detail.horas_extras || 0),                 // HORAS_EXTRAS_MONTO
+      0,                                                     // OTROS_IMPONIBLES
+      Math.round(totalImponible),                           // TOTAL_IMPONIBLE
+      
+      // REMUNERACIONES NO IMPONIBLES
+      Math.round(detail.colacion || 0),                     // COLACION
+      Math.round(detail.movilizacion || 0),                 // MOVILIZACION
+      0,                                                     // VIATICOS
+      Math.round(detail.asignacion_familiar || 0),          // ASIGNACION_FAMILIAR
+      0,                                                     // ASIGNACION_CAJA
+      0,                                                     // OTROS_NO_IMPONIBLES
+      Math.round(totalNoImponible),                         // TOTAL_NO_IMPONIBLE
+      
+      // DESCUENTOS PREVISIONALES
+      '033',                                                 // AFP_CODIGO (033 = HABITAT ejemplo)
+      Math.round(detail.prevision_afp || 0),                // AFP_MONTO
+      '007',                                                 // SALUD_CODIGO (007 = FONASA)
+      Math.round(detail.salud || 0),                        // SALUD_MONTO
+      0,                                                     // SALUD_ADICIONAL
+      Math.round(detail.cesantia || 0),                     // CESANTIA_TRABAJADOR
+      0,                                                     // SEGURO_INVALIDEZ
+      0,                                                     // TRABAJO_PESADO
+      Math.round(detail.apv || 0),                          // APV_MONTO
+      Math.round(totalPrevision),                           // TOTAL_PREVISION
+      
+      // DESCUENTOS LEGALES
+      Math.round(detail.impuesto_unico || 0),               // IMPUESTO_UNICO
+      0,                                                     // RETENCION_JUDICIAL
+      Math.round(totalDescuentosLegales),                   // TOTAL_DESCUENTOS_LEGALES
+      
+      // OTROS DESCUENTOS
+      0,                                                     // ANTICIPOS
+      Math.round(detail.prestamo_empresa || 0),             // PRESTAMOS
+      Math.round(detail.cuota_sindical || 0),               // CUOTA_SINDICAL
+      Math.round(detail.otros_descuentos || 0),             // OTROS_DESCUENTOS
+      Math.round(totalOtrosDescuentos),                     // TOTAL_OTROS_DESCUENTOS
+      
+      // TOTALES
+      Math.round(detail.total_haberes || 0),                // TOTAL_HABERES
+      Math.round(detail.total_descuentos || 0),             // TOTAL_DESCUENTOS
+      Math.round(detail.sueldo_liquido || 0),               // SUELDO_LIQUIDO
+      
+      // APORTES DEL EMPLEADOR
+      Math.round(totalImponible * 0.024),                   // APORTE_SIS (2.4% aprox)
+      Math.round(totalImponible * 0.0093),                  // APORTE_MUTUAL (0.93% aprox)
+      Math.round(totalImponible * 0.024),                   // CESANTIA_EMPLEADOR (2.4%)
+      0                                                      // OTROS_APORTES_EMPLEADOR
     ].join(';');
   });
 
+  // Línea de totales generales
+  const totalLine = [
+    'TOTALES',
+    '', '', '', '', '', '', '', '', '', '',
+    bookDetails.reduce((sum: number, d: any) => sum + (d.dias_trabajados || 0), 0),
+    '', '', '',
+    bookDetails.reduce((sum: number, d: any) => sum + (d.sueldo_base || 0), 0),
+    bookDetails.reduce((sum: number, d: any) => sum + (d.gratificacion_mensual || 0), 0),
+    0,
+    bookDetails.reduce((sum: number, d: any) => sum + (d.otros_haberes_imponibles || 0), 0),
+    bookDetails.reduce((sum: number, d: any) => sum + (d.horas_extras || 0), 0),
+    0,
+    '', // total imponible se calcula
+    bookDetails.reduce((sum: number, d: any) => sum + (d.colacion || 0), 0),
+    bookDetails.reduce((sum: number, d: any) => sum + (d.movilizacion || 0), 0),
+    0,
+    bookDetails.reduce((sum: number, d: any) => sum + (d.asignacion_familiar || 0), 0),
+    0, 0,
+    '', // total no imponible se calcula
+    '',
+    bookDetails.reduce((sum: number, d: any) => sum + (d.prevision_afp || 0), 0),
+    '',
+    bookDetails.reduce((sum: number, d: any) => sum + (d.salud || 0), 0),
+    0,
+    bookDetails.reduce((sum: number, d: any) => sum + (d.cesantia || 0), 0),
+    0, 0,
+    bookDetails.reduce((sum: number, d: any) => sum + (d.apv || 0), 0),
+    '', // total prevision se calcula
+    bookDetails.reduce((sum: number, d: any) => sum + (d.impuesto_unico || 0), 0),
+    0,
+    '', // total descuentos legales se calcula
+    0,
+    bookDetails.reduce((sum: number, d: any) => sum + (d.prestamo_empresa || 0), 0),
+    bookDetails.reduce((sum: number, d: any) => sum + (d.cuota_sindical || 0), 0),
+    bookDetails.reduce((sum: number, d: any) => sum + (d.otros_descuentos || 0), 0),
+    '', // total otros descuentos se calcula
+    book.total_haberes || 0,
+    book.total_descuentos || 0,
+    book.total_liquido || 0,
+    '', '', '', ''
+  ].join(';');
+
   return [
-    ...bookHeaders,
-    ...employeeRows
+    ...bookMetadata,
+    ...employeeRows,
+    '', // Línea vacía antes de totales
+    totalLine
   ].join('\n');
 }

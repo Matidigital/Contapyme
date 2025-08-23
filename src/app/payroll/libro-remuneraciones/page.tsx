@@ -815,29 +815,6 @@ export default function LibroRemuneracionesPage() {
                             </div>
                           </div>
                         </div>
-                        <div className="flex flex-col sm:flex-row gap-3">
-                          <button
-                            onClick={() => downloadExcel(book)}
-                            className="flex items-center justify-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-                          >
-                            <FileSpreadsheet className="w-4 h-4 mr-2" />
-                            Excel
-                          </button>
-                          <button
-                            onClick={() => downloadCSV(book)}
-                            className="flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-                          >
-                            <Download className="w-4 h-4 mr-2" />
-                            CSV
-                          </button>
-                          <button
-                            onClick={() => downloadPrevired(book)}
-                            className="flex items-center justify-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-                          >
-                            <FileText className="w-4 h-4 mr-2" />
-                            Previred
-                          </button>
-                        </div>
                       </div>
                     </div>
                     <div className="p-6">
@@ -922,16 +899,24 @@ export default function LibroRemuneracionesPage() {
                       <div className="mt-6 pt-4 border-t border-white/20">
                         <div className="flex flex-col sm:flex-row gap-3">
                           <button
-                            onClick={() => downloadCSV(book)}
+                            onClick={() => downloadExcel(book)}
                             className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-medium rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                           >
                             <FileSpreadsheet className="w-4 h-4" />
+                            Descargar Excel
+                          </button>
+                          
+                          <button
+                            onClick={() => downloadCSV(book)}
+                            className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                          >
+                            <Download className="w-4 h-4" />
                             Descargar CSV
                           </button>
                           
                           <button
                             onClick={() => downloadPrevired(book)}
-                            className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                            className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-medium rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                           >
                             <FileText className="w-4 h-4" />
                             Descargar PREVIRED
