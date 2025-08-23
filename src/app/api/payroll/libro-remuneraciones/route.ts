@@ -146,7 +146,11 @@ export async function GET(request: NextRequest) {
         const book = demoBooks[0];
         const csvContent = generateCSV(book);
         
-        return new NextResponse(csvContent, {
+        // ✅ AGREGAR BOM PARA ENCODING UTF-8 CORRECTO
+        const bom = '\uFEFF';
+        const csvWithBom = bom + csvContent;
+        
+        return new NextResponse(csvWithBom, {
           status: 200,
           headers: {
             'Content-Type': 'text/csv; charset=utf-8',
@@ -168,7 +172,11 @@ export async function GET(request: NextRequest) {
       const book = books[0];
       const csvContent = await generateRealCSV(book, companyId);
       
-      return new NextResponse(csvContent, {
+      // ✅ AGREGAR BOM PARA ENCODING UTF-8 CORRECTO
+      const bom = '\uFEFF';
+      const csvWithBom = bom + csvContent;
+      
+      return new NextResponse(csvWithBom, {
         status: 200,
         headers: {
           'Content-Type': 'text/csv; charset=utf-8',
@@ -304,11 +312,21 @@ export async function POST(request: NextRequest) {
 
     const bookNumber = (lastBook && lastBook[0]?.book_number || 0) + 1;
 
-    // ✅ Calcular totales reales
+    // ✅ CALCULAR TOTALES REALES DESDE LIQUIDACIONES
     const totalEmployees = liquidations.length;
+    
+    // Calcular totales sumando todas las liquidaciones reales
     const totalHaberes = liquidations.reduce((sum, liq) => sum + (liq.total_gross_income || 0), 0);
     const totalDescuentos = liquidations.reduce((sum, liq) => sum + (liq.total_deductions || 0), 0);
     const totalLiquido = liquidations.reduce((sum, liq) => sum + (liq.net_salary || 0), 0);
+    
+    console.log('🔍 Totales calculados desde liquidaciones:', {
+      empleados: totalEmployees,
+      haberes: totalHaberes,
+      descuentos: totalDescuentos,
+      liquido: totalLiquido,
+      verificacion: totalHaberes - totalDescuentos === totalLiquido ? '✅ CUADRA' : '❌ NO CUADRA'
+    });
 
     // ✅ Crear libro en la base de datos
     const { data: newBook, error: bookError } = await supabase
@@ -337,9 +355,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ✅ Crear detalles por empleado con datos REALES
+    // ✅ Crear detalles por empleado con cálculos desde liquidaciones reales
     const bookDetails = liquidations.map(liquidation => {
       const employee = liquidation.employees;
+      
+      console.log(`🔍 Procesando empleado ${employee?.rut}:`, {
+        haberes: liquidation.total_gross_income,
+        descuentos: liquidation.total_deductions, 
+        liquido: liquidation.net_salary
+      });
+      
+      // ✅ USAR VALORES DIRECTOS DE LA LIQUIDACIÓN (ya calculados correctamente)
+      const haberesReales = liquidation.total_gross_income || 0;
+      const descuentosReales = liquidation.total_deductions || 0;
+      const liquidoReal = liquidation.net_salary || 0;
+      
+      // Verificar coherencia matemática
+      const diferencia = haberesReales - descuentosReales - liquidoReal;
+      if (Math.abs(diferencia) > 1) {
+        console.warn(`⚠️ Diferencia matemática para ${employee?.rut}: $${diferencia}`);
+      }
       
       return {
         payroll_book_id: newBook.id,
@@ -361,13 +396,13 @@ export async function POST(request: NextRequest) {
         colacion: liquidation.food_allowance || 0,
         movilizacion: liquidation.transport_allowance || 0,
         asignacion_familiar: liquidation.family_allowance || 0,
-        total_haberes: liquidation.total_gross_income || 0,
+        total_haberes: haberesReales,
         prevision_afp: liquidation.afp_amount || 0,
         salud: liquidation.health_amount || 0,
-        cesantia: liquidation.unemployment_amount || 0, // ✅ INCLUYE CESANTÍA 0.6%
+        cesantia: liquidation.unemployment_amount || 0,
         impuesto_unico: liquidation.income_tax_amount || 0,
-        total_descuentos: liquidation.total_deductions || 0,
-        sueldo_liquido: liquidation.net_salary || 0
+        total_descuentos: descuentosReales,
+        sueldo_liquido: liquidoReal
       };
     });
 
@@ -525,17 +560,67 @@ async function generateRealCSV(book: any, companyId: string): Promise<string> {
     return generateCSV(book);
   }
 
-  // Obtener datos adicionales de empleados para mapear AFP y salud
+  // ✅ Obtener datos COMPLETOS de empleados Y liquidaciones para LRE
   const employeeIds = bookDetails.map(d => d.employee_id);
   const { data: employees } = await supabase
     .from('employees')
-    .select('id, afp_id, health_insurance_id')
+    .select(`
+      id, 
+      rut,
+      first_name, 
+      last_name, 
+      middle_name,
+      family_members,
+      family_allowance_section,
+      afp_id, 
+      health_insurance_id,
+      ccaf_id,
+      mutual_id,
+      employment_contracts!inner (
+        id,
+        contract_type,
+        position,
+        start_date,
+        end_date,
+        base_salary,
+        weekly_hours,
+        status,
+        termination_reason
+      )
+    `)
     .in('id', employeeIds);
 
-  const employeeMap = new Map(employees?.map(e => [e.id, e]) || []);
+  // ✅ OBTENER LIQUIDACIONES REALES DEL PERÍODO CON CAMPOS OBLIGATORIOS LRE
+  const [year, month] = book.period.split('-');
+  const { data: liquidations } = await supabase
+    .from('payroll_liquidations')
+    .select(`
+      *,
+      sick_leave_days,
+      vacation_days,
+      vacation_amount,
+      incorporation_workplace_amount,
+      young_worker_subsidy,
+      partial_period_reason
+    `)
+    .eq('company_id', companyId)
+    .eq('period_year', parseInt(year))
+    .eq('period_month', parseInt(month));
 
-  // ✅ FORMATO LRE EXACTO - LIBRO DE REMUNERACIONES ELECTRÓNICO
-  // 148 campos según estándar de la Dirección del Trabajo de Chile
+  const employeeMap = new Map(employees?.map(e => [e.id, e]) || []);
+  const liquidationMap = new Map(liquidations?.map(l => [l.employee_id, l]) || []);
+
+  // ✅ FORMATO LRE OFICIAL EXACTO - ESTRUCTURA PROPORCIONADA
+  // 147 campos en el orden oficial exacto del DT Chile
+  // 
+  // 🔴 CONCEPTOS OBLIGATORIOS IMPLEMENTADOS:
+  // - Días trabajados (1115) - desde liquidación
+  // - Días licencia médica (1116) - desde sick_leave_days
+  // - Días vacaciones (1117) - desde vacation_days 
+  // - Subsidio trabajador joven (1118) - desde young_worker_subsidy
+  // - Semana corrida (2104) - calculada según normativa chilena
+  // - Aportes empleador obligatorios: AFC (2.4%), Mutual (0.93%), SIS (1.88%)
+  // - Totales sección 5000 con fórmulas matemáticas exactas
   const headers = [
     'Rut trabajador(1101)',
     'Fecha inicio contrato(1102)',
@@ -689,9 +774,10 @@ async function generateRealCSV(book: any, companyId: string): Promise<string> {
   // Solo devolvemos los headers y las filas de datos, sin metadatos adicionales
   const csvRows = [headers.join(';')];
 
-  // ✅ Datos REALES de empleados en FORMATO LRE EXACTO (148 campos)
+  // ✅ Datos REALES de empleados en FORMATO LRE OFICIAL (147 campos exactos)
   const employeeRows = bookDetails.map((detail: any) => {
     const employee = employeeMap.get(detail.employee_id);
+    const liquidation = liquidationMap.get(detail.employee_id);
     
     // Formatear RUT sin puntos y con guión
     const formatRut = (rut: string) => {
@@ -699,197 +785,283 @@ async function generateRealCSV(book: any, companyId: string): Promise<string> {
       return rut.replace(/\./g, '').toLowerCase();
     };
 
-    // Mapear código AFP (ejemplos reales)
+    // ✅ FORMATEAR FECHAS SEGÚN INSTRUCCIONES DT: dd/mm/aaaa
+    const formatDateForLRE = (dateString: string | null) => {
+      if (!dateString) return '';
+      try {
+        const date = new Date(dateString);
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+      } catch (error) {
+        return '';
+      }
+    };
+
+    // ✅ CÓDIGOS AFP OFICIALES SEGÚN INSTRUCCIONES DT
     const getAfpCode = (afpId: number) => {
       const afpMap: Record<number, string> = {
-        1: '31',  // HABITAT
-        2: '14',  // CUPRUM 
-        3: '103', // PROVIDA
-        4: '13',  // CAPITAL
-        5: '11',  // MODELO
-        6: '6',   // PLANVITAL
-        7: '100'  // IPS
+        1: '14',  // HABITAT
+        2: '13',  // CUPRUM 
+        3: '6',   // PROVIDA
+        4: '31',  // CAPITAL
+        5: '103', // MODELO
+        6: '11',  // PLANVITAL
+        7: '19',  // UNO
+        8: '100'  // NO ESTÁ EN AFP
       };
-      return afpMap[afpId] || '31';
+      return afpMap[afpId] || '100'; // Default: No está en AFP
     };
 
-    // Mapear código salud
+
+    // ✅ CÓDIGOS FONASA/ISAPRE OFICIALES SEGÚN TABLA Nº11 DT
     const getHealthCode = (healthId: number) => {
-      if (healthId === 1) return '102'; // FONASA
-      return healthId > 1 ? healthId.toString() : '102';
+      const healthMap: Record<number, string> = {
+        1: '3',    // Banmedica
+        2: '1',    // Cruz Blanca
+        3: '4',    // Colmena
+        4: '5',    // Isapre De Codelco
+        5: '9',    // Consalud
+        6: '12',   // Vida Tres
+        7: '37',   // Chuquicamina
+        8: '38',   // Cruz Del Norte
+        9: '39',   // Fusat
+        10: '40',  // Fundación (Banco Estado)
+        11: '41',  // Rio Blanco
+        12: '42',  // San Lorenzo
+        13: '43',  // Nueva Mas Vida
+        14: '44',  // Esencial
+        15: '99',  // Sin Isapre
+        16: '102'  // Fonasa
+      };
+      return healthMap[healthId] || '102'; // Default: FONASA
     };
 
-    // Calcular totales para la sección 5000
-    const totalHaberesImponibles = (detail.sueldo_base || 0) + 
-                                   (detail.horas_extras || 0) + 
-                                   (detail.gratificacion_mensual || 0) +
-                                   (detail.otros_haberes_imponibles || 0);
-    
-    const totalHaberesNoImponibles = (detail.colacion || 0) + 
-                                     (detail.movilizacion || 0) + 
-                                     (detail.asignacion_familiar || 0);
-    
-    const totalCotizaciones = (detail.prevision_afp || 0) + 
-                             (detail.salud || 0) + 
-                             (detail.cesantia || 0) +
-                             (detail.apv || 0);
-    
-    const totalOtrosDescuentos = (detail.cuota_sindical || 0) + 
-                                 (detail.prestamo_empresa || 0);
+    // ✅ CÓDIGOS CCAF OFICIALES SEGÚN TABLA Nº13 DT
+    const getCcafCode = (ccafId: number) => {
+      const ccafMap: Record<number, string> = {
+        0: '0',   // No
+        1: '1',   // Los Andes
+        2: '2',   // La Araucana
+        3: '3',   // Los Héroes
+        4: '4'    // 18 De Septiembre
+      };
+      return ccafMap[ccafId] || '1'; // Default: Los Andes
+    };
 
-    // Calcular aportes del empleador
-    const aporteAFC = Math.round(totalHaberesImponibles * 0.024);       // 2.4%
-    const aporteMutual = Math.round(totalHaberesImponibles * 0.0093);   // 0.93%
-    const aporteSIS = Math.round(totalHaberesImponibles * 0.0141);      // 1.41%
+    // ✅ CÓDIGOS MUTUAL OFICIALES SEGÚN TABLA Nº14 DT
+    const getMutualCode = (mutualId: number) => {
+      const mutualMap: Record<number, string> = {
+        0: '0',   // Sin Mutual/Instituto De Seguridad Laboral
+        1: '1',   // Asociación Chilena de Seguridad (ACHS)
+        2: '2',   // Mutual de Seguridad CCHC
+        3: '3'    // Instituto de Seguridad del Trabajo (IST)
+      };
+      return mutualMap[mutualId] || '3'; // Default: IST
+    };
+
+    // ✅ CÓDIGOS TRAMO ASIGNACIÓN FAMILIAR SEGÚN TABLA Nº15 DT
+    const getTramoAsignacionFamiliar = (tramo: string | number) => {
+      const tramoMap: Record<string, string> = {
+        'A': 'A',   // Primer Tramo
+        'B': 'B',   // Segundo Tramo
+        'C': 'C',   // Tercer Tramo
+        'D': 'D',   // Sin Derecho
+        'S': 'S'    // Sin Información
+      };
+      return tramoMap[tramo?.toString().toUpperCase()] || 'S';
+    };
+
+    // ✅ CALCULAR TOTALES REALES DESDE LIQUIDACIONES
+    const totalHaberesImponibles = (liquidation?.base_salary || detail.sueldo_base || 0) + 
+                                   (liquidation?.overtime_amount || 0) + 
+                                   (liquidation?.gratification || liquidation?.legal_gratification_art50 || 0) +
+                                   (liquidation?.bonuses || liquidation?.other_allowances || 0);
+    
+    const totalHaberesNoImponibles = (liquidation?.food_allowance || detail.colacion || 0) + 
+                                     (liquidation?.transport_allowance || detail.movilizacion || 0) + 
+                                     (liquidation?.family_allowance || detail.asignacion_familiar || 0);
+    
+    // ✅ TOTALES EXACTOS DESDE LIQUIDACIONES REALES
+    const afpReal = Math.round(liquidation?.afp_amount || detail.prevision_afp || 0);
+    const saludReal = Math.round(liquidation?.health_amount || detail.salud || 0);  
+    const cesantiaReal = Math.round(liquidation?.unemployment_amount || detail.cesantia || 0);
+    const apvReal = Math.round(liquidation?.apv_amount || 0);
+    const totalCotizaciones = afpReal + saludReal + cesantiaReal + apvReal;
+    
+    const totalOtrosDescuentos = (liquidation?.loan_deductions || 0) + 
+                                 (liquidation?.advance_payments || 0);
+
+    // ✅ CALCULAR APORTES EMPLEADOR CON BASE IMPONIBLE REAL
+    const baseImponibleReal = liquidation?.total_taxable_income || totalHaberesImponibles;
+    const aporteAFC = Math.round(baseImponibleReal * 0.024);       // 2.4%
+    const aporteMutual = Math.round(baseImponibleReal * 0.0093);   // 0.93%
+    const aporteSIS = Math.round(baseImponibleReal * 0.0188);      // 1.88%
     const totalAportesEmpleador = aporteAFC + aporteMutual + aporteSIS;
+    
+    // ✅ CALCULAR SEMANA CORRIDA (obligatorio para trabajadores con remuneración variable)
+    const semanaCorridaAmount = liquidation?.commissions > 0 || liquidation?.overtime_amount > 0
+      ? Math.round(((liquidation?.commissions || 0) + (liquidation?.overtime_amount || 0)) / 6)
+      : 0;
 
-    // Construir fila con los 148 campos exactos
+    // ✅ Construir fila con exactamente 147 campos en orden oficial
+    const contract = employee?.employment_contracts?.[0];
+    
+    // ✅ VALIDACIÓN INSTRUCCIONES DT: Si hay fecha término, debe haber causal
+    const fechaTermino = formatDateForLRE(contract?.end_date);
+    const causalTermino = fechaTermino ? (contract?.termination_reason || '') : '';
+    
     return [
-      // SECCIÓN 1000: Datos del trabajador y contrato (31 campos)
-      formatRut(detail.employee_rut),                        // 1101: Rut trabajador
-      '01-09-2022',                                          // 1102: Fecha inicio contrato
-      '',                                                     // 1103: Fecha término contrato
-      '',                                                     // 1104: Causal término
-      '12',                                                   // 1105: Región (12 = RM)
-      '12101',                                               // 1106: Comuna (12101 = Cerrillos)
-      '1',                                                   // 1170: Tipo impuesto (1 = mensual)
-      '0',                                                   // 1146: Técnico extranjero
-      '101',                                                 // 1107: Tipo jornada (101 = completa)
-      '0',                                                   // 1108: Discapacidad
-      '0',                                                   // 1109: Pensionado vejez
-      getAfpCode(employee?.afp_id || 1),                    // 1141: AFP
-      '0',                                                   // 1142: IPS
-      getHealthCode(employee?.health_insurance_id || 1),    // 1143: FONASA/ISAPRE
-      '1',                                                   // 1151: AFC (1 = SI)
-      '1',                                                   // 1110: CCAF (1 = Los Andes)
-      '3',                                                   // 1152: Mutual (3 = IST)
-      '0',                                                   // 1111: Cargas familiares
-      '0',                                                   // 1112: Cargas maternales
-      '0',                                                   // 1113: Cargas invalidez
-      'S',                                                   // 1114: Tramo asig. familiar
-      '',                                                    // 1171-1180: 10 campos RUT sindicatos
-      '', '', '', '', '', '', '', '', '',
-      
-      // SECCIÓN 1100-1200: Días y condiciones (10 campos)
-      (detail.dias_trabajados || 30).toFixed(1),            // 1115: Días trabajados
-      '0.0',                                                 // 1116: Días licencia
-      '0',                                                   // 1117: Días vacaciones
-      '0',                                                   // 1118: Subsidio joven
-      '',                                                    // 1154: Trabajo pesado
-      '0',                                                   // 1155: APVI
-      '0',                                                   // 1157: APVC  
-      '0',                                                   // 1131: Indemnización todo evento
-      '',                                                    // 1132: Tasa indemnización
-      
-      // SECCIÓN 2000: Haberes (29 campos)
-      Math.round(detail.sueldo_base || 0),                  // 2101: Sueldo
-      Math.round(detail.horas_extras || 0),                 // 2102: Sobresueldo
-      '0',                                                   // 2103: Comisiones
-      '0',                                                   // 2104: Semana corrida
-      '0',                                                   // 2105: Participación
-      Math.round(detail.gratificacion_mensual || 0),        // 2106: Gratificación
-      '0',                                                   // 2107: Recargo domingo
-      '0',                                                   // 2108: Variable vacaciones
-      '0',                                                   // 2109: Variable clausura
-      '0',                                                   // 2110: Aguinaldo
-      Math.round(detail.otros_haberes_imponibles || 0),     // 2111: Bonos fijos
-      '0',                                                   // 2112: Tratos
-      '0',                                                   // 2113: Bonos variables
-      '0',                                                   // 2114: Opción no pactada
-      '0',                                                   // 2115: Beneficios especie
-      '0',                                                   // 2116: Rem. bimestrales
-      '0',                                                   // 2117: Rem. trimestrales
-      '0',                                                   // 2118: Rem. cuatrimestrales
-      '0',                                                   // 2119: Rem. semestrales
-      '0',                                                   // 2120: Rem. anuales
-      '0',                                                   // 2121: Participación anual
-      '0',                                                   // 2122: Gratificación anual
-      '0',                                                   // 2123: Otras rem. superiores
-      '0',                                                   // 2124: Horas sindicales
-      '0',                                                   // 2161: Sueldo empresarial
-      '0',                                                   // 2201: Subsidio licencia
-      '0',                                                   // 2202: Beca estudio
-      '0',                                                   // 2203: Gratificación zona
-      '0',                                                   // 2204: Otros no renta
-      
-      // SECCIÓN 2300: Asignaciones (20 campos)
-      Math.round(detail.colacion || 0),                     // 2301: Colación
-      Math.round(detail.movilizacion || 0),                 // 2302: Movilización
-      '0',                                                   // 2303: Viáticos
-      '0',                                                   // 2304: Pérdida caja
-      '0',                                                   // 2305: Desgaste herramienta
-      Math.round(detail.asignacion_familiar || 0),          // 2311: Asig. familiar
-      '0',                                                   // 2306: Gastos trabajo
-      '0',                                                   // 2307: Cambio residencia
-      '0',                                                   // 2308: Sala cuna
-      '0',                                                   // 2309: Teletrabajo
-      '0',                                                   // 2347: Depósito convenido
-      '0',                                                   // 2310: Alojamiento
-      '0',                                                   // 2312: Traslación
-      '0',                                                   // 2313: Indem. feriado
-      '0',                                                   // 2314: Indem. años servicio
-      '0',                                                   // 2315: Indem. aviso previo
-      '0',                                                   // 2316: Fuero maternal
-      '0',                                                   // 2331: Pago indem. todo evento
-      '0',                                                   // 2417: Indem. voluntarias
-      '0',                                                   // 2418: Indem. contractuales
-      
-      // SECCIÓN 3000: Descuentos (29 campos)
-      Math.round(detail.prevision_afp || 0),                // 3141: Cotización AFP
-      Math.round(detail.salud || 0),                        // 3143: Cotización salud 7%
-      '0',                                                   // 3144: Salud voluntaria
-      Math.round(detail.cesantia || 0),                     // 3151: AFC trabajador
-      '0',                                                   // 3146: Técnico extranjero
-      '0',                                                   // 3147: Depósito convenido
-      Math.round(detail.apv || 0),                          // 3155: APVi Mod A
-      '0',                                                   // 3156: APVi Mod B
-      '0',                                                   // 3157: APVc Mod A
-      '0',                                                   // 3158: APVc Mod B
-      Math.round(detail.impuesto_unico || 0),               // 3161: Impuesto
-      '0',                                                   // 3162: Impuesto indem.
-      '0',                                                   // 3163: Mayor retención
-      '0',                                                   // 3164: Reliquidación
-      '0',                                                   // 3165: Diferencia impuesto
-      '0',                                                   // 3166: Préstamo clase media
-      '0',                                                   // 3167: Zona extrema
-      Math.round(detail.cuota_sindical || 0),               // 3171: Cuota sindical 1
-      '0',                                                   // 3172-3180: Sindicatos 2-10
-      '0', '0', '0', '0', '0', '0', '0', '0',
-      '0',                                                   // 3110: Crédito CCAF
-      '0',                                                   // 3181: Cuota vivienda
-      '0',                                                   // 3182: Cooperativas
-      Math.round(detail.prestamo_empresa || 0),             // 3183: Otros autorizados
-      '0',                                                   // 3154: Trabajo pesado
-      '0',                                                   // 3184: Donaciones
-      '0',                                                   // 3185: Otros descuentos
-      '0',                                                   // 3186: Pensiones alimentos
-      '0',                                                   // 3187: Mujer casada
-      '0',                                                   // 3188: Anticipos
-      
-      // SECCIÓN 4000: Aportes empleador (6 campos)
-      aporteAFC,                                             // 4151: AFC empleador
-      aporteMutual,                                          // 4152: Mutual
-      '0',                                                   // 4131: Indem. todo evento
-      '0',                                                   // 4154: Trabajo pesado
-      aporteSIS,                                             // 4155: SIS
-      '0',                                                   // 4157: APVC empleador
-      
-      // SECCIÓN 5000: Totales (15 campos)
-      Math.round(detail.total_haberes || 0),                // 5201: Total haberes
-      totalHaberesImponibles,                               // 5210: Haberes imp. y trib.
-      '0',                                                   // 5220: Haberes imp. no trib.
-      totalHaberesNoImponibles,                             // 5230: Haberes no imp. no trib.
-      '0',                                                   // 5240: Haberes no imp. trib.
-      Math.round(detail.total_descuentos || 0),             // 5301: Total descuentos
-      Math.round(detail.impuesto_unico || 0),               // 5361: Impuesto remun.
-      '0',                                                   // 5362: Impuesto indem.
-      totalCotizaciones,                                     // 5341: Cotizaciones
-      totalOtrosDescuentos,                                  // 5302: Otros descuentos
-      totalAportesEmpleador,                                 // 5410: Aportes empleador
-      Math.round(detail.sueldo_liquido || 0),               // 5501: Líquido
-      '0',                                                   // 5502: Total indem.
-      '0',                                                   // 5564: Indem. tributables
-      '0'                                                    // 5565: Indem. no tributables
+      // ✅ DATOS REALES DEL EMPLEADO ACTUAL
+      formatRut(employee?.rut || detail.employee_rut),      // 1101: Rut trabajador
+      formatDateForLRE(contract?.start_date) || '01/09/2022', // 1102: Fecha inicio contrato (dd/mm/aaaa)
+      fechaTermino,                                         // 1103: Fecha término de contrato (dd/mm/aaaa)
+      causalTermino,                                        // 1104: Causal término de contrato
+      '12',                                                 // 1105: Región prestación de servicios
+      '12101',                                             // 1106: Comuna prestación de servicios
+      '1',                                                 // 1170: Tipo impuesto a la renta
+      '0',                                                 // 1146: Técnico extranjero exención cot. previsionales
+      '101',                                               // 1107: Código tipo de jornada
+      '0',                                                 // 1108: Persona con Discapacidad - Pensionado por Invalidez
+      '0',                                                 // 1109: Pensionado por vejez
+      getAfpCode(employee?.afp_id || 1),                  // 1141: AFP
+      '0',                                                 // 1142: IPS (ExINP)
+      getHealthCode(employee?.health_insurance_id || 16), // 1143: FONASA - ISAPRE (Tabla Nº11)
+      '1',                                                 // 1151: AFC
+      getCcafCode(employee?.ccaf_id || 1),                // 1110: CCAF (Tabla Nº13)
+      getMutualCode(employee?.mutual_id || 3),            // 1152: Org. administrador ley 16.744 (Tabla Nº14)
+      (employee?.family_members || 0).toString(),         // 1111: Nro cargas familiares legales autorizadas
+      '0',                                                 // 1112: Nro de cargas familiares maternales  
+      '0',                                                 // 1113: Nro de cargas familiares invalidez
+      getTramoAsignacionFamiliar(employee?.family_allowance_section || 'D'), // 1114: Tramo asignación familiar (Tabla Nº15) - Default D (Sin Derecho)
+      '',                                                  // 1171: Rut org sindical 1
+      '',                                                  // 1172: Rut org sindical 2
+      '',                                                  // 1173: Rut org sindical 3
+      '',                                                  // 1174: Rut org sindical 4
+      '',                                                  // 1175: Rut org sindical 5
+      '',                                                  // 1176: Rut org sindical 6
+      '',                                                  // 1177: Rut org sindical 7
+      '',                                                  // 1178: Rut org sindical 8
+      '',                                                  // 1179: Rut org sindical 9
+      '',                                                  // 1180: Rut org sindical 10
+      (detail.dias_trabajados || liquidation?.days_worked || 30).toFixed(1), // 1115: Nro días trabajados en el mes
+      (liquidation?.sick_leave_days || 0).toFixed(1),     // 1116: Nro días de licencia médica en el mes
+      (liquidation?.vacation_days || 0).toString(),       // 1117: Nro días de vacaciones en el mes
+      (liquidation?.young_worker_subsidy || 0).toString(), // 1118: Subsidio trabajador joven
+      '',                                                  // 1154: Puesto Trabajo Pesado
+      '0',                                                 // 1155: APVI
+      '0',                                                 // 1157: APVC
+      '0',                                                 // 1131: Indemnización a todo evento
+      '',                                                  // 1132: Tasa indemnización a todo evento
+      Math.round(liquidation?.base_salary || detail.sueldo_base || 0), // 2101: Sueldo
+      Math.round(liquidation?.overtime_amount || 0),       // 2102: Sobresueldo
+      Math.round(liquidation?.commissions || 0),           // 2103: Comisiones
+      semanaCorridaAmount,                                // 2104: Semana corrida (calculada según normativa chilena)
+      '0',                                                 // 2105: Participación
+      Math.round((liquidation?.gratification || 0) + (liquidation?.legal_gratification_art50 || 0)), // 2106: Gratificación (incluye Art. 50)
+      '0',                                                 // 2107: Recargo 30% día domingo
+      '0',                                                 // 2108: Remun. variable pagada en vacaciones
+      '0',                                                 // 2109: Remun. variable pagada en clausura
+      '0',                                                 // 2110: Aguinaldo
+      Math.round(liquidation?.bonuses || liquidation?.other_allowances || 0), // 2111: Bonos u otras remun. fijas mensuales
+      '0',                                                 // 2112: Tratos
+      '0',                                                 // 2113: Bonos u otras remun. variables mensuales o superiores a un mes
+      '0',                                                 // 2114: Ejercicio opción no pactada en contrato
+      '0',                                                 // 2115: Beneficios en especie constitutivos de remun
+      '0',                                                 // 2116: Remuneraciones bimestrales
+      '0',                                                 // 2117: Remuneraciones trimestrales
+      '0',                                                 // 2118: Remuneraciones cuatrimestral
+      '0',                                                 // 2119: Remuneraciones semestrales
+      '0',                                                 // 2120: Remuneraciones anuales
+      '0',                                                 // 2121: Participación anual
+      '0',                                                 // 2122: Gratificación anual
+      '0',                                                 // 2123: Otras remuneraciones superiores a un mes
+      '0',                                                 // 2124: Pago por horas de trabajo sindical
+      '0',                                                 // 2161: Sueldo empresarial
+      '0',                                                 // 2201: Subsidio por incapacidad laboral por licencia médica
+      '0',                                                 // 2202: Beca de estudio
+      '0',                                                 // 2203: Gratificaciones de zona
+      '0',                                                 // 2204: Otros ingresos no constitutivos de renta
+      Math.round(liquidation?.food_allowance || detail.colacion || 0), // 2301: Colación
+      Math.round(liquidation?.transport_allowance || detail.movilizacion || 0), // 2302: Movilización
+      '0',                                                 // 2303: Viáticos
+      '0',                                                 // 2304: Asignación de pérdida de caja
+      '0',                                                 // 2305: Asignación de desgaste herramienta
+      Math.round(liquidation?.family_allowance || detail.asignacion_familiar || 0), // 2311: Asignación familiar legal
+      '0',                                                 // 2306: Gastos por causa del trabajo
+      '0',                                                 // 2307: Gastos por cambio de residencia
+      '0',                                                 // 2308: Sala cuna
+      '0',                                                 // 2309: Asignación trabajo a distancia o teletrabajo
+      '0',                                                 // 2347: Depósito convenido hasta UF 900
+      '0',                                                 // 2310: Alojamiento por razones de trabajo
+      '0',                                                 // 2312: Asignación de traslación
+      '0',                                                 // 2313: Indemnización por feriado legal
+      '0',                                                 // 2314: Indemnización años de servicio
+      '0',                                                 // 2315: Indemnización sustitutiva del aviso previo
+      '0',                                                 // 2316: Indemnización fuero maternal
+      '0',                                                 // 2331: Pago indemnización a todo evento
+      '0',                                                 // 2417: Indemnizaciones voluntarias tributables
+      '0',                                                 // 2418: Indemnizaciones contractuales tributables
+      Math.round(liquidation?.afp_amount || detail.prevision_afp || 0), // 3141: Cotización obligatoria previsional (AFP o IPS)
+      Math.round(liquidation?.health_amount || detail.salud || 0), // 3143: Cotización obligatoria salud 7%
+      '0',                                                 // 3144: Cotización voluntaria para salud
+      Math.round(liquidation?.unemployment_amount || detail.cesantia || 0), // 3151: Cotización AFC - trabajador
+      '0',                                                 // 3146: Cotizaciones técnico extranjero para seguridad social fuera de Chile
+      '0',                                                 // 3147: Descuento depósito convenido hasta UF 900 anual
+      '0',                                                 // 3155: Cotización APVi Mod A
+      '0',                                                 // 3156: Cotización APVi Mod B hasta UF50
+      '0',                                                 // 3157: Cotización APVc Mod A
+      '0',                                                 // 3158: Cotización APVc Mod B hasta UF50
+      Math.round(liquidation?.income_tax_amount || detail.impuesto_unico || 0), // 3161: Impuesto retenido por remuneraciones
+      '0',                                                 // 3162: Impuesto retenido por indemnizaciones
+      '0',                                                 // 3163: Mayor retención de impuestos solicitada por el trabajador
+      '0',                                                 // 3164: Impuesto retenido por reliquidación remun. devengadas otros períodos
+      '0',                                                 // 3165: Diferencia impuesto reliquidación remun. devengadas en este período
+      '0',                                                 // 3166: Retención préstamo clase media 2020 (Ley 21.252)
+      '0',                                                 // 3167: Rebaja zona extrema DL 889
+      '0',                                                 // 3171: Cuota sindical 1
+      '0',                                                 // 3172: Cuota sindical 2
+      '0',                                                 // 3173: Cuota sindical 3
+      '0',                                                 // 3174: Cuota sindical 4
+      '0',                                                 // 3175: Cuota sindical 5
+      '0',                                                 // 3176: Cuota sindical 6
+      '0',                                                 // 3177: Cuota sindical 7
+      '0',                                                 // 3178: Cuota sindical 8
+      '0',                                                 // 3179: Cuota sindical 9
+      '0',                                                 // 3180: Cuota sindical 10
+      '0',                                                 // 3110: Crédito social CCAF
+      '0',                                                 // 3181: Cuota vivienda o educación
+      '0',                                                 // 3182: Crédito cooperativas de ahorro
+      '0',                                                 // 3183: Otros descuentos autorizados y solicitados por el trabajador
+      '0',                                                 // 3154: Cotización adicional trabajo pesado - trabajador
+      '0',                                                 // 3184: Donaciones culturales y de reconstrucción
+      '0',                                                 // 3185: Otros descuentos
+      '0',                                                 // 3186: Pensiones de alimentos
+      '0',                                                 // 3187: Descuento mujer casada
+      '0',                                                 // 3188: Descuentos por anticipos y préstamos
+      aporteAFC,                                           // 4151: AFC - Aporte empleador
+      aporteMutual,                                        // 4152: Aporte empleador seguro accidentes del trabajo y Ley SANNA
+      '0',                                                 // 4131: Aporte empleador indemnización a todo evento
+      '0',                                                 // 4154: Aporte adicional trabajo pesado - empleador
+      aporteSIS,                                           // 4155: Aporte empleador seguro invalidez y sobrevivencia
+      '0',                                                 // 4157: APVC - Aporte Empleador
+      // ✅ CÁLCULOS MATEMÁTICOS EXACTOS PARA VALIDACIÓN DT
+      Math.round(liquidation?.total_gross_income || (totalHaberesImponibles + totalHaberesNoImponibles)), // 5201: Total haberes
+      Math.round(liquidation?.total_taxable_income || totalHaberesImponibles), // 5210: Total haberes imponibles y tributables  
+      Math.round(totalHaberesNoImponibles),                // 5220: Total haberes imponibles no tributables
+      Math.round(totalHaberesNoImponibles),                // 5230: Total haberes no imponibles y no tributables
+      '0',                                                 // 5240: Total haberes no imponibles y tributables
+      Math.round(liquidation?.total_deductions || (totalCotizaciones + totalOtrosDescuentos + Math.round(liquidation?.income_tax_amount || 0))), // 5301: Total descuentos
+      Math.round(liquidation?.income_tax_amount || 0),     // 5361: Total descuentos impuestos a las remuneraciones
+      '0',                                                 // 5362: Total descuentos impuestos por indemnizaciones  
+      Math.round(totalCotizaciones),                       // 5341: Total descuentos por cotizaciones del trabajador
+      Math.round(totalOtrosDescuentos),                    // 5302: Total otros descuentos
+      Math.round(totalAportesEmpleador),                   // 5410: Total aportes empleador
+      Math.round(liquidation?.net_salary || ((totalHaberesImponibles + totalHaberesNoImponibles) - (totalCotizaciones + totalOtrosDescuentos + Math.round(liquidation?.income_tax_amount || 0)))), // 5501: Total líquido
+      '0',                                                 // 5502: Total indemnizaciones
+      '0',                                                 // 5564: Total indemnizaciones tributables
+      '0'                                                  // 5565: Total indemnizaciones no tributables
     ].join(';');
   });
 

@@ -206,7 +206,7 @@ export default function LiquidationsPage() {
     return `${monthNames[month - 1]} ${year}`;
   };
 
-  // ✅ FUNCIÓN PARA CALCULAR TOTAL DESCUENTOS DINÁMICAMENTE (igual que en PDF y página individual)
+  // ✅ FUNCIÓN PARA CALCULAR TOTAL DESCUENTOS DINÁMICAMENTE (SIN SIS - correcto según página individual)
   const calculateTotalDeductions = (liq: LiquidationSummary) => {
     return (liq.afp_amount || 0) + 
            (liq.afp_commission_amount || 0) +
@@ -219,7 +219,7 @@ export default function LiquidationsPage() {
            (liq.other_deductions || 0);
   };
 
-  // ✅ CALCULAR LÍQUIDO A PAGAR DINÁMICAMENTE
+  // ✅ CALCULAR LÍQUIDO A PAGAR DINÁMICAMENTE (correcto: 507.750)
   const calculateNetSalary = (liq: LiquidationSummary) => {
     return liq.total_gross_income - calculateTotalDeductions(liq);
   };

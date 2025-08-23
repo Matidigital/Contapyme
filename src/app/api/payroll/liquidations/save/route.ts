@@ -208,6 +208,11 @@ async function updatePayrollBook(companyId: string, year: number, month: number)
   try {
     console.log(`🔍 Actualizando libro de remuneraciones para ${companyId} - ${year}/${month}`);
     
+    const supabase = getDatabaseConnection();
+    if (!supabase) {
+      throw new Error('No se pudo obtener conexión a la base de datos');
+    }
+    
     const period = `${year}-${String(month).padStart(2, '0')}`;
     
     // ✅ OBTENER TODAS LAS LIQUIDACIONES DEL PERÍODO
@@ -388,6 +393,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'company_id es requerido' },
         { status: 400 }
+      );
+    }
+
+    const supabase = getDatabaseConnection();
+    if (!supabase) {
+      return NextResponse.json(
+        { success: false, error: 'Error de configuración de base de datos' },
+        { status: 503 }
       );
     }
 

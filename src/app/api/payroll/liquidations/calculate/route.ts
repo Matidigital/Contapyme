@@ -232,7 +232,7 @@ export async function POST(request: NextRequest) {
           afp_commission_percentage: liquidationResult.afp_commission_percentage,
           afp_amount: liquidationResult.afp_amount,
           afp_commission_amount: liquidationResult.afp_commission_amount,
-          sis_amount: liquidationResult.sis_amount,
+          // sis_amount: liquidationResult.sis_amount, // ✅ SIS es costo patronal, NO descuento del trabajador
           
           health_percentage: liquidationResult.health_percentage,
           health_amount: liquidationResult.health_amount,

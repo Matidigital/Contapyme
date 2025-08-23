@@ -387,11 +387,20 @@ async function generatePayrollExcel(
     };
 
     const otrosHaberes = (liquidation.food_allowance || 0) + (liquidation.transport_allowance || 0) - (liquidation.food_allowance || 0) - (liquidation.transport_allowance || 0);
-    const otrosDescuentos = (liquidation.total_deductions || 0) - (liquidation.afp_amount || 0) - (liquidation.health_amount || 0) - (liquidation.unemployment_amount || 0) - (liquidation.income_tax_amount || 0);
+    // ✅ AFP TOTAL = AFP (10%) + Comisión AFP (sin SIS)
+    const afpTotal = (liquidation.afp_amount || 0) + (liquidation.afp_commission_amount || 0);
+    // ✅ OTROS DESC = Solo préstamos y descuentos adicionales reales
+    const otrosDescuentos = (liquidation.loan_deductions || 0) + (liquidation.advance_payments || 0) + (liquidation.other_deductions || 0);
+
+    // ✅ TOTAL DESCUENTOS CORRECTO = Solo lo que aparece en las columnas (sin SIS)
+    const totalDescuentosCorregido = afpTotal + (liquidation.health_amount || 0) + (liquidation.unemployment_amount || 0) + (liquidation.income_tax_amount || 0) + otrosDescuentos;
+    
+    // ✅ LÍQUIDO CORREGIDO = Haberes - Descuentos corregidos
+    const liquidoCorregido = (liquidation.total_gross_income || 0) - totalDescuentosCorregido;
 
     totalHaberes += liquidation.total_gross_income || 0;
-    totalDescuentos += liquidation.total_deductions || 0;
-    totalLiquido += liquidation.net_salary || 0;
+    totalDescuentos += totalDescuentosCorregido; // Usar total corregido
+    totalLiquido += liquidoCorregido; // Usar líquido corregido
 
     const dataRow = worksheet.addRow([
       employee?.rut || '',
@@ -407,13 +416,13 @@ async function generatePayrollExcel(
       liquidation.family_allowance || 0,
       otrosHaberes,
       liquidation.total_gross_income || 0,
-      liquidation.afp_amount || 0,
+      afpTotal, // AFP (10%) + Comisión (sin SIS)
       liquidation.health_amount || 0,
       liquidation.unemployment_amount || 0,
       liquidation.income_tax_amount || 0,
       Math.max(0, otrosDescuentos), // No mostrar negativos
-      liquidation.total_deductions || 0,
-      liquidation.net_salary || 0
+      totalDescuentosCorregido, // Total corregido sin SIS
+      liquidoCorregido // Líquido corregido = Haberes - Descuentos
     ]);
 
     // ✅ FORMATO DE DATOS
