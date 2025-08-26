@@ -7,6 +7,8 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const companyId = searchParams.get('company_id');
+    const searchRut = searchParams.get('search_rut'); // 🎯 NUEVO: Búsqueda por RUT
+    const employeeId = searchParams.get('employee_id'); // 🎯 NUEVO: Búsqueda por ID de empleado
     
     if (!companyId) {
       return NextResponse.json(
@@ -15,7 +17,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log('🔍 API empleados llamada para company_id:', companyId);
+    console.log('🔍 API empleados llamada para company_id:', companyId, 'search_rut:', searchRut, 'employee_id:', employeeId);
 
     // ✅ Verificar configuración Supabase
     if (!isSupabaseConfigured()) {
@@ -37,30 +39,32 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Consulta SIMPLIFICADA para diagnosticar problema
-    const { data: employees, error } = await supabase
+    // ✅ CONSULTA OPTIMIZADA - Solo campos necesarios
+    let query = supabase
       .from('employees')
       .select(`
-        *,
+        id, rut, first_name, last_name, middle_name, email, phone, status,
         employment_contracts (
-          id,
-          position,
-          department,
-          contract_type,
-          start_date,
-          end_date,
-          base_salary,
-          salary_type,
-          status
+          id, position, department, base_salary, status, contract_type, start_date, end_date
         ),
         payroll_config (
-          afp_code,
-          health_institution_code,
-          family_allowances
+          afp_code, health_institution_code
         )
       `)
-      .eq('company_id', companyId)
-      .order('first_name', { ascending: true });
+      .eq('company_id', companyId);
+    
+    // 🎯 FILTROS ESPECÍFICOS
+    if (searchRut) {
+      query = query.eq('rut', searchRut);
+      console.log('🔎 Buscando empleado con RUT:', searchRut);
+    } else if (employeeId) {
+      query = query.eq('id', employeeId);
+      console.log('🔎 Buscando empleado con ID:', employeeId);
+    } else {
+      query = query.order('first_name', { ascending: true }).limit(100);
+    }
+    
+    const { data: employees, error } = await query;
 
     if (error) {
       console.error('❌ Error Supabase empleados:', error);
@@ -111,38 +115,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 🔍 VERIFICAR SI EL RUT YA EXISTE Y PRECARGAR DATOS
+    // 🔍 VERIFICAR SI EL RUT YA EXISTE
     const { data: existingEmployee } = await supabase
       .from('employees')
-      .select('*')
+      .select('id, rut')
       .eq('rut', body.rut)
       .single();
 
-    if (existingEmployee && body.preload_existing !== true) {
-      // Si existe y no se solicita explícitamente precargar, devolver datos para precarga
+    if (existingEmployee) {
       return NextResponse.json({
-        exists: true,
-        existing_data: {
-          rut: existingEmployee.rut,
-          first_name: existingEmployee.first_name,
-          last_name: existingEmployee.last_name,
-          middle_name: existingEmployee.middle_name,
-          birth_date: existingEmployee.birth_date,
-          gender: existingEmployee.gender,
-          marital_status: existingEmployee.marital_status,
-          nationality: existingEmployee.nationality,
-          email: existingEmployee.email,
-          phone: existingEmployee.phone,
-          mobile_phone: existingEmployee.mobile_phone,
-          address: existingEmployee.address,
-          city: existingEmployee.city,
-          region: existingEmployee.region,
-          postal_code: existingEmployee.postal_code,
-          emergency_contact_name: existingEmployee.emergency_contact_name,
-          emergency_contact_phone: existingEmployee.emergency_contact_phone,
-          emergency_contact_relationship: existingEmployee.emergency_contact_relationship
-        },
-        message: 'Empleado encontrado con este RUT. ¿Deseas precargar sus datos?'
+        error: 'Ya existe un empleado con este RUT',
+        rut: body.rut
       }, { status: 409 });
     }
 
@@ -219,8 +202,9 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Empleado creado:', employee.id);
 
-    // 2. CREAR CONTRATO COMPLETO (si se proporcionaron datos)
+    // 2. CREAR CONTRATO AUTOMÁTICAMENTE SIEMPRE
     let contract = null;
+    // 🎯 CREAR CONTRATO SIEMPRE que tengamos datos básicos
     if (body.position && body.base_salary) {
       const contractData = {
         employee_id: employee.id,
@@ -232,7 +216,11 @@ export async function POST(request: NextRequest) {
         end_date: body.contract_type === 'indefinido' ? null : body.end_date,
         base_salary: parseFloat(body.base_salary) || 0,
         salary_type: body.salary_type || 'monthly',
-        weekly_hours: parseFloat(body.weekly_hours) || 45,
+        weekly_hours: parseFloat(body.weekly_hours) || 44,
+        // 🔧 HORARIO DE TRABAJO (nuevos campos)
+        entry_time: body.entry_time || '09:00',
+        exit_time: body.exit_time || '18:00', 
+        lunch_break_duration: parseInt(body.lunch_break_duration) || 60,
         status: 'active',
         created_by: body.created_by,
         // 🔧 AÑADIR FUNCIONES DEL CARGO (desde asistente IA)
@@ -248,11 +236,12 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (contractError) {
-        console.error('⚠️ Error creando contrato:', contractError);
-        // No cancelar la creación del empleado, solo avisar
+        console.error('❌ Error creando contrato automático:', contractError);
+        console.error('Datos del contrato que fallaron:', contractData);
+        // No cancelar la creación del empleado, pero advertir en respuesta
       } else {
         contract = createdContract;
-        console.log('✅ Contrato creado:', contract.id);
+        console.log('✅ Contrato creado automáticamente:', contract.id);
         
         // 📊 Log de días trabajados para debugging
         if (workedDaysThisMonth > 0) {
@@ -386,12 +375,13 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
-// DELETE - Desactivar empleado (soft delete)
+// DELETE - Desactivar o eliminar empleado
 export async function DELETE(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const id = searchParams.get('id');
     const companyId = searchParams.get('company_id');
+    const permanent = searchParams.get('permanent') === 'true'; // Nuevo parámetro
 
     if (!id || !companyId) {
       return NextResponse.json(
@@ -400,7 +390,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    console.log('🔍 Desactivando empleado:', id, 'de empresa:', companyId);
+    console.log(`🔍 ${permanent ? 'Eliminando permanentemente' : 'Desactivando'} empleado:`, id, 'de empresa:', companyId);
 
     // ✅ Obtener conexión a Supabase
     const supabase = getDatabaseConnection();
@@ -411,41 +401,101 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Desactivar en Supabase (soft delete)
-    const { data: updatedEmployee, error: deleteError } = await supabase
-      .from('employees')
-      .update({
-        status: 'terminated',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .eq('company_id', companyId)
-      .select()
-      .single();
+    if (permanent) {
+      // ✅ ELIMINACIÓN PERMANENTE - Eliminar registros relacionados primero
+      
+      // 1. Eliminar liquidaciones
+      const { error: liquidationsError } = await supabase
+        .from('payroll_liquidations')
+        .delete()
+        .eq('employee_id', id)
+        .eq('company_id', companyId);
 
-    if (deleteError) {
-      console.error('❌ Error desactivando empleado:', deleteError);
-      return NextResponse.json(
-        { error: 'Error desactivando empleado en base de datos' },
-        { status: 500 }
-      );
+      if (liquidationsError) {
+        console.error('❌ Error eliminando liquidaciones:', liquidationsError);
+      }
+
+      // 2. Eliminar configuración previsional
+      const { error: payrollConfigError } = await supabase
+        .from('payroll_config')
+        .delete()
+        .eq('employee_id', id);
+
+      if (payrollConfigError) {
+        console.error('❌ Error eliminando configuración previsional:', payrollConfigError);
+      }
+
+      // 3. Eliminar contratos
+      const { error: contractsError } = await supabase
+        .from('employment_contracts')
+        .delete()
+        .eq('employee_id', id)
+        .eq('company_id', companyId);
+
+      if (contractsError) {
+        console.error('❌ Error eliminando contratos:', contractsError);
+      }
+
+      // 4. Finalmente eliminar el empleado
+      const { error: deleteError } = await supabase
+        .from('employees')
+        .delete()
+        .eq('id', id)
+        .eq('company_id', companyId);
+
+      if (deleteError) {
+        console.error('❌ Error eliminando empleado:', deleteError);
+        return NextResponse.json(
+          { error: 'Error eliminando empleado de la base de datos' },
+          { status: 500 }
+        );
+      }
+
+      console.log('✅ Empleado eliminado permanentemente de Supabase:', id);
+
+      return NextResponse.json({
+        success: true,
+        message: 'Empleado eliminado permanentemente del sistema',
+        mode: 'supabase_database'
+      });
+
+    } else {
+      // ✅ SOFT DELETE - Solo desactivar (comportamiento original)
+      const { data: updatedEmployee, error: deleteError } = await supabase
+        .from('employees')
+        .update({
+          status: 'terminated',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .eq('company_id', companyId)
+        .select()
+        .single();
+
+      if (deleteError) {
+        console.error('❌ Error desactivando empleado:', deleteError);
+        return NextResponse.json(
+          { error: 'Error desactivando empleado en base de datos' },
+          { status: 500 }
+        );
+      }
+
+      if (!updatedEmployee) {
+        return NextResponse.json(
+          { error: 'Empleado no encontrado' },
+          { status: 404 }
+        );
+      }
+
+      console.log('✅ Empleado desactivado en Supabase:', id);
+
+      return NextResponse.json({
+        success: true,
+        data: updatedEmployee,
+        message: 'Empleado desactivado exitosamente',
+        mode: 'supabase_database'
+      });
     }
-
-    if (!updatedEmployee) {
-      return NextResponse.json(
-        { error: 'Empleado no encontrado' },
-        { status: 404 }
-      );
-    }
-
-    console.log('✅ Empleado desactivado en Supabase:', id);
-
-    return NextResponse.json({
-      success: true,
-      data: updatedEmployee,
-      message: 'Empleado desactivado exitosamente',
-      mode: 'supabase_database'
-    });
   } catch (error) {
     console.error('Error en DELETE /api/payroll/employees:', error);
     return NextResponse.json(

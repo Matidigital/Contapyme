@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PayrollHeader } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
-import { ArrowLeft, Save, User, Phone, Mail, Home, Calendar, AlertCircle, Calculator, Settings, DollarSign, UserPlus, Briefcase } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Save, User, Phone, Mail, Home, Calendar, AlertCircle, Calculator, Settings, DollarSign, UserPlus, Briefcase } from 'lucide-react';
 import RutInputFixed from '@/modules/remuneraciones/components/empleados/RutInputFixed';
 import { usePayrollOptions } from '@/modules/remuneraciones/hooks/useConfiguracion';
 import { useCompanyId } from '@/contexts/CompanyContext';
@@ -14,9 +14,9 @@ import { JobDescriptionAssistant } from '@/components/payroll/JobDescriptionAssi
 interface EmployeeFormData {
   // Información Personal
   rut: string;
-  firstName: string;
-  lastName: string;
-  middleName: string;
+  fullNames: string;
+  firstSurname: string;
+  secondSurname: string;
   birthDate: string;
   gender: string;
   maritalStatus: string;
@@ -45,6 +45,12 @@ interface EmployeeFormData {
   baseSalary: string;
   salaryType: string;
   weeklyHours: string;
+  
+  // Horario de Trabajo (nuevos campos)
+  entryTime: string;
+  exitTime: string;
+  lunchBreakDuration: string;
+  
   healthInsurance: string;
   pensionFund: string;
   
@@ -64,12 +70,10 @@ export default function NewEmployeePage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isRutValid, setIsRutValid] = useState(false);
   const [showPayrollConfig, setShowPayrollConfig] = useState(false);
-  
-  // 🔄 NUEVAS FUNCIONALIDADES
-  const [rutCheckLoading, setRutCheckLoading] = useState(false);
-  const [showPreloadModal, setShowPreloadModal] = useState(false);
-  const [existingEmployeeData, setExistingEmployeeData] = useState<any>(null);
   const [workedDaysInfo, setWorkedDaysInfo] = useState<any>(null);
+  const [disableAutoComplete, setDisableAutoComplete] = useState(false);
+  
+  // Estados simplificados para entrada manual
   
   // 🔗 NUEVA FUNCIONALIDAD: Opciones dinámicas de AFP e ISAPRE
   // ✅ Usar company ID dinámico desde contexto
@@ -79,9 +83,9 @@ export default function NewEmployeePage() {
   const [formData, setFormData] = useState<EmployeeFormData>({
     // Información Personal
     rut: '',
-    firstName: '',
-    lastName: '',
-    middleName: '',
+    fullNames: '',
+    firstSurname: '',
+    secondSurname: '',
     birthDate: '',
     gender: '',
     maritalStatus: '',
@@ -109,7 +113,13 @@ export default function NewEmployeePage() {
     endDate: '',
     baseSalary: '',
     salaryType: 'monthly',
-    weeklyHours: '45',
+    weeklyHours: '44',
+    
+    // Horario de Trabajo
+    entryTime: '09:00',
+    exitTime: '18:00',
+    lunchBreakDuration: '60',
+    
     healthInsurance: '',
     pensionFund: '',
     
@@ -122,6 +132,197 @@ export default function NewEmployeePage() {
     hasLegalGratification: false,
   });
 
+  // 🔍 FUNCIÓN PARA BUSCAR EMPLEADO EXISTENTE POR RUT
+  const searchExistingEmployeeByRut = async (rut: string) => {
+    try {
+      const response = await fetch(`/api/payroll/employees?company_id=${companyId}&search_rut=${encodeURIComponent(rut)}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.data && result.data.length > 0) {
+          const employee = result.data[0];
+          console.log('🔎 Empleado existente encontrado:', employee);
+          return {
+            pensionFund: employee.payroll_config?.[0]?.afp_code,
+            healthInsurance: employee.payroll_config?.[0]?.health_institution_code,
+            employeeData: employee
+          };
+        }
+      }
+    } catch (error) {
+      console.log('🔍 No se encontró empleado existente:', error);
+    }
+    return null;
+  };
+
+  // 🎯 FUNCIÓN PARA CONSULTAR AFP REAL DE CHILE
+  const consultarAFPRealChile = async (rut: string) => {
+    try {
+      console.log('🇨🇱 Consultando AFP real de Chile para RUT:', rut);
+      const response = await fetch(`/api/payroll/rut-previsional?rut=${encodeURIComponent(rut)}`);
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          console.log('✅ Información previsional oficial encontrada:', result.data);
+          return {
+            afp: result.data.afp,
+            health: result.data.health,
+            source: result.data.source
+          };
+        }
+      }
+    } catch (error) {
+      console.log('⚠️ Error consultando AFP real:', error);
+    }
+    return null;
+  };
+
+  // 🎯 FUNCIÓN PARA AUTOCOMPLETAR AFP Y SALUD BASADO EN RUT
+  const autoCompletePrevisionalData = async (rut: string) => {
+    console.log('🔍 Intentando autocompletar con RUT:', rut);
+    console.log('📊 Estado actual:', {
+      rutLength: rut.length,
+      currentPensionFund: formData.pensionFund,
+      currentHealthInsurance: formData.healthInsurance,
+      hasPayrollOptions: !!payrollOptions,
+      afpOptions: payrollOptions?.afp_options?.length || 0,
+      healthOptions: payrollOptions?.health_options?.length || 0
+    });
+    
+    // Solo autocompletar si el RUT es válido y los campos están vacíos
+    if (rut.length >= 11 && !formData.pensionFund && !formData.healthInsurance && payrollOptions) {
+      // 🔎 PASO 1: Buscar si el empleado ya existe en nuestra base de datos
+      const existingEmployee = await searchExistingEmployeeByRut(rut);
+      
+      if (existingEmployee && existingEmployee.pensionFund && existingEmployee.healthInsurance) {
+        // 🎯 Usar datos del empleado existente en nuestra empresa
+        console.log('✅ Usando datos previsionales del empleado existente en empresa');
+        
+        // Buscar los nombres completos en las opciones
+        const existingAFP = payrollOptions.afp_options?.find(afp => 
+          afp.code === existingEmployee.pensionFund
+        );
+        const existingHealth = payrollOptions.health_options?.find(health => 
+          health.code === existingEmployee.healthInsurance
+        );
+        
+        if (existingAFP || existingHealth) {
+          setFormData(prev => ({
+            ...prev,
+            ...(existingAFP && { pensionFund: existingAFP.name }),
+            ...(existingHealth && { healthInsurance: existingHealth.name })
+          }));
+          
+          console.log('✅ Autocompletado con datos existentes empresa:', {
+            AFP: existingAFP?.name,
+            Salud: existingHealth?.name
+          });
+          return; // Salir aquí, ya autocompletamos
+        }
+      }
+      
+      // 🇨🇱 PASO 2: Si no existe en empresa, consultar AFP REAL de Chile
+      const afpRealChile = await consultarAFPRealChile(rut);
+      
+      if (afpRealChile) {
+        console.log('✅ Usando AFP real de Chile oficial');
+        
+        // Buscar AFP y Salud reales en nuestras opciones
+        const realAFP = payrollOptions.afp_options?.find(afp => 
+          afp.name.toUpperCase().includes(afpRealChile.afp.toUpperCase())
+        );
+        const realHealth = payrollOptions.health_options?.find(health => 
+          health.name.toUpperCase().includes(afpRealChile.health.toUpperCase())
+        );
+        
+        if (realAFP || realHealth) {
+          setFormData(prev => ({
+            ...prev,
+            ...(realAFP && { pensionFund: realAFP.name }),
+            ...(realHealth && { healthInsurance: realHealth.name })
+          }));
+          
+          console.log('✅ Autocompletado con AFP real de Chile:', {
+            AFP: realAFP?.name,
+            Salud: realHealth?.name,
+            Source: afpRealChile.source
+          });
+          return; // Salir aquí, ya autocompletamos con datos oficiales
+        }
+      }
+      
+      // 🔄 FALLBACK: Si no hay empleado existente, usar valores predeterminados
+      console.log('🔄 No se encontró empleado existente, usando valores predeterminados');
+      
+      // 🎯 PRIORIZAR AFPs MÁS COMUNES EN CHILE (en orden de preferencia)
+      const afpPreferences = ['PROVIDA', 'HABITAT', 'CUPRUM', 'PLANVITAL', 'MODELO', 'CAPITAL'];
+      let defaultAFP = null;
+      
+      // Buscar AFP en orden de preferencia
+      for (const preferredAfp of afpPreferences) {
+        defaultAFP = payrollOptions.afp_options?.find(afp => 
+          afp.name.toUpperCase().includes(preferredAfp)
+        );
+        if (defaultAFP) break;
+      }
+      
+      // Si no encuentra ninguna de las preferidas, usar la primera disponible
+      if (!defaultAFP) {
+        defaultAFP = payrollOptions.afp_options?.[0];
+      }
+      
+      // Para Salud, FONASA es la opción más común
+      const defaultHealth = payrollOptions.health_options?.find(health => 
+        health.name.toUpperCase().includes('FONASA')
+      ) || payrollOptions.health_options?.[0];
+      
+      console.log('🎯 Opciones disponibles:', {
+        afpOptions: payrollOptions.afp_options?.map(afp => afp.name) || [],
+        healthOptions: payrollOptions.health_options?.map(health => health.name) || []
+      });
+      
+      console.log('🎯 Opciones seleccionadas para autocompletado:', {
+        defaultAFP: defaultAFP?.name,
+        defaultHealth: defaultHealth?.name
+      });
+      
+      if (defaultAFP || defaultHealth) {
+        setFormData(prev => ({
+          ...prev,
+          ...(defaultAFP && !prev.pensionFund && { pensionFund: defaultAFP.name }),
+          ...(defaultHealth && !prev.healthInsurance && { healthInsurance: defaultHealth.name })
+        }));
+        
+        console.log('✅ Autocompletado previsional exitoso:', { 
+          AFP: defaultAFP?.name, 
+          Salud: defaultHealth?.name 
+        });
+      }
+    } else {
+      console.log('⚠️ No se puede autocompletar:', {
+        rutTooShort: rut.length < 11,
+        pensionFundExists: !!formData.pensionFund,
+        healthInsuranceExists: !!formData.healthInsurance,
+        noPayrollOptions: !payrollOptions
+      });
+    }
+  };
+
+  // 🔄 EFECTO PARA AUTOCOMPLETAR CUANDO PAYROLL OPTIONS ESTÉN LISTOS
+  useEffect(() => {
+    console.log('🔄 useEffect disparado:', {
+      hasPayrollOptions: !!payrollOptions,
+      rutLength: formData.rut.length,
+      currentPensionFund: formData.pensionFund,
+      currentHealthInsurance: formData.healthInsurance
+    });
+    
+    if (payrollOptions && formData.rut.length >= 11 && !formData.pensionFund && !formData.healthInsurance && !disableAutoComplete) {
+      console.log('🔄 Ejecutando autocompletado por useEffect con RUT:', formData.rut);
+      autoCompletePrevisionalData(formData.rut).catch(console.error);
+    }
+  }, [payrollOptions, formData.rut, formData.pensionFund, formData.healthInsurance]); // Se ejecuta cuando cambian estos valores
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
@@ -130,6 +331,12 @@ export default function NewEmployeePage() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+    
+    // 🎯 AUTOCOMPLETAR AFP Y SALUD AL INGRESAR RUT
+    if (name === 'rut' && value.length >= 11) {
+      autoCompletePrevisionalData(value);
+    }
+    
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
@@ -138,6 +345,11 @@ export default function NewEmployeePage() {
 
   // Manejar datos extraídos del asistente de descriptor de cargo
   const handleJobDescriptionData = (data: any) => {
+    console.log('🔍 Datos recibidos del asistente:', data);
+    
+    // 🛑 Desactivar autocompletado temporalmente para evitar creación accidental de empleados
+    setDisableAutoComplete(true);
+    
     setFormData(prev => ({
       ...prev,
       // Actualizar cargo y departamento si fueron extraídos
@@ -149,56 +361,25 @@ export default function NewEmployeePage() {
       prohibitions: data.prohibitions || []
     }));
     
-    // Limpiar errores relacionados
+    // Limpiar errores relacionados inmediatamente
     setErrors(prev => ({
       ...prev,
       position: '',
       department: ''
     }));
-  };
-
-  // 🔍 VERIFICAR SI RUT YA EXISTE
-  const checkExistingRut = async (rut: string) => {
-    if (!rut || !isRutValid) return;
     
-    setRutCheckLoading(true);
-    try {
-      const response = await fetch('/api/payroll/employees', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          company_id: companyId,
-          rut,
-          first_name: 'temp',
-          last_name: 'temp',
-          email: 'temp@temp.com'
-        })
-      });
-
-      const result = await response.json();
-      
-      if (response.status === 409 && result.exists) {
-        setExistingEmployeeData(result.existing_data);
-        setShowPreloadModal(true);
-      }
-    } catch (error) {
-      console.error('Error checking RUT:', error);
-    } finally {
-      setRutCheckLoading(false);
-    }
+    // Log para debug
+    console.log('✅ FormData actualizado con cargo:', data.position);
+    console.log('🛑 Autocompletado desactivado temporalmente');
+    
+    // Reactivar autocompletado después de 2 segundos
+    setTimeout(() => {
+      setDisableAutoComplete(false);
+      console.log('✅ Autocompletado reactivado');
+    }, 2000);
   };
 
-  // 📋 PRECARGAR DATOS EXISTENTES
-  const preloadExistingData = () => {
-    if (existingEmployeeData) {
-      setFormData(prev => ({
-        ...prev,
-        ...existingEmployeeData
-      }));
-      setShowPreloadModal(false);
-      setActiveTab('contract'); // Mover a la pestaña de contrato
-    }
-  };
+
 
   // 📅 CALCULAR DÍAS TRABAJADOS DEL MES
   const calculateWorkedDays = (startDate: string) => {
@@ -235,16 +416,48 @@ export default function NewEmployeePage() {
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     
+    // Debug temporal
+    console.log('🔍 Validando formData.position:', formData.position);
+    console.log('🔍 FormData completo:', formData);
+    
     // Validaciones básicas
     if (!formData.rut) newErrors.rut = 'RUT es requerido';
     if (!isRutValid) newErrors.rut = 'RUT inválido';
-    if (!formData.firstName) newErrors.firstName = 'Nombre es requerido';
-    if (!formData.lastName) newErrors.lastName = 'Apellido es requerido';
-    if (!formData.birthDate) newErrors.birthDate = 'Fecha de nacimiento es requerida';
+    if (!formData.fullNames) newErrors.fullNames = 'Nombres son requeridos';
+    if (!formData.firstSurname) newErrors.firstSurname = 'Primer apellido es requerido';
+    if (!formData.birthDate || formData.birthDate.trim() === '') {
+      newErrors.birthDate = 'Fecha de nacimiento es requerida';
+    } else if (!/^\d{4}-\d{2}-\d{2}$/.test(formData.birthDate)) {
+      newErrors.birthDate = 'Formato de fecha inválido (YYYY-MM-DD)';
+    }
     if (!formData.email) newErrors.email = 'Email es requerido';
-    if (!formData.position) newErrors.position = 'Cargo es requerido';
+    
+    // Validación de cargo con debug mejorado
+    const positionValue = formData.position?.trim();
+    console.log('🎯 Validando cargo - Valor actual:', `"${positionValue}"`);
+    if (!positionValue || positionValue === '') {
+      newErrors.position = 'Cargo es requerido';
+      console.log('❌ Error: Cargo es requerido');
+    } else {
+      console.log('✅ Cargo válido:', positionValue);
+    }
     if (!formData.startDate) newErrors.startDate = 'Fecha de inicio es requerida';
     if (!formData.baseSalary) newErrors.baseSalary = 'Salario base es requerido';
+    
+    // Validaciones de horario
+    if (!formData.entryTime) newErrors.entryTime = 'Hora de entrada es requerida';
+    if (!formData.exitTime) newErrors.exitTime = 'Hora de salida es requerida';
+    if (!formData.lunchBreakDuration) newErrors.lunchBreakDuration = 'Duración de colación es requerida';
+    
+    // Validación lógica: hora de salida debe ser posterior a hora de entrada
+    if (formData.entryTime && formData.exitTime && formData.entryTime >= formData.exitTime) {
+      newErrors.exitTime = 'Hora de salida debe ser posterior a hora de entrada';
+    }
+    
+    // Validación de duración de colación
+    if (formData.lunchBreakDuration && (parseInt(formData.lunchBreakDuration) < 30 || parseInt(formData.lunchBreakDuration) > 120)) {
+      newErrors.lunchBreakDuration = 'La colación debe ser entre 30 y 120 minutos';
+    }
     
     // Validaciones adicionales para configuración previsional
     if (!formData.healthInsurance) newErrors.healthInsurance = 'Previsión de salud es requerida';
@@ -255,15 +468,16 @@ export default function NewEmployeePage() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log('🚨 handleSubmit ejecutado - Tab actual:', activeTab, 'Evento:', e.type);
     e.preventDefault();
     
     if (!validateForm()) {
       // Find first tab with error
-      if (errors.rut || errors.firstName || errors.lastName || errors.birthDate) {
+      if (errors.rut || errors.fullNames || errors.firstSurname || errors.birthDate) {
         setActiveTab('personal');
       } else if (errors.email) {
         setActiveTab('contact');
-      } else if (errors.position || errors.startDate || errors.baseSalary) {
+      } else if (errors.position || errors.startDate || errors.baseSalary || errors.entryTime || errors.exitTime || errors.lunchBreakDuration) {
         setActiveTab('contract');
       } else if (errors.healthInsurance || errors.pensionFund) {
         setActiveTab('payroll');
@@ -297,14 +511,12 @@ export default function NewEmployeePage() {
         company_id: companyId,
         created_by: '550e8400-e29b-41d4-a716-446655440000',
         
-        // 🔄 FLAG PARA PERMITIR CREACIÓN CON RUT EXISTENTE
-        preload_existing: true,
         
         // Employee data
         rut: formData.rut,
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        middle_name: formData.middleName || null,
+        first_name: formData.fullNames,
+        last_name: formData.firstSurname,
+        middle_name: formData.secondSurname || null,
         birth_date: formData.birthDate,
         gender: formData.gender || null,
         marital_status: formData.maritalStatus || null,
@@ -332,7 +544,12 @@ export default function NewEmployeePage() {
         end_date: formData.endDate || null,
         base_salary: parseFloat(formData.baseSalary),
         salary_type: formData.salaryType,
-        weekly_hours: parseFloat(formData.weeklyHours) || 45,
+        weekly_hours: parseFloat(formData.weeklyHours) || 44,
+        
+        // Schedule info
+        entry_time: formData.entryTime,
+        exit_time: formData.exitTime,
+        lunch_break_duration: parseInt(formData.lunchBreakDuration) || 60,
         
         // 🔧 FUNCIONES DEL CARGO (desde asistente IA)
         job_functions: formData.jobFunctions,
@@ -363,13 +580,59 @@ export default function NewEmployeePage() {
         throw new Error(result.error || 'Error al guardar empleado');
       }
 
-      console.log('Empleado creado:', result.data);
+      console.log('✅ Empleado creado exitosamente:', result.data);
+      
+      // 🎯 MENSAJE DE CREACIÓN AUTOMÁTICA DE CONTRATO
+      let successMessage = '✅ Empleado creado exitosamente!';
+      
+      // Verificar si se creó contrato automáticamente en DB
+      if (result.data.employment_contracts && result.data.employment_contracts.length > 0) {
+        successMessage += '\n📝 Contrato laboral generado automáticamente';
+        
+        // 📄 GENERAR PDF DEL CONTRATO Y GUARDARLO EN SECCIÓN CONTRATOS
+        try {
+          const contractId = result.data.employment_contracts[0].id;
+          const employeeId = result.data.id;
+          
+          // Llamar a la API de generación de contratos PDF
+          const contractResponse = await fetch('/api/payroll/contracts/generate-pdf', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              employee_id: employeeId,
+              contract_id: contractId,
+              company_id: companyId,
+              format: 'json', // Especificar que queremos respuesta JSON
+              save_to_contracts: true // Flag para guardar en sección contratos
+            }),
+          });
+
+          if (contractResponse.ok) {
+            const contractResult = await contractResponse.json();
+            successMessage += '\n📄 Documento de contrato PDF generado y guardado';
+          } else {
+            console.warn('⚠️ Error generando PDF del contrato, pero empleado creado exitosamente');
+          }
+        } catch (contractError) {
+          console.error('Error generando contrato PDF:', contractError);
+          // No bloquear el flujo principal si falla la generación del PDF
+        }
+      }
+      
+      // Verificar si se creó configuración previsional
+      if (result.data.payroll_config && result.data.payroll_config.length > 0) {
+        successMessage += '\n🏛️ Configuración previsional establecida';
+      }
       
       // 📅 Mostrar información de días trabajados si está disponible
       if (result.worked_days_info) {
         setWorkedDaysInfo(result.worked_days_info);
-        alert(`✅ Empleado creado exitosamente!\n\n${result.worked_days_info.calculation_note}`);
+        successMessage += `\n\n📊 ${result.worked_days_info.calculation_note}`;
       }
+      
+      alert(successMessage);
       
       // Redirigir a la lista de empleados
       router.push('/payroll?tab=employees');
@@ -492,21 +755,20 @@ export default function NewEmployeePage() {
                           value={formData.rut}
                           onChange={(value) => {
                             setFormData(prev => ({ ...prev, rut: value }));
-                            // Verificar RUT cuando cambie y sea válido
-                            if (value && value.length >= 9) {
-                              setTimeout(() => checkExistingRut(value), 500);
+                            setErrors({...errors, rut: ''});
+                            // 🎯 AUTOCOMPLETAR AFP Y SALUD AL INGRESAR RUT
+                            if (value.length >= 11) {
+                              autoCompletePrevisionalData(value).catch(console.error);
                             }
                           }}
                           onValidChange={setIsRutValid}
                           required
                           className={errors.rut ? 'border-red-500' : ''}
                         />
-                        {rutCheckLoading && (
-                          <div className="absolute right-3 top-3">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-                          </div>
-                        )}
                       </div>
+                      {errors.rut && (
+                        <p className="mt-1 text-sm text-red-600">{errors.rut}</p>
+                      )}
                     </div>
 
                     <div>
@@ -524,51 +786,54 @@ export default function NewEmployeePage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Nombre *
+                        Nombres *
                       </label>
                       <input
                         type="text"
-                        name="firstName"
-                        value={formData.firstName}
+                        name="fullNames"
+                        value={formData.fullNames}
                         onChange={handleInputChange}
+                        placeholder="Ej: Juan Carlos"
                         className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                          errors.firstName ? 'border-red-500' : 'border-gray-300'
+                          errors.fullNames ? 'border-red-500' : 'border-gray-300'
                         }`}
                       />
-                      {errors.firstName && (
-                        <p className="mt-1 text-sm text-red-600">{errors.firstName}</p>
+                      {errors.fullNames && (
+                        <p className="mt-1 text-sm text-red-600">{errors.fullNames}</p>
                       )}
                     </div>
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Segundo Nombre
+                        Primer Apellido *
                       </label>
                       <input
                         type="text"
-                        name="middleName"
-                        value={formData.middleName}
+                        name="firstSurname"
+                        value={formData.firstSurname}
                         onChange={handleInputChange}
+                        placeholder="Ej: González"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                          errors.firstSurname ? 'border-red-500' : 'border-gray-300'
+                        }`}
+                      />
+                      {errors.firstSurname && (
+                        <p className="mt-1 text-sm text-red-600">{errors.firstSurname}</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Segundo Apellido
+                      </label>
+                      <input
+                        type="text"
+                        name="secondSurname"
+                        value={formData.secondSurname}
+                        onChange={handleInputChange}
+                        placeholder="Ej: Pérez (opcional)"
                         className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                       />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Apellido *
-                      </label>
-                      <input
-                        type="text"
-                        name="lastName"
-                        value={formData.lastName}
-                        onChange={handleInputChange}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                          errors.lastName ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                      />
-                      {errors.lastName && (
-                        <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>
-                      )}
                     </div>
 
                     <div>
@@ -827,8 +1092,14 @@ export default function NewEmployeePage() {
                         <Calendar className="w-4 h-4 text-purple-600" />
                       </div>
                       <h3 className="text-xl font-semibold text-gray-900">Información del Contrato</h3>
+                      <div className="ml-auto">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                          <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                          Se generará automáticamente
+                        </span>
+                      </div>
                     </div>
-                    <p className="text-gray-600">Detalles del contrato laboral</p>
+                    <p className="text-gray-600">Detalles del contrato laboral que se creará automáticamente al guardar el empleado</p>
                   </div>
                   <div className="p-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -884,7 +1155,8 @@ export default function NewEmployeePage() {
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Horas Semanales
+                          Horas Semanales *
+                          <span className="text-xs text-gray-500 ml-2">(Máx. 44 horas - Normativa 2024)</span>
                         </label>
                         <input
                           type="number"
@@ -892,9 +1164,68 @@ export default function NewEmployeePage() {
                           value={formData.weeklyHours}
                           onChange={handleInputChange}
                           min="1"
-                          max="45"
+                          max="44"
+                          placeholder="44"
                           className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                         />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Hora de Entrada *
+                        </label>
+                        <input
+                          type="time"
+                          name="entryTime"
+                          value={formData.entryTime}
+                          onChange={handleInputChange}
+                          className={`w-full px-4 py-3 bg-white/80 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200 ${
+                            errors.entryTime ? 'border-red-500' : 'border-gray-200'
+                          }`}
+                        />
+                        {errors.entryTime && (
+                          <p className="mt-1 text-sm text-red-600">{errors.entryTime}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Hora de Salida *
+                        </label>
+                        <input
+                          type="time"
+                          name="exitTime"
+                          value={formData.exitTime}
+                          onChange={handleInputChange}
+                          className={`w-full px-4 py-3 bg-white/80 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200 ${
+                            errors.exitTime ? 'border-red-500' : 'border-gray-200'
+                          }`}
+                        />
+                        {errors.exitTime && (
+                          <p className="mt-1 text-sm text-red-600">{errors.exitTime}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Duración Colación (minutos) *
+                          <span className="text-xs text-gray-500 ml-2">(Ej: 60 para 1 hora)</span>
+                        </label>
+                        <input
+                          type="number"
+                          name="lunchBreakDuration"
+                          value={formData.lunchBreakDuration}
+                          onChange={handleInputChange}
+                          min="30"
+                          max="120"
+                          placeholder="60"
+                          className={`w-full px-4 py-3 bg-white/80 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200 ${
+                            errors.lunchBreakDuration ? 'border-red-500' : 'border-gray-200'
+                          }`}
+                        />
+                        {errors.lunchBreakDuration && (
+                          <p className="mt-1 text-sm text-red-600">{errors.lunchBreakDuration}</p>
+                        )}
                       </div>
 
                       <div>
@@ -905,43 +1236,13 @@ export default function NewEmployeePage() {
                           type="date"
                           name="startDate"
                           value={formData.startDate}
-                          onChange={(e) => {
-                            handleInputChange(e);
-                            // Calcular días trabajados cuando cambie la fecha
-                            const workInfo = calculateWorkedDays(e.target.value);
-                            setWorkedDaysInfo(workInfo);
-                          }}
+                          onChange={handleInputChange}
                           className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                             errors.startDate ? 'border-red-500' : 'border-gray-300'
                           }`}
                         />
                         {errors.startDate && (
                           <p className="mt-1 text-sm text-red-600">{errors.startDate}</p>
-                        )}
-                        
-                        {/* 📅 INFORMACIÓN DE DÍAS TRABAJADOS */}
-                        {workedDaysInfo && (
-                          <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Calendar className="h-4 w-4 text-blue-600" />
-                              <span className="text-sm font-medium text-blue-900">Días trabajados este mes</span>
-                            </div>
-                            <p className="text-sm text-blue-700">{workedDaysInfo.note}</p>
-                            <div className="grid grid-cols-3 gap-2 mt-2 text-xs">
-                              <div className="text-center p-2 bg-white rounded border">
-                                <div className="text-blue-600 font-medium">{workedDaysInfo.startDay}</div>
-                                <div className="text-gray-500">Día inicio</div>
-                              </div>
-                              <div className="text-center p-2 bg-white rounded border">
-                                <div className="text-green-600 font-medium">{workedDaysInfo.workedDays}</div>
-                                <div className="text-gray-500">Días trabajados</div>
-                              </div>
-                              <div className="text-center p-2 bg-white rounded border">
-                                <div className="text-gray-600 font-medium">{workedDaysInfo.totalDays}</div>
-                                <div className="text-gray-500">Total mes</div>
-                              </div>
-                            </div>
-                          </div>
                         )}
                       </div>
 
@@ -1152,7 +1453,13 @@ export default function NewEmployeePage() {
                         </label>
                         <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-md">
                           <p><strong>Contrato {formData.contractType === 'indefinido' ? 'Indefinido' : 'Plazo Fijo'}</strong></p>
-                          <p className="mt-1">Trabajador: 0.6%</p>
+                          <p className="mt-1">
+                            Trabajador: {formData.contractType === 'plazo_fijo' ? (
+                              <span className="text-orange-600 font-medium">Sin cesantía</span>
+                            ) : (
+                              '0.6%'
+                            )}
+                          </p>
                           <p>Empleador: {formData.contractType === 'indefinido' ? '2.4%' : '3.0%'}</p>
                         </div>
                       </div>
@@ -1394,7 +1701,11 @@ export default function NewEmployeePage() {
                             <span className="text-gray-600">Seguro Cesantía:</span>
                             <br />
                             <span className="font-medium">
-                              {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0 }).format(parseFloat(formData.baseSalary) * 0.006)}
+                              {formData.contractType === 'plazo_fijo' ? (
+                                <span className="text-orange-600">Sin cesantía (Plazo Fijo)</span>
+                              ) : (
+                                new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', minimumFractionDigits: 0 }).format(parseFloat(formData.baseSalary) * 0.006)
+                              )}
                             </span>
                           </div>
                           <div>
@@ -1450,74 +1761,51 @@ export default function NewEmployeePage() {
                   </Button>
                 </Link>
                 
-                <Button 
-                  type="submit" 
-                  variant="primary"
-                  disabled={loading || !isRutValid}
-                  className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg"
-                >
-                  {loading ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  ) : (
-                    <UserPlus className="w-4 h-4 mr-2" />
-                  )}
-                  {loading ? 'Guardando...' : 'Crear Empleado'}
-                </Button>
+                {activeTab !== 'payroll' ? (
+                  // Botón "Siguiente" para pestañas intermedias
+                  <Button 
+                    type="button"
+                    variant="primary"
+                    onClick={(e) => {
+                      console.log('🔍 Botón Siguiente clickeado desde tab:', activeTab);
+                      e.preventDefault(); // Prevenir cualquier comportamiento de submit
+                      e.stopPropagation(); // Prevenir propagación del evento
+                      
+                      const tabs = ['personal', 'contact', 'contract', 'payroll'];
+                      const currentIndex = tabs.indexOf(activeTab);
+                      if (currentIndex < tabs.length - 1) {
+                        const nextTab = tabs[currentIndex + 1];
+                        console.log('🔄 Cambiando de tab:', activeTab, '→', nextTab);
+                        setActiveTab(nextTab as typeof activeTab);
+                      }
+                    }}
+                    className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg"
+                  >
+                    Siguiente
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                ) : (
+                  // Botón "Crear Empleado" solo en la última pestaña
+                  <Button 
+                    type="submit" 
+                    variant="primary"
+                    disabled={loading || !isRutValid}
+                    className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg"
+                  >
+                    {loading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    ) : (
+                      <UserPlus className="w-4 h-4 mr-2" />
+                    )}
+                    {loading ? 'Guardando...' : 'Crear Empleado'}
+                  </Button>
+                )}
               </div>
             </div>
           </form>
         </div>
       </div>
 
-      {/* 📋 MODAL DE PRECARGA DE DATOS EXISTENTES */}
-      {showPreloadModal && existingEmployeeData && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex items-center gap-3 mb-4">
-              <User className="h-6 w-6 text-blue-600" />
-              <h3 className="text-lg font-semibold text-gray-900">Empleado Encontrado</h3>
-            </div>
-            
-            <p className="text-gray-600 mb-4">
-              Ya existe un empleado con el RUT <strong>{existingEmployeeData.rut}</strong>:
-            </p>
-            
-            <div className="bg-gray-50 rounded-lg p-4 mb-4">
-              <p className="font-medium text-gray-900">
-                {existingEmployeeData.first_name} {existingEmployeeData.middle_name} {existingEmployeeData.last_name}
-              </p>
-              <p className="text-sm text-gray-600">Email: {existingEmployeeData.email}</p>
-              {existingEmployeeData.phone && (
-                <p className="text-sm text-gray-600">Teléfono: {existingEmployeeData.phone}</p>
-              )}
-              {existingEmployeeData.address && (
-                <p className="text-sm text-gray-600">Dirección: {existingEmployeeData.address}</p>
-              )}
-            </div>
-            
-            <p className="text-sm text-gray-600 mb-6">
-              ¿Deseas precargar estos datos en el formulario? Podrás crear un nuevo contrato para este empleado.
-            </p>
-            
-            <div className="flex gap-3">
-              <Button
-                onClick={() => setShowPreloadModal(false)}
-                variant="outline"
-                className="flex-1"
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={preloadExistingData}
-                variant="primary"
-                className="flex-1"
-              >
-                Precargar Datos
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

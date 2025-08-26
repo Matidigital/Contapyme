@@ -464,9 +464,6 @@ export class PayrollCalculator {
     
     const afpCommissionAmount = Math.round(taxableIncome * (afpCommissionPercentage / 100));
     
-    // SIS - Seguro de Invalidez y Sobrevivencia
-    const sisAmount = Math.round(taxableIncome * (CHILE_TAX_VALUES.SIS_PERCENTAGE / 100));
-    
     // Salud - 7% mínimo (puede ser más en ISAPRE)
     const healthAmount = Math.round(taxableIncome * (CHILE_TAX_VALUES.HEALTH_PERCENTAGE / 100));
     

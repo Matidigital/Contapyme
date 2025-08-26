@@ -211,13 +211,13 @@ export default function PayrollPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <p className="text-sm font-medium text-gray-600 mb-2">Total Empleados</p>
-                      <p className="text-2xl sm:text-3xl font-bold text-gray-900">
+                      <div className="text-2xl sm:text-3xl font-bold text-gray-900">
                         {loadingStats ? (
                           <div className="animate-pulse bg-gray-200/60 rounded-lg w-12 h-8"></div>
                         ) : (
                           stats.totalEmployees
                         )}
-                      </p>
+                      </div>
                       <p className="text-xs text-gray-500 mt-1">
                         {!loadingStats && stats.totalEmployees > 0 && 'Activos en el sistema'}
                       </p>
@@ -232,13 +232,13 @@ export default function PayrollPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <p className="text-sm font-medium text-gray-600 mb-2">Contratos Activos</p>
-                      <p className="text-2xl sm:text-3xl font-bold text-gray-900">
+                      <div className="text-2xl sm:text-3xl font-bold text-gray-900">
                         {loadingStats ? (
                           <div className="animate-pulse bg-gray-200/60 rounded-lg w-12 h-8"></div>
                         ) : (
                           stats.activeContracts
                         )}
-                      </p>
+                      </div>
                       <p className="text-xs text-gray-500 mt-1">
                         {!loadingStats && stats.activeContracts > 0 && 'Contratos vigentes'}
                       </p>
@@ -253,13 +253,13 @@ export default function PayrollPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-600 mb-2">Nómina Mensual</p>
-                      <p className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
+                      <div className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
                         {loadingStats ? (
                           <div className="animate-pulse bg-gray-200/60 rounded-lg w-24 h-8"></div>
                         ) : (
                           formatCurrency(stats.monthlyPayroll)
                         )}
-                      </p>
+                      </div>
                       <p className="text-xs text-gray-500 mt-1">
                         {!loadingStats && stats.monthlyPayroll > 0 && 'Sueldos base totales'}
                       </p>
@@ -274,13 +274,13 @@ export default function PayrollPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <p className="text-sm font-medium text-gray-600 mb-2">Próximos Vencimientos</p>
-                      <p className="text-2xl sm:text-3xl font-bold text-gray-900">
+                      <div className="text-2xl sm:text-3xl font-bold text-gray-900">
                         {loadingStats ? (
                           <div className="animate-pulse bg-gray-200/60 rounded-lg w-12 h-8"></div>
                         ) : (
                           stats.upcomingEvents
                         )}
-                      </p>
+                      </div>
                       <p className="text-xs text-gray-500 mt-1">Próximamente</p>
                     </div>
                     <div className="p-3 bg-gradient-to-br from-yellow-500/10 to-yellow-600/20 rounded-xl group-hover:from-yellow-500/20 group-hover:to-yellow-600/30 transition-colors">
@@ -446,12 +446,20 @@ export default function PayrollPage() {
               {/* Header Actions modernizadas */}
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Gestión de Contratos</h2>
-                <Link href="/payroll/contracts/new">
-                  <button className="w-full sm:w-auto group relative px-4 py-2.5 rounded-xl bg-green-500/80 hover:bg-green-500 border border-green-400/50 hover:border-green-400 backdrop-blur-sm transition-all duration-200 flex items-center justify-center gap-2 text-white font-medium">
-                    <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                    <span>Nuevo Contrato</span>
-                  </button>
-                </Link>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Link href="/payroll/contracts/annexes">
+                    <button className="w-full sm:w-auto group relative px-4 py-2.5 rounded-xl bg-blue-500/80 hover:bg-blue-500 border border-blue-400/50 hover:border-blue-400 backdrop-blur-sm transition-all duration-200 flex items-center justify-center gap-2 text-white font-medium">
+                      <FileText className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                      <span>Generar Anexos</span>
+                    </button>
+                  </Link>
+                  <Link href="/payroll/contracts/new">
+                    <button className="w-full sm:w-auto group relative px-4 py-2.5 rounded-xl bg-green-500/80 hover:bg-green-500 border border-green-400/50 hover:border-green-400 backdrop-blur-sm transition-all duration-200 flex items-center justify-center gap-2 text-white font-medium">
+                      <Plus className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                      <span>Nuevo Contrato</span>
+                    </button>
+                  </Link>
+                </div>
               </div>
 
               {/* Empty State modernizado */}

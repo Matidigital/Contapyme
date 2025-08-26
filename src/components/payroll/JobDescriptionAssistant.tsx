@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button, Card, CardHeader, CardTitle, CardContent } from '@/components/ui';
 import { Upload, FileText, Zap, Loader2, CheckCircle, AlertTriangle, X, Sparkles, Save } from 'lucide-react';
 import { SavedJobDescriptionsSelector } from './SavedJobDescriptionsSelector';
@@ -56,6 +56,15 @@ export function JobDescriptionAssistant({
     obligations: [''],
     prohibitions: ['']
   });
+
+  // Sincronizar manualForm con props cuando cambien
+  useEffect(() => {
+    setManualForm(prev => ({
+      ...prev,
+      position: currentPosition,
+      department: currentDepartment
+    }));
+  }, [currentPosition, currentDepartment]);
 
   // Manejar generación IA
   const handleAIGeneration = async () => {
@@ -179,9 +188,15 @@ export function JobDescriptionAssistant({
       const nonEmptyObligations = manualForm.obligations.filter(o => o.trim());
       const nonEmptyProhibitions = manualForm.prohibitions.filter(p => p.trim());
 
+      // Si no hay datos en el formulario manual, pero hay un cargo, generar desde cero
       if (!nonEmptyFunctions.length && !nonEmptyObligations.length && !nonEmptyProhibitions.length) {
-        setError('Debe tener al menos una función, obligación o prohibición para refinar');
-        return;
+        if (manualForm.position || aiForm.position) {
+          // Si hay cargo pero no funciones, generar desde cero
+          return handleAIGeneration();
+        } else {
+          setError('Ingrese al menos un cargo o agregue funciones para poder refinar');
+          return;
+        }
       }
 
       dataToRefine = {
@@ -356,24 +371,46 @@ export function JobDescriptionAssistant({
         {/* Contenido del tab activo */}
         {activeTab === 'manual' && (
           <div className="space-y-4">
-            {/* Información de contexto usando valores del formulario principal */}
+            {/* Información editable del cargo */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-3">
                 <CheckCircle className="h-5 w-5 text-blue-600" />
                 <h4 className="text-sm font-medium text-blue-900">Información del Cargo</h4>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <span className="text-blue-700 font-medium">Cargo:</span> 
-                  <span className="ml-2 text-blue-800">{currentPosition || 'No especificado'}</span>
+                  <label className="block text-sm font-medium text-blue-700 mb-1">
+                    Cargo *
+                  </label>
+                  <input
+                    type="text"
+                    value={manualForm.position}
+                    onChange={(e) => setManualForm(prev => ({
+                      ...prev,
+                      position: e.target.value
+                    }))}
+                    placeholder="Ej: Cajero, Vendedor"
+                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
                 <div>
-                  <span className="text-blue-700 font-medium">Departamento:</span> 
-                  <span className="ml-2 text-blue-800">{currentDepartment || 'No especificado'}</span>
+                  <label className="block text-sm font-medium text-blue-700 mb-1">
+                    Departamento
+                  </label>
+                  <input
+                    type="text"
+                    value={manualForm.department}
+                    onChange={(e) => setManualForm(prev => ({
+                      ...prev,
+                      department: e.target.value
+                    }))}
+                    placeholder="Ej: Caja, Ventas"
+                    className="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
               </div>
               <p className="text-xs text-blue-600 mt-2">
-                💡 Los campos de cargo y departamento se toman del formulario principal arriba
+                💡 Estos campos se sincronizan automáticamente con el formulario principal
               </p>
             </div>
 
@@ -486,8 +523,8 @@ export function JobDescriptionAssistant({
             <Button
               onClick={() => {
                 const data = {
-                  position: currentPosition,
-                  department: currentDepartment,
+                  position: manualForm.position,
+                  department: manualForm.department,
                   job_functions: manualForm.functions.filter(f => f.trim()),
                   obligations: manualForm.obligations.filter(o => o.trim()),
                   prohibitions: manualForm.prohibitions.filter(p => p.trim())
@@ -504,13 +541,13 @@ export function JobDescriptionAssistant({
               }}
               variant="primary"
               className="w-full"
-              disabled={!currentPosition.trim()}
+              disabled={!manualForm.position.trim()}
             >
               <Save className="h-4 w-4 mr-2" />
               Aplicar Información Manual
             </Button>
             
-            {!currentPosition.trim() && (
+            {!manualForm.position.trim() && (
               <p className="text-sm text-amber-600 mt-2 flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4" />
                 Completa el campo "Cargo" arriba para aplicar la información
@@ -722,7 +759,7 @@ export function JobDescriptionAssistant({
               </div>
 
               {/* Botón refinador IA universal */}
-              {!showRefinedResult && (
+              {!showRefinedResult ? (
                 <div className="mt-4 pt-3 border-t border-green-200">
                   <Button
                     onClick={handleRefineWithAI}
@@ -745,6 +782,29 @@ export function JobDescriptionAssistant({
                   <p className="text-xs text-green-600 text-center mt-2">
                     Mejora automáticamente las funciones según normativa laboral chilena
                   </p>
+                </div>
+              ) : (
+                <div className="mt-4 pt-3 border-t border-green-200">
+                  <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-200 mb-3">
+                    <div className="flex items-center">
+                      <Sparkles className="h-4 w-4 text-purple-600 mr-2" />
+                      <span className="text-sm font-medium text-purple-800">
+                        Descriptor refinado con IA según normativa chilena
+                      </span>
+                    </div>
+                    <div className="text-xs text-purple-600">
+                      ✨ Listo para usar
+                    </div>
+                  </div>
+                  
+                  <Button
+                    onClick={() => setShowRefinedResult(false)}
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-purple-600 border-purple-300 hover:bg-purple-50"
+                  >
+                    🔄 Refinar nuevamente
+                  </Button>
                 </div>
               )}
             </div>

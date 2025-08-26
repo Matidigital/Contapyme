@@ -56,19 +56,33 @@ export default function LibroRemuneracionesPage() {
 
   const loadBooks = async () => {
     try {
-      const response = await fetch(`/api/payroll/libro-remuneraciones?company_id=${companyId}`);
-      const result = await response.json();
+      // ✅ USAR CONSULTA RÁPIDA PRIMERO para cargar la página inmediatamente
+      const fastResponse = await fetch(`/api/payroll/libro-remuneraciones/fast?company_id=${companyId}`);
+      const fastResult = await fastResponse.json();
       
-      if (result.success) {
-        setBooks(result.data);
-        // Mostrar fuente de datos al usuario
-        if (result.source) {
-          console.log(`📊 Datos cargados desde: ${result.source === 'database' ? 'Base de datos' : 'Demo'}`);
-        }
+      if (fastResult.success) {
+        setBooks(fastResult.data);
+        setLoading(false); // ✅ Mostrar página inmediatamente con datos básicos
+        
+        console.log(`⚡ Carga rápida: ${fastResult.source === 'database' ? 'Base de datos' : 'Demo'}`);
+        
+        // ✅ CARGAR DATOS COMPLETOS EN BACKGROUND (sin mostrar loading)
+        setTimeout(async () => {
+          try {
+            const fullResponse = await fetch(`/api/payroll/libro-remuneraciones?company_id=${companyId}`);
+            const fullResult = await fullResponse.json();
+            
+            if (fullResult.success) {
+              setBooks(fullResult.data);
+              console.log(`📊 Datos completos: ${fullResult.source === 'database' ? 'Base de datos' : 'Demo'}`);
+            }
+          } catch (error) {
+            console.log('Info completa no disponible, usando datos rápidos');
+          }
+        }, 1000); // Delay de 1 segundo para evitar sobrecargar
       }
     } catch (error) {
       console.error('Error cargando libros:', error);
-    } finally {
       setLoading(false);
     }
   };

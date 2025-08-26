@@ -225,7 +225,7 @@ export default function ContractDetailPage({ params }: { params: { id: string } 
 
   const employee = contract.employees;
   const company = contract.companies;
-  const employeeFullName = employee ? `${employee.first_name} ${employee.middle_name || ''} ${employee.last_name}`.trim() : '';
+  const employeeFullName = employee ? `${employee.first_name} ${employee.last_name} ${employee.middle_name || ''}`.trim() : '';
 
   return (
     <div className="min-h-screen bg-gray-50">

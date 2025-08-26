@@ -424,7 +424,7 @@ export default function NewContractPage() {
                       <option value="">Selecciona un empleado...</option>
                       {employees.map(employee => (
                         <option key={employee.id} value={employee.id}>
-                          {employee.first_name} {employee.middle_name} {employee.last_name} - {employee.rut}
+                          {employee.first_name} {employee.last_name} {employee.middle_name} - {employee.rut}
                         </option>
                       ))}
                     </select>

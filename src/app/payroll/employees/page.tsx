@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { PayrollHeader } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
-import { Plus, Users, Search, Filter, Eye, Edit, DollarSign, Activity, ArrowRight, Mail, Briefcase } from 'lucide-react';
+import { Plus, Users, Search, Filter, Eye, Edit, Trash2, DollarSign, Activity, ArrowRight, Mail, Briefcase, FileText } from 'lucide-react';
 
 interface Employee {
   id: string;
@@ -15,9 +15,11 @@ interface Employee {
   position?: string;
   status: string;
   employment_contracts?: Array<{
+    id: string;
     position: string;
     base_salary: number;
     status: string;
+    contract_type?: string;
   }>;
 }
 
@@ -25,6 +27,12 @@ export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ show: boolean; employee: Employee | null; permanent: boolean }>({
+    show: false,
+    employee: null,
+    permanent: false
+  });
+  const [deleting, setDeleting] = useState(false);
 
   const COMPANY_ID = '8033ee69-b420-4d91-ba0e-482f46cd6fce';
 
@@ -49,6 +57,78 @@ export default function EmployeesPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDeleteClick = (employee: Employee) => {
+    setDeleteModal({ show: true, employee, permanent: false });
+  };
+
+  // Función para ver contrato del empleado
+  const handleViewContract = async (employeeId: string) => {
+    try {
+      // Obtener contratos del empleado
+      const response = await fetch(`/api/payroll/employees?company_id=${COMPANY_ID}&employee_id=${employeeId}`);
+      if (!response.ok) {
+        throw new Error('Error obteniendo datos del empleado');
+      }
+      
+      const data = await response.json();
+      const employee = data.data.find((emp: Employee) => emp.id === employeeId);
+      
+      if (!employee || !employee.employment_contracts || employee.employment_contracts.length === 0) {
+        alert('No se encontró contrato para este empleado');
+        return;
+      }
+      
+      // Usar el primer contrato activo
+      const contract = employee.employment_contracts[0];
+      const contractUrl = `/api/payroll/contracts/generate-pdf?contract_id=${contract.id}`;
+      
+      // Abrir en nueva pestaña
+      window.open(contractUrl, '_blank');
+      
+    } catch (error) {
+      console.error('Error al obtener contrato:', error);
+      alert('Error al cargar el contrato');
+    }
+  };
+
+  const confirmDelete = async (permanent: boolean = false) => {
+    if (!deleteModal.employee) return;
+
+    try {
+      setDeleting(true);
+      const url = permanent 
+        ? `/api/payroll/employees?id=${deleteModal.employee.id}&company_id=${COMPANY_ID}&permanent=true`
+        : `/api/payroll/employees?id=${deleteModal.employee.id}&company_id=${COMPANY_ID}`;
+        
+      const response = await fetch(url, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Recargar la lista de empleados
+        await fetchEmployees();
+        setDeleteModal({ show: false, employee: null, permanent: false });
+        const message = permanent 
+          ? '✅ Empleado eliminado permanentemente del sistema'
+          : '✅ Empleado desactivado exitosamente';
+        alert(message);
+      } else {
+        alert(`❌ Error: ${data.error || 'No se pudo eliminar el empleado'}`);
+      }
+    } catch (err) {
+      console.error('Error deleting employee:', err);
+      alert('❌ Error de conexión al eliminar empleado');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const cancelDelete = () => {
+    setDeleteModal({ show: false, employee: null, permanent: false });
   };
 
   // Función para limpiar caracteres especiales malformados
@@ -266,12 +346,26 @@ export default function EmployeesPage() {
                           <span>Ver</span>
                         </button>
                       </Link>
+                      <button 
+                        onClick={() => handleViewContract(employee.id)}
+                        className="w-full sm:w-auto group/btn relative px-3 py-2 rounded-xl bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 hover:border-green-500/40 backdrop-blur-sm transition-all duration-200 flex items-center justify-center gap-2 text-green-600 hover:text-green-700 font-medium text-sm"
+                      >
+                        <FileText className="w-3 h-3 group-hover/btn:scale-110 transition-transform" />
+                        <span>Ver Contrato</span>
+                      </button>
                       <Link href={`/payroll/employees/${employee.id}/edit`} className="w-full sm:w-auto">
                         <button className="w-full group/btn relative px-3 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 hover:border-purple-500/40 backdrop-blur-sm transition-all duration-200 flex items-center justify-center gap-2 text-purple-600 hover:text-purple-700 font-medium text-sm">
                           <Edit className="w-3 h-3 group-hover/btn:scale-110 transition-transform" />
                           <span>Editar</span>
                         </button>
                       </Link>
+                      <button 
+                        onClick={() => handleDeleteClick(employee)}
+                        className="w-full sm:w-auto group/btn relative px-3 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/40 backdrop-blur-sm transition-all duration-200 flex items-center justify-center gap-2 text-red-600 hover:text-red-700 font-medium text-sm"
+                      >
+                        <Trash2 className="w-3 h-3 group-hover/btn:scale-110 transition-transform" />
+                        <span>Eliminar</span>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -280,6 +374,97 @@ export default function EmployeesPage() {
           </div>
         )}
       </div>
+
+      {/* Modal de confirmación de eliminación */}
+      {deleteModal.show && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full border border-gray-200 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">
+                  Eliminar Empleado
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Esta acción no se puede deshacer
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-6 p-4 bg-red-50 rounded-xl border border-red-200">
+              <p className="text-sm text-red-800 mb-4">
+                ¿Qué acción deseas realizar con{' '}
+                <strong>
+                  {cleanText(`${deleteModal.employee?.first_name} ${deleteModal.employee?.last_name}`)}
+                </strong>
+                ?
+              </p>
+              
+              <div className="space-y-3">
+                <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <div className="font-medium text-yellow-800 text-sm mb-1">Desactivar (Recomendado)</div>
+                  <div className="text-xs text-yellow-700">
+                    El empleado se marcará como inactivo pero se conservarán todos sus registros históricos para reportes y auditorías.
+                  </div>
+                </div>
+                
+                <div className="p-3 bg-red-100 border border-red-300 rounded-lg">
+                  <div className="font-medium text-red-800 text-sm mb-1">Eliminar Permanentemente ⚠️</div>
+                  <div className="text-xs text-red-700">
+                    Se eliminará completamente del sistema junto con todos sus contratos, liquidaciones y registros. Esta acción NO se puede deshacer.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={cancelDelete}
+                disabled={deleting}
+                className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 rounded-xl transition-colors duration-200 font-medium disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => confirmDelete(false)}
+                disabled={deleting}
+                className="w-full px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-xl transition-colors duration-200 font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Procesando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-4 h-4" />
+                    <span>Desactivar Empleado</span>
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => confirmDelete(true)}
+                disabled={deleting}
+                className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors duration-200 font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {deleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Eliminando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>Eliminar Permanentemente</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

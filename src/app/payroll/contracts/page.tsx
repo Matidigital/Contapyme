@@ -264,13 +264,15 @@ export default function ContractsPage() {
                   </select>
                 </div>
 
-                {/* Botón nuevo contrato */}
-                <Link href="/payroll/contracts/new">
-                  <Button variant="primary" className="flex items-center">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Nuevo Contrato
-                  </Button>
-                </Link>
+                {/* Botones de acción */}
+                <div className="flex gap-3">
+                  <Link href="/payroll/contracts/new">
+                    <Button variant="primary" className="flex items-center">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nuevo Contrato
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </CardContent>
           </Card>

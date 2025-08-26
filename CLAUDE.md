@@ -1439,8 +1439,61 @@ CREATE TABLE rcv_entities (
 
 ---
 
-**Fecha de actualización**: 13 de agosto, 2025  
+## 🔄 REVERT SISTEMA RUT LOOKUP - AGOSTO 25, 2025
+
+### **DECISIÓN ESTRATÉGICA: SIMPLIFICACIÓN TOTAL**
+
+**🎯 MOTIVACIÓN:**
+*"Mejor entrada manual confiable que automatización inconsistente"*
+
+### **✅ CAMBIOS IMPLEMENTADOS:**
+
+#### **Formulario de Empleados Simplificado:**
+- ❌ **RUT Lookup automático removido** - Eliminadas todas las consultas externas
+- ❌ **Botón de búsqueda removido** - Interface limpia sin elementos confusos
+- ❌ **Mensajes de feedback API** - No más alertas de servicios externos
+- ❌ **Modales de precarga** - Eliminado sistema de datos existentes
+- ✅ **Campo RUT simple** - Solo validación de formato y duplicados
+
+#### **APIs Limpiadas:**
+- ❌ **`/api/payroll/rut-lookup`** - API completa eliminada
+- ❌ **Funciones checkExistingRut()** - Lógica simplificada a verificación básica
+- ❌ **Funciones lookupRutData()** - Sistema automático completamente removido
+- ❌ **preload_existing flag** - Eliminado de API de empleados
+- ✅ **Validación duplicados simple** - Error 409 directo para RUTs existentes
+
+#### **Documentación Actualizada:**
+- ❌ **RUT_LOOKUP_DOCUMENTATION.md** - Archivo eliminado
+- ❌ **SERVICIOS_RUT_DISPONIBLES.md** - Guía de APIs removida
+- ✅ **CLAUDE.md actualizado** - Documentación reflejando cambios
+
+### **🎯 BENEFICIOS DE LA SIMPLIFICACIÓN:**
+
+#### **Para Usuarios:**
+- **🎯 Interfaz más limpia** - Sin elementos confusos o inconsistentes
+- **⚡ Respuesta inmediata** - Sin esperas de APIs externas
+- **🎛️ Control total** - Usuario ingresa exactamente lo que necesita
+- **📱 Mejor UX móvil** - Formulario más simple y directo
+
+#### **Para Desarrollo:**
+- **🔧 Código más mantenible** - Menos dependencias externas
+- **🐛 Menos bugs potenciales** - Sin APIs fallando o inconsistentes
+- **⚡ Performance mejorada** - Sin timeouts ni llamadas externas
+- **📊 Mejor estabilidad** - Sistema predictible y confiable
+
+### **🏆 ESTADO FINAL:**
+
+**✅ SISTEMA SIMPLIFICADO Y ROBUSTO**
+- Formulario de empleados con entrada manual únicamente
+- Validación RUT por formato y duplicados solamente
+- Sin dependencias externas para datos de personas
+- Interface limpia y profesional
+- Código mantenible y estable
+
+---
+
+**Fecha de actualización**: 25 de agosto, 2025  
 **Desarrolladores**: Matías Riquelme + Claude Sonnet 4  
-**Estado**: **DESCRIPTORES DE CARGO IA - COMPLETAMENTE FUNCIONAL Y EN PRODUCCIÓN**  
-**Próximo hito**: Testing con usuarios reales + Optimización basada en feedback  
-**Funcionalidad única**: Primera y única IA especializada en descriptores de cargo chilenos
+**Estado**: **SISTEMA SIMPLIFICADO - ENTRADA MANUAL ÚNICAMENTE**  
+**Decisión**: Priorizar confiabilidad sobre automatización
+**Resultado**: Interface más limpia y sistema más estable
