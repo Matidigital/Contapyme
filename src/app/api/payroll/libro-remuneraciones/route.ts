@@ -13,8 +13,8 @@ const demoPayrollBooks = [
     company_id: '8033ee69-b420-4d91-ba0e-482f46cd6fce',
     period: '2025-08',
     book_number: 1,
-    company_name: 'Empresa Demo ContaPyme',
-    company_rut: '12.345.678-9',
+    company_name: 'ContaPyme Puq',
+    company_rut: '78.223.873-6',
     generation_date: new Date('2025-08-05T10:30:00Z').toISOString(),
     status: 'draft' as const,
     total_employees: 5,
@@ -53,8 +53,8 @@ const demoPayrollBooks = [
     company_id: '8033ee69-b420-4d91-ba0e-482f46cd6fce',
     period: '2025-07',
     book_number: 2,
-    company_name: 'Empresa Demo ContaPyme',
-    company_rut: '12.345.678-9',
+    company_name: 'ContaPyme Puq',
+    company_rut: '78.223.873-6',
     generation_date: new Date('2025-07-05T10:30:00Z').toISOString(),
     status: 'approved' as const,
     total_employees: 5,
@@ -584,7 +584,7 @@ function generateSimpleCSVFromLiquidations(liquidations: any[], book: any): stri
 
   const bookHeaders = [
     `LIBRO DE REMUNERACIONES - ${formatPeriod(book.period)}`,
-    `${book.company_name || 'Empresa Demo'} - RUT: ${book.company_rut || '12.345.678-9'}`,
+    `${book.company_name || 'ContaPyme Puq'} - RUT: ${book.company_rut || '78.223.873-6'}`,
     `Generado el: ${formatDate(book.generation_date)}`,
     '', // Fila vacía
     headers.join(';')

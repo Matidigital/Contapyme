@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Header } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { ArrowLeft, Edit, Trash2, User, Mail, Phone, MapPin, Briefcase, Calendar, DollarSign } from 'lucide-react';
+import { formatDate as utilFormatDate, formatCurrency as utilFormatCurrency } from '@/lib/utils';
 
 interface Employee {
   id: string;
@@ -97,8 +98,9 @@ export default function EmployeeDetailPage() {
     return employee.payroll_config?.health_institution_code || 'No definida';
   };
 
+  // Formatear fecha usando utilidad centralizada
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-CL');
+    return utilFormatDate(dateString);
   };
 
   if (loading) {

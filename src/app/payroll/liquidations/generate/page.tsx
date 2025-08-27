@@ -501,6 +501,7 @@ export default function GenerateLiquidationPage() {
         
         // Haberes imponibles
         base_salary: result.base_salary || 0,
+        overtime_hours: formData.overtime_hours_qty || 0, // ✅ NUEVO: Cantidad de horas extras del formulario
         overtime_amount: result.overtime_amount || 0,
         bonuses: result.bonuses || 0,
         commissions: result.commissions || 0,

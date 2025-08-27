@@ -17,10 +17,10 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
   liquidationData,
   employeeName,
   period,
-  companyName = "CONTAPYME SPA",
-  companyRut = "12.345.678-9",
-  companyAddress = "Dirección no especificada",
-  companyPhone = "No especificado",
+  companyName = "ContaPyme Puq",
+  companyRut = "78.223.873-6",
+  companyAddress = "Punta Arenas, Región de Magallanes, Chile",
+  companyPhone = "+56 9 1234 5678",
   employeeRut = liquidationData.employee?.rut || "No especificado",
   employeePosition = "Empleado",
   employeeStartDate = "01-01-2024"
@@ -406,20 +406,11 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
               padding: '8px', 
               fontSize: '11px',
               borderRight: '2px solid #000',
-              borderBottom: '1px solid #ccc',
-              backgroundColor: '#f8f4ff'
+              borderBottom: '1px solid #ccc'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span>
-                  🏆 GRATIFICACIÓN ART. 50 (25%)
-                </span>
-                <span style={{ fontWeight: 'bold', color: '#7c3aed' }}>
-                  ${legalGratificationArt50.toLocaleString('es-CL')}
-                </span>
-              </div>
-              <div style={{ fontSize: '9px', color: '#6b46c1', marginTop: '2px' }}>
-                (Tope: 4.75 sueldos mínimos ÷ 12 meses)
-              </div>
+              GRATIFICACIÓN ART. 50: <span style={{ float: 'right', fontWeight: 'bold' }}>
+                ${legalGratificationArt50.toLocaleString('es-CL')}
+              </span>
             </td>
             <td style={{ 
               padding: '8px', 
@@ -459,7 +450,7 @@ export const LiquidationPDFTemplate: React.FC<LiquidationPDFTemplateProps> = ({
               borderRight: '2px solid #000',
               borderBottom: '1px solid #ccc'
             }}>
-              HORAS EXTRAS: <span style={{ float: 'right', fontWeight: 'bold' }}>
+              HORAS EXTRAS {(liquidationData.overtime_hours || 0) > 0 && `(${liquidationData.overtime_hours}h)`}: <span style={{ float: 'right', fontWeight: 'bold' }}>
                 ${(liquidationData.overtime_amount || 0).toLocaleString('es-CL')}
               </span>
             </td>

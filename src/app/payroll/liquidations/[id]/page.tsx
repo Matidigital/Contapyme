@@ -25,6 +25,7 @@ import {
   Eye,
   Send
 } from 'lucide-react';
+import { formatDate, formatCurrency } from '@/lib/utils';
 
 interface LiquidationDetail {
   id: string;
@@ -796,7 +797,7 @@ export default function LiquidationDetailPage() {
                 <span>ContaPyme Demo</span>
               </div>
               <div className="text-sm text-gray-500">
-                Fecha: {new Date().toLocaleDateString('es-CL')}
+                Fecha: {formatDate(new Date().toISOString().split('T')[0])}
               </div>
             </div>
           </div>
@@ -1125,25 +1126,13 @@ export default function LiquidationDetailPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Creado</label>
                   <p className="text-gray-900">
-                    {new Date(liquidation.created_at).toLocaleDateString('es-CL', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
+                    {formatDate(liquidation.created_at.split('T')[0], 'long')}
                   </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-500 mb-1">Última Modificación</label>
                   <p className="text-gray-900">
-                    {new Date(liquidation.updated_at).toLocaleDateString('es-CL', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
+                    {formatDate(liquidation.updated_at.split('T')[0], 'long')}
                   </p>
                 </div>
                 <div>
@@ -1193,7 +1182,7 @@ export default function LiquidationDetailPage() {
 
         {/* Footer para impresión */}
         <div className="hidden print:block mt-8 pt-4 border-t border-gray-300 text-center text-sm text-gray-600">
-          <p>Este documento fue generado automáticamente por ContaPyme el {new Date().toLocaleDateString('es-CL')}</p>
+          <p>Este documento fue generado automáticamente por ContaPyme el {formatDate(new Date().toISOString().split('T')[0])}</p>
         </div>
       </div>
     </div>

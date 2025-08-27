@@ -162,16 +162,42 @@ export async function DELETE(
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Soft delete: cambiar estado a 'terminated'
-    const { data, error } = await supabase
+    // Verificar el estado actual del contrato
+    const { data: currentContract } = await supabase
       .from('employment_contracts')
-      .update({ 
-        status: 'terminated',
-        termination_date: new Date().toISOString().split('T')[0]
-      })
+      .select('status')
       .eq('id', contractId)
-      .select()
       .single();
+
+    // Si es un borrador, eliminarlo completamente; si no, soft delete
+    let data, error;
+    
+    if (currentContract?.status === 'draft') {
+      // Hard delete para borradores
+      const result = await supabase
+        .from('employment_contracts')
+        .delete()
+        .eq('id', contractId)
+        .select()
+        .single();
+      
+      data = result.data;
+      error = result.error;
+    } else {
+      // Soft delete para contratos activos/terminados
+      const result = await supabase
+        .from('employment_contracts')
+        .update({ 
+          status: 'terminated',
+          termination_date: new Date().toISOString().split('T')[0]
+        })
+        .eq('id', contractId)
+        .select()
+        .single();
+        
+      data = result.data;
+      error = result.error;
+    }
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -181,10 +207,14 @@ export async function DELETE(
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
+    const message = currentContract?.status === 'draft' 
+      ? 'Contrato borrador eliminado exitosamente'
+      : 'Contrato terminado exitosamente';
+
     return NextResponse.json({ 
       success: true, 
       data,
-      message: 'Contrato terminado exitosamente'
+      message
     });
 
   } catch (error) {

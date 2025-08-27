@@ -10,6 +10,7 @@ import {
   User, DollarSign, MapPin, Clock, Filter, Search 
 } from 'lucide-react';
 import { useCompanyId } from '@/contexts/CompanyContext';
+import { formatDate as utilFormatDate, formatCurrency as utilFormatCurrency } from '@/lib/utils';
 
 interface Contract {
   id: string;
@@ -26,12 +27,14 @@ interface Contract {
   workplace_address?: string;
   weekly_hours?: number;
   company_name: string;
+  employee_id?: string;
 }
 
 export default function ContractsPage() {
   const router = useRouter();
   const companyId = useCompanyId();
   const [contracts, setContracts] = useState<Contract[]>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -40,27 +43,54 @@ export default function ContractsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
 
-  // Cargar contratos
-  const fetchContracts = async () => {
+  // Cargar empleados con contratos
+  const fetchEmployeesWithContracts = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const params = new URLSearchParams({
-        company_id: companyId,
-        include_details: 'true'
-      });
+      // Primero obtener todos los empleados con sus contratos
+      const employeesResponse = await fetch(`/api/payroll/employees?company_id=${companyId}`);
+      const employeesData = await employeesResponse.json();
 
-      const response = await fetch(`/api/payroll/contracts?${params}`);
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Error al cargar contratos');
+      if (employeesResponse.ok && (employeesData.success || employeesData.data)) {
+        // La API devuelve los datos en 'data'
+        const allEmployees = employeesData.data || employeesData.employees || [];
+        
+        // Filtrar solo empleados que tienen contratos
+        const employeesWithContracts = allEmployees
+          .filter((emp: any) => emp.employment_contracts && emp.employment_contracts.length > 0);
+        
+        setEmployees(employeesWithContracts);
+        
+        // Convertir empleados a formato de contratos para mantener compatibilidad
+        const contractsList: Contract[] = [];
+        employeesWithContracts.forEach((emp: any) => {
+          emp.employment_contracts.forEach((contract: any) => {
+            contractsList.push({
+              id: contract.id,
+              employee_id: emp.id,
+              employee_full_name: `${emp.first_name} ${emp.last_name}`,
+              employee_rut: emp.rut,
+              position: contract.position || contract.job_position || '',
+              department: contract.department || '',
+              contract_type: contract.contract_type || 'indefinido',
+              start_date: contract.start_date,
+              end_date: contract.end_date,
+              base_salary: contract.base_salary || 0,
+              status: contract.status || 'active',
+              total_gross_salary: contract.base_salary,
+              workplace_address: contract.workplace_address,
+              weekly_hours: contract.weekly_hours,
+              company_name: 'ContaPyme Puq'
+            });
+          });
+        });
+        
+        setContracts(contractsList);
       }
-
-      setContracts(data.data || []);
     } catch (err) {
-      console.error('Error fetching contracts:', err);
+      console.error('Error fetching employees with contracts:', err);
       setError(err instanceof Error ? err.message : 'Error desconocido');
     } finally {
       setLoading(false);
@@ -69,7 +99,7 @@ export default function ContractsPage() {
 
   useEffect(() => {
     if (companyId) {
-      fetchContracts();
+      fetchEmployeesWithContracts();
     }
   }, [companyId]);
 
@@ -86,19 +116,15 @@ export default function ContractsPage() {
     return matchesSearch && matchesStatus && matchesType;
   });
 
-  // Formatear fecha
+  // Formatear fecha usando utilidad centralizada
   const formatDate = (dateString?: string) => {
     if (!dateString) return '';
-    return new Date(dateString).toLocaleDateString('es-CL');
+    return utilFormatDate(dateString);
   };
 
-  // Formatear moneda
+  // Formatear moneda usando utilidad centralizada
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-CL', {
-      style: 'currency',
-      currency: 'CLP',
-      minimumFractionDigits: 0
-    }).format(amount);
+    return utilFormatCurrency(amount);
   };
 
   // Obtener color del estado
@@ -126,24 +152,11 @@ export default function ContractsPage() {
   // Generar PDF del contrato
   const generateContractPDF = async (contractId: string) => {
     try {
-      const response = await fetch('/api/payroll/contracts/generate-pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contract_id: contractId, format: 'html' })
-      });
-
-      if (!response.ok) {
-        throw new Error('Error al generar el contrato');
-      }
-
-      const html = await response.text();
+      // Usar GET con query params para generar el PDF
+      const url = `/api/payroll/contracts/generate-pdf?contract_id=${contractId}`;
       
-      // Abrir HTML en nueva ventana para imprimir/guardar como PDF
-      const newWindow = window.open('', '_blank');
-      if (newWindow) {
-        newWindow.document.write(html);
-        newWindow.document.close();
-      }
+      // Abrir directamente en nueva ventana
+      window.open(url, '_blank');
     } catch (err) {
       console.error('Error generating contract PDF:', err);
       alert('Error al generar el contrato PDF');
@@ -294,7 +307,7 @@ export default function ContractsPage() {
               ) : error ? (
                 <div className="text-center py-12">
                   <p className="text-red-600 mb-4">{error}</p>
-                  <Button onClick={fetchContracts} variant="outline">
+                  <Button onClick={fetchEmployeesWithContracts} variant="outline">
                     Intentar de nuevo
                   </Button>
                 </div>
@@ -302,22 +315,14 @@ export default function ContractsPage() {
                 <div className="text-center py-12">
                   <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    {contracts.length === 0 ? 'No hay contratos' : 'No se encontraron contratos'}
+                    {contracts.length === 0 ? 'No hay empleados con contratos registrados' : 'No se encontraron contratos'}
                   </h3>
                   <p className="text-gray-500 mb-6">
                     {contracts.length === 0 
-                      ? 'Comienza creando el primer contrato de la empresa'
+                      ? 'Los contratos aparecerán aquí una vez que los empleados tengan contratos asignados'
                       : 'Intenta ajustar los filtros de búsqueda'
                     }
                   </p>
-                  {contracts.length === 0 && (
-                    <Link href="/payroll/contracts/new">
-                      <Button variant="primary">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Crear Primer Contrato
-                      </Button>
-                    </Link>
-                  )}
                 </div>
               ) : (
                 <div className="space-y-4">

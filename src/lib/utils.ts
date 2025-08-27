@@ -14,7 +14,15 @@ export function formatCurrency(amount: number, currency = 'CLP') {
 }
 
 export function formatDate(date: string | Date, format: 'short' | 'long' = 'short') {
-  const dateObj = typeof date === 'string' ? new Date(date) : date
+  let dateObj: Date
+  
+  if (typeof date === 'string') {
+    // Forzar interpretación local para evitar problemas de timezone
+    const [year, month, day] = date.split('-').map(Number)
+    dateObj = new Date(year, month - 1, day)
+  } else {
+    dateObj = date
+  }
   
   if (format === 'long') {
     return dateObj.toLocaleDateString('es-CL', {

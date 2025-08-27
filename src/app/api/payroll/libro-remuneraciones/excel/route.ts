@@ -279,8 +279,8 @@ async function generatePayrollExcel(
     .eq('id', params.companyId)
     .single();
 
-  const companyName = company?.name || 'Empresa Demo';
-  const companyRut = company?.rut || '12.345.678-9';
+  const companyName = company?.name || 'ContaPyme Puq';
+  const companyRut = company?.rut || '78.223.873-6';
 
   const monthNames = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',

@@ -18,7 +18,7 @@ export default function RutInput({
   value,
   onChange,
   onValidChange,
-  placeholder = "12.345.678-9",
+  placeholder = "11.111.111-1",
   className = "",
   required = false,
   disabled = false,

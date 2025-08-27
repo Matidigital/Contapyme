@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { MinimalHeader } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
-import { Users, FileText, Clock, Calendar, BarChart3, Plus, ChevronRight, Settings, FileSpreadsheet, DollarSign, Activity, TrendingUp, ArrowRight, Database, Sparkles } from 'lucide-react';
+import { Users, FileText, Clock, Calendar, BarChart3, Plus, ChevronRight, Settings, FileSpreadsheet, DollarSign, Activity, TrendingUp, ArrowRight, Database, Sparkles, FileX } from 'lucide-react';
 
 interface PayrollStats {
   totalEmployees: number;
@@ -40,7 +40,7 @@ export default function PayrollPage() {
       if (response.ok && data.success) {
         const employees = data.data || [];
         const activeContracts = employees.reduce((count: number, emp: any) => {
-          return count + (emp.employment_contracts?.filter((contract: any) => contract.status === 'active').length || 0);
+          return count + (emp.employment_contracts?.length || 0);
         }, 0);
         
         const monthlyPayroll = employees.reduce((total: number, emp: any) => {
@@ -374,6 +374,23 @@ export default function PayrollPage() {
                     </div>
                   </Link>
                   
+                  <Link href="/payroll/terminations" className="group">
+                    <div className="p-4 sm:p-6 bg-gradient-to-br from-red-50/80 to-red-100/80 rounded-xl border border-red-200/50 hover:border-red-300 transition-all duration-200 group-hover:shadow-md group-hover:scale-105">
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 bg-red-500/10 rounded-xl flex items-center justify-center group-hover:bg-red-500/20 transition-colors">
+                          <FileX className="h-5 w-5 text-red-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-gray-900 mb-1">
+                            Finiquitos
+                            <span className="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full font-medium">NUEVO</span>
+                          </h4>
+                          <p className="text-sm text-gray-600 truncate">Cartas aviso y finiquitos</p>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                  
                   <Link href="/payroll/settings" className="group">
                     <div className="p-4 sm:p-6 bg-gradient-to-br from-yellow-50/80 to-yellow-100/80 rounded-xl border border-yellow-200/50 hover:border-yellow-300 transition-all duration-200 group-hover:shadow-md group-hover:scale-105">
                       <div className="flex items-start gap-4">
@@ -462,19 +479,60 @@ export default function PayrollPage() {
                 </div>
               </div>
 
-              {/* Empty State modernizado */}
-              <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-12 border border-white/20 text-center">
-                <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full mx-auto mb-6 flex items-center justify-center">
-                  <FileText className="w-10 h-10 text-gray-400" />
+              {/* Contracts Content modernizado */}
+              <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
+                <div className="text-center mb-8">
+                  <div className="w-20 h-20 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full mx-auto mb-6 flex items-center justify-center">
+                    <FileText className="w-10 h-10 text-blue-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-3">
+                    {loadingStats ? 'Cargando contratos...' : `${stats.activeContracts} Contratos Registrados`}
+                  </h3>
+                  <p className="text-gray-600 mb-8 max-w-md mx-auto">
+                    {stats.activeContracts > 0 
+                      ? 'Gestiona todos los contratos laborales de la empresa desde aquí'
+                      : 'Los contratos aparecerán aquí una vez que los empleados tengan contratos asignados'
+                    }
+                  </p>
+                  <div className="flex flex-col sm:flex-row justify-center gap-4">
+                    <Link href="/payroll/contracts">
+                      <button className="w-full sm:w-auto inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium rounded-xl transition-all duration-200 transform hover:scale-105">
+                        <FileText className="w-5 h-5" />
+                        <span>Ver Todos los Contratos</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </Link>
+                    <Link href="/payroll/contracts/new">
+                      <button className="w-full sm:w-auto inline-flex items-center gap-2 px-6 py-3 bg-white/80 hover:bg-white border border-gray-200 hover:border-gray-300 text-gray-700 hover:text-gray-900 font-medium rounded-xl transition-all duration-200">
+                        <Plus className="w-5 h-5" />
+                        <span>Crear Nuevo Contrato</span>
+                      </button>
+                    </Link>
+                  </div>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-3">No hay contratos registrados</h3>
-                <p className="text-gray-600 mb-8 max-w-md mx-auto">Los contratos aparecerán aquí una vez que agregues empleados</p>
-                <Link href="/payroll/employees/new">
-                  <button className="inline-flex items-center gap-2 px-6 py-3 bg-white/80 hover:bg-white border border-gray-200 hover:border-gray-300 text-gray-700 hover:text-gray-900 font-medium rounded-xl transition-all duration-200">
-                    <Users className="w-4 h-4" />
-                    <span>Ir a Empleados</span>
-                  </button>
-                </Link>
+                
+                {!loadingStats && stats.activeContracts > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-gradient-to-br from-blue-50/80 to-blue-100/80 p-6 rounded-xl border border-blue-200/50">
+                      <h4 className="font-bold text-blue-900 mb-2 flex items-center gap-2">
+                        <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                          📋
+                        </div>
+                        Total Contratos
+                      </h4>
+                      <p className="text-sm text-blue-700">{stats.activeContracts} contratos registrados en el sistema</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-green-50/80 to-green-100/80 p-6 rounded-xl border border-green-200/50">
+                      <h4 className="font-bold text-green-900 mb-2 flex items-center gap-2">
+                        <div className="w-8 h-8 bg-green-500/10 rounded-lg flex items-center justify-center">
+                          💼
+                        </div>
+                        Gestión Completa
+                      </h4>
+                      <p className="text-sm text-green-700">Ver, editar, generar PDFs y gestionar contratos</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
         )}

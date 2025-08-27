@@ -183,9 +183,9 @@ function generateLiquidationHTML(liquidation: any, employee: any, company: any) 
         <!-- Header -->
         <div class="header">
             <div class="company-info">
-                <div class="company-name">${company.name || 'EMPRESA DEMO S.A.'}</div>
-                <div>RUT: ${company.rut || '76.XXX.XXX-X'}</div>
-                <div>${company.address || 'Dirección de la empresa'}</div>
+                <div class="company-name">${company.name || 'CONTAPYME PUQ'}</div>
+                <div>RUT: ${company.rut || '78.223.873-6'}</div>
+                <div>${company.address || 'Punta Arenas, Chile'}</div>
             </div>
         </div>
 
@@ -226,7 +226,7 @@ function generateLiquidationHTML(liquidation: any, employee: any, company: any) 
                 </tr>
                 ${liquidation.overtime_amount > 0 ? `
                 <tr>
-                    <td>Horas Extras</td>
+                    <td>Horas Extras${liquidation.overtime_hours > 0 ? ` (${liquidation.overtime_hours}h)` : ''}</td>
                     <td class="amount">${formatCurrency(liquidation.overtime_amount)}</td>
                 </tr>` : ''}
                 ${liquidation.bonuses > 0 ? `
@@ -245,9 +245,9 @@ function generateLiquidationHTML(liquidation: any, employee: any, company: any) 
                     <td class="amount">${formatCurrency(liquidation.gratification)}</td>
                 </tr>` : ''}
                 ${(liquidation.legal_gratification_art50 || 0) > 0 ? `
-                <tr style="background-color: #f8f4ff;">
-                    <td style="color: #7c3aed; font-weight: bold;">🏆 Gratificación Legal Art. 50 (25%)</td>
-                    <td class="amount" style="color: #7c3aed; font-weight: bold;">${formatCurrency(liquidation.legal_gratification_art50)}</td>
+                <tr>
+                    <td>Gratificación Legal Art. 50</td>
+                    <td class="amount">${formatCurrency(liquidation.legal_gratification_art50)}</td>
                 </tr>` : ''}
                 <tr class="row-divider">
                     <td><strong>Total Imponible</strong></td>

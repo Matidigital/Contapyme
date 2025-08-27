@@ -10,6 +10,7 @@ import {
   MapPin, Clock, FileText, Building, Phone, Mail, CreditCard,
   AlertCircle, CheckCircle, XCircle, Clock3
 } from 'lucide-react';
+import { formatDate as utilFormatDate, formatCurrency as utilFormatCurrency } from '@/lib/utils';
 
 interface ContractDetails {
   id: string;
@@ -97,24 +98,16 @@ export default function ContractDetailPage({ params }: { params: { id: string } 
     }
   }, [params.id]);
 
-  // Formatear fecha
+  // Formatear fecha usando utilidad centralizada
   const formatDate = (dateString?: string) => {
     if (!dateString) return '';
-    return new Date(dateString).toLocaleDateString('es-CL', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    return utilFormatDate(dateString, 'long');
   };
 
-  // Formatear moneda
+  // Formatear moneda usando utilidad centralizada
   const formatCurrency = (amount?: number) => {
     if (!amount) return '$0';
-    return new Intl.NumberFormat('es-CL', {
-      style: 'currency',
-      currency: 'CLP',
-      minimumFractionDigits: 0
-    }).format(amount);
+    return utilFormatCurrency(amount);
   };
 
   // Obtener color del estado

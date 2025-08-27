@@ -82,6 +82,7 @@ export interface LiquidationResult {
   
   // Haberes Imponibles
   base_salary: number;
+  overtime_hours: number; // ✅ NUEVO: Cantidad de horas extras realizadas
   overtime_amount: number;
   bonuses: number;
   commissions: number;
@@ -246,6 +247,7 @@ export class PayrollCalculator {
       
       // Haberes Imponibles
       base_salary: proportionalBaseSalary,
+      overtime_hours: period.overtime_hours || 0, // ✅ CORREGIDO: Usar las horas ingresadas manualmente
       overtime_amount: additionalIncome.overtime_amount || 0,
       bonuses: additionalIncome.bonuses || 0,
       commissions: additionalIncome.commissions || 0,

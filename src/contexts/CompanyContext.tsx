@@ -22,14 +22,14 @@ export interface Company {
 // Empresa demo con datos realistas chilenos
 export const DEMO_COMPANY: Company = {
   id: '8033ee69-b420-4d91-ba0e-482f46cd6fce', // ✅ CORREGIDO: Usar UUID de Supabase
-  rut: '12.345.678-9',
-  razon_social: 'PyME Ejemplo S.A.',
-  nombre_fantasia: 'PyME Ejemplo',
-  giro: 'Servicios de Consultoría y Asesoría Empresarial',
-  direccion: 'Av. Providencia 1234, Piso 8, Oficina 802, Providencia, Santiago',
-  telefono: '+56 2 2345 6789',
-  email: 'contacto@pymeejemplo.cl',
-  website: 'https://pymeejemplo.cl',
+  rut: '78.223.873-6',
+  razon_social: 'ContaPyme Puq',
+  nombre_fantasia: 'ContaPyme Puq',
+  giro: 'Servicios de Consultoría Contable y Tributaria',
+  direccion: 'Punta Arenas, Región de Magallanes, Chile',
+  telefono: '+56 9 1234 5678',
+  email: 'contacto@contapymepuq.cl',
+  website: 'https://contapymepuq.cl',
   logo: '/logo-demo-company.png',
   created_at: '2024-01-15T10:00:00Z',
   plan_tipo: 'demo',
