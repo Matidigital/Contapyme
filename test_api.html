@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test API Modificaciones Contractuales</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .test-button {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            margin: 10px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .result {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success { border-left: 5px solid #4CAF50; }
+        .error { border-left: 5px solid #f44336; }
+        h1, h2 { text-align: center; margin-bottom: 30px; }
+        h1 { font-size: 2.5em; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+        h2 { font-size: 1.8em; margin-top: 40px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Test Sistema Modificaciones Contractuales</h1>
+        <p style="text-align: center; font-size: 1.2em; margin-bottom: 40px;">
+            Sistema de modificaciones automáticas - Francisco Mancilla (30h semanales)
+        </p>
+
+        <h2>📋 Verificar Sistema</h2>
+        <button class="test-button" onclick="testSystemStatus()">
+            📊 Verificar Estado del Sistema
+        </button>
+
+        <h2>🧪 Crear Modificación de Prueba</h2>
+        <button class="test-button" onclick="createTestModification()">
+            💰 Crear Aumento Salarial Francisco ($529k → $650k)
+        </button>
+
+        <h2>🔍 Probar Contratos por Período</h2>
+        <button class="test-button" onclick="testContractForPeriod(8)">
+            📅 Agosto 2025 (Sin modificación)
+        </button>
+        <button class="test-button" onclick="testContractForPeriod(9)">
+            📅 Septiembre 2025 (Con modificación)
+        </button>
+        <button class="test-button" onclick="testContractForPeriod(10)">
+            📅 Octubre 2025 (Modificación mantenida)
+        </button>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const FRANCISCO_ID = '0ec169ea-6453-4ea5-85ce-3f49b548bef2';
+        const COMPANY_ID = '8033ee69-b420-4d91-ba0e-482f46cd6fce';
+
+        function addResult(title, data, isSuccess = true) {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${isSuccess ? 'success' : 'error'}`;
+            resultDiv.innerHTML = `<strong>${title}</strong>\n${JSON.stringify(data, null, 2)}`;
+            resultsDiv.appendChild(resultDiv);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        async function testSystemStatus() {
+            try {
+                const response = await fetch('/api/payroll/contract-modifications/test');
+                const data = await response.json();
+                addResult('✅ Estado del Sistema', data, data.success);
+            } catch (error) {
+                addResult('❌ Error verificando sistema', { error: error.message }, false);
+            }
+        }
+
+        async function createTestModification() {
+            try {
+                const response = await fetch('/api/payroll/contract-modifications/test', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                addResult('✅ Modificación de Prueba Creada', data, data.success);
+                
+                if (data.success) {
+                    alert('🎉 ¡Modificación creada exitosamente!\\n\\nAhora Francisco tendrá:\\n- Agosto: $529,000\\n- Septiembre+: $650,000');
+                }
+            } catch (error) {
+                addResult('❌ Error creando modificación', { error: error.message }, false);
+            }
+        }
+
+        async function testContractForPeriod(month) {
+            try {
+                const response = await fetch(`/api/payroll/contract-for-period?employee_id=${FRANCISCO_ID}&year=2025&month=${month}`);
+                const data = await response.json();
+                
+                const monthNames = {
+                    8: 'Agosto',
+                    9: 'Septiembre', 
+                    10: 'Octubre'
+                };
+                
+                addResult(`📅 Contrato ${monthNames[month]} 2025`, data, data.success);
+            } catch (error) {
+                addResult(`❌ Error ${monthNames[month]}`, { error: error.message }, false);
+            }
+        }
+
+        // Auto-verificar sistema al cargar
+        window.addEventListener('load', () => {
+            setTimeout(testSystemStatus, 1000);
+        });
+    </script>
+</body>
+</html>

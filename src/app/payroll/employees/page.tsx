@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { PayrollHeader } from '@/components/layout';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
 import { Plus, Users, Search, Filter, Eye, Edit, Trash2, DollarSign, Activity, ArrowRight, Mail, Briefcase, FileText } from 'lucide-react';
+import EmployeeEditModal from '@/components/payroll/EmployeeEditModal';
 
 interface Employee {
   id: string;
@@ -33,6 +34,10 @@ export default function EmployeesPage() {
     permanent: false
   });
   const [deleting, setDeleting] = useState(false);
+  const [editModal, setEditModal] = useState<{ show: boolean; employee: Employee | null }>({
+    show: false,
+    employee: null
+  });
 
   const COMPANY_ID = '8033ee69-b420-4d91-ba0e-482f46cd6fce';
 
@@ -43,7 +48,15 @@ export default function EmployeesPage() {
   const fetchEmployees = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/payroll/employees?company_id=${COMPANY_ID}`);
+      setError('');
+      
+      // Optimización: Headers para cache y performance
+      const response = await fetch(`/api/payroll/employees?company_id=${COMPANY_ID}`, {
+        headers: {
+          'Cache-Control': 'public, max-age=30', // Cache de 30 segundos
+        }
+      });
+      
       const data = await response.json();
 
       if (response.ok) {
@@ -63,19 +76,10 @@ export default function EmployeesPage() {
     setDeleteModal({ show: true, employee, permanent: false });
   };
 
-  // Función para ver contrato del empleado
-  const handleViewContract = async (employeeId: string) => {
+  // Función optimizada para ver contrato del empleado (sin consultas adicionales)
+  const handleViewContract = (employee: Employee) => {
     try {
-      // Obtener contratos del empleado
-      const response = await fetch(`/api/payroll/employees?company_id=${COMPANY_ID}&employee_id=${employeeId}`);
-      if (!response.ok) {
-        throw new Error('Error obteniendo datos del empleado');
-      }
-      
-      const data = await response.json();
-      const employee = data.data.find((emp: Employee) => emp.id === employeeId);
-      
-      if (!employee || !employee.employment_contracts || employee.employment_contracts.length === 0) {
+      if (!employee.employment_contracts || employee.employment_contracts.length === 0) {
         alert('No se encontró contrato para este empleado');
         return;
       }
@@ -346,18 +350,21 @@ export default function EmployeesPage() {
                           <span>Ver</span>
                         </button>
                       </Link>
+                      <button
+                        onClick={() => setEditModal({ show: true, employee })}
+                        className="w-full sm:w-auto group/btn relative px-3 py-2 rounded-xl bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 hover:border-green-500/40 backdrop-blur-sm transition-all duration-200 flex items-center justify-center gap-2 text-green-600 hover:text-green-700 font-medium text-sm"
+                      >
+                        <Edit className="w-3 h-3 group-hover/btn:scale-110 transition-transform" />
+                        <span>Editar</span>
+                      </button>
                       <button 
-                        onClick={() => handleViewContract(employee.id)}
+                        onClick={() => handleViewContract(employee)}
                         className="w-full sm:w-auto group/btn relative px-3 py-2 rounded-xl bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 hover:border-green-500/40 backdrop-blur-sm transition-all duration-200 flex items-center justify-center gap-2 text-green-600 hover:text-green-700 font-medium text-sm"
                       >
                         <FileText className="w-3 h-3 group-hover/btn:scale-110 transition-transform" />
                         <span>Ver Contrato</span>
                       </button>
                       <Link href={`/payroll/employees/${employee.id}/edit`} className="w-full sm:w-auto">
-                        <button className="w-full group/btn relative px-3 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 hover:border-purple-500/40 backdrop-blur-sm transition-all duration-200 flex items-center justify-center gap-2 text-purple-600 hover:text-purple-700 font-medium text-sm">
-                          <Edit className="w-3 h-3 group-hover/btn:scale-110 transition-transform" />
-                          <span>Editar</span>
-                        </button>
                       </Link>
                       <button 
                         onClick={() => handleDeleteClick(employee)}
@@ -464,6 +471,22 @@ export default function EmployeesPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal de edición de empleado */}
+      {editModal.show && editModal.employee && (
+        <EmployeeEditModal
+          isOpen={editModal.show}
+          onClose={() => setEditModal({ show: false, employee: null })}
+          employeeId={editModal.employee.id}
+          onSave={() => {
+            setEditModal({ show: false, employee: null });
+            // Solo recargar si no estamos en estado de carga
+            if (!loading) {
+              fetchEmployees();
+            }
+          }}
+        />
       )}
     </div>
   );

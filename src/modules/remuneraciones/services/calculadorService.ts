@@ -24,6 +24,7 @@ export interface EmployeeData {
   first_name: string;
   last_name: string;
   base_salary: number;
+  weekly_hours?: number; // ✅ NUEVO: Horas semanales para cálculo de horas extras
   contract_type: 'indefinido' | 'plazo_fijo' | 'obra_faena';
   afp_code: string;
   health_institution_code: string;

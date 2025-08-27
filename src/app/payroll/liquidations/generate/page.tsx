@@ -57,6 +57,7 @@ export default function GenerateLiquidationPage() {
     bonuses: 0,
     commissions: 0,
     gratification: 0,
+    overtime_hours_qty: 0, // ✅ NUEVO: Cantidad de horas extras
     overtime_amount: 0,
     food_allowance: 0,
     transport_allowance: 0,
@@ -100,6 +101,8 @@ export default function GenerateLiquidationPage() {
     
     // ✅ DEBUG: Verificar estructura de datos del empleado
     console.log(`🔍 DEBUG EMPLEADO - Empleado completo:`, emp);
+    console.log(`🔍 DEBUG EMPLEADO - Contrato:`, contract);
+    console.log(`🔍 DEBUG EMPLEADO - weekly_hours del contrato:`, contract.weekly_hours);
     console.log(`🔍 DEBUG EMPLEADO - payroll_config encontrado:`, payrollConfig);
     console.log(`🔍 DEBUG EMPLEADO - afp_code será:`, payrollConfig?.afp_code || 'MODELO');
     
@@ -109,6 +112,7 @@ export default function GenerateLiquidationPage() {
       first_name: emp.first_name,
       last_name: emp.last_name,
       base_salary: contract.base_salary,
+      weekly_hours: contract.weekly_hours, // ✅ NUEVO: Incluir horas semanales del contrato
       contract_type: contract.contract_type as 'indefinido' | 'plazo_fijo' | 'obra_faena',
       afp_code: payrollConfig?.afp_code || 'MODELO', // ✅ CORREGIDO: Desde payroll_config
       health_institution_code: payrollConfig?.health_institution_code || 'FONASA', // ✅ CORREGIDO
@@ -179,6 +183,43 @@ export default function GenerateLiquidationPage() {
     }
   }, [selectedEmployeeId, employees]);
 
+  // ✅ NUEVO: Auto-precargar fecha de inicio y calcular días trabajados
+  useEffect(() => {
+    if (selectedEmployeeId && employees.length > 0) {
+      const emp = employees.find(e => e.id === selectedEmployeeId);
+      const activeContract = emp?.employment_contracts?.find(c => c.status === 'active');
+      
+      if (activeContract?.start_date) {
+        console.log('🔍 AUTO-PRECARGA PARA EMPLEADO:', {
+          name: `${emp.first_name} ${emp.last_name}`,
+          start_date: activeContract.start_date,
+          period: `${formData.period_month}/${formData.period_year}`
+        });
+
+        // Precargar fecha en datos Previred
+        setPreviredData(prev => ({
+          ...prev,
+          start_work_date: activeContract.start_date
+        }));
+
+        // Calcular días trabajados automáticamente
+        const calculatedDays = calculateWorkedDays(
+          activeContract.start_date,
+          formData.period_year,
+          formData.period_month
+        );
+
+        console.log('🔍 DÍAS CALCULADOS AUTO-PRECARGA:', calculatedDays);
+
+        // Actualizar días trabajados
+        setFormData(prev => ({
+          ...prev,
+          days_worked: calculatedDays
+        }));
+      }
+    }
+  }, [selectedEmployeeId, employees, formData.period_year, formData.period_month]);
+
   const fetchEmployees = async () => {
     try {
       setLoading(true);
@@ -220,6 +261,100 @@ export default function GenerateLiquidationPage() {
     return { isValid: true };
   };
 
+  // ✅ NUEVO: Función para calcular días trabajados automáticamente (LÓGICA CHILENA COMPLETA)
+  const calculateWorkedDays = (startDate: string, year: number, month: number): number => {
+    if (!startDate) return 30; // Valor por defecto
+    
+    // Extraer componentes de la fecha
+    const dateComponents = startDate.split('-'); // ['2025', '08', '06']
+    const startYear = parseInt(dateComponents[0], 10); // 2025
+    const startMonth = parseInt(dateComponents[1], 10); // 8
+    const startDay = parseInt(dateComponents[2], 10); // 6
+    
+    // ✅ DETECTAR SI ES EL PRIMER MES O MES POSTERIOR
+    const isFirstMonth = (year === startYear && month === startMonth);
+    
+    if (!isFirstMonth) {
+      // MESES SIGUIENTES: Siempre 30 días para empleados antiguos
+      console.log('🔍 CÁLCULO AUTOMÁTICO DÍAS TRABAJADOS (MES POSTERIOR):');
+      console.log(`  - Fecha inicio: ${startDate} (${startMonth}/${startYear})`);
+      console.log(`  - Período actual: ${month}/${year}`);
+      console.log(`  - Empleado antiguo: 30 días trabajados automáticamente`);
+      return 30;
+    }
+    
+    // PRIMER MES: Aplicar cálculo con días reales desde ingreso
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const calculatedDays = daysInMonth - startDay + 1;
+    const workedDays = Math.min(calculatedDays, 30);
+    
+    console.log('🔍 CÁLCULO AUTOMÁTICO DÍAS TRABAJADOS (PRIMER MES):');
+    console.log(`  - Fecha inicio: ${startDate} (día ${startDay})`);
+    console.log(`  - Mes ${month}/${year} tiene ${daysInMonth} días`);
+    console.log(`  - Cálculo: ${daysInMonth} - ${startDay} + 1 = ${calculatedDays} días`);
+    console.log(`  - Con tope máximo 30: ${workedDays} días`);
+    
+    return workedDays;
+  };
+
+  // ✅ NUEVO: Función para calcular valor de horas extras según tabla oficial del Ministerio del Trabajo
+  const calculateOvertimeAmount = (overtimeHours: number, baseSalary: number, weeklyHours: number): number => {
+    if (!overtimeHours || !baseSalary || overtimeHours === 0) return 0;
+    
+    // Obtener horas semanales del empleado (por defecto 44 si no está especificado)
+    const employeeWeeklyHours = weeklyHours || 44;
+    
+    // 📊 TABLA OFICIAL DE FACTORES DIRECTOS PARA HORAS EXTRAS (SUELDO MENSUAL)
+    // Fuente: Ministerio del Trabajo de Chile
+    const overtimeFactors: { [key: number]: number } = {
+      45: 0.0077777,
+      44: 0.0079545,   // ⭐ ESTÁNDAR CHILENO
+      43: 0.0081395,
+      42: 0.0083333,
+      41: 0.0085366,
+      40: 0.00875,
+      39: 0.0089743,
+      38: 0.0092105,
+      37: 0.0094594,
+      36: 0.0097222,
+      35: 0.01,
+      34: 0.0102941,
+      33: 0.0106060,
+      32: 0.0109375,
+      31: 0.0112903,
+      30: 0.0116667,
+      28: 0.0125,
+      25: 0.014,
+      22: 0.0159091,
+      20: 0.0175
+    };
+    
+    // Buscar el factor exacto o calcular para horas no estándar
+    let factor = overtimeFactors[employeeWeeklyHours];
+    
+    if (!factor) {
+      // Si no está en la tabla, usar cálculo manual (fórmula general)
+      // Para trabajadores con sueldo mensual: (sueldo ÷ 30 × 28) ÷ (horas_semanales × 4) × 1.5
+      const monthlyHours = employeeWeeklyHours * 4;
+      factor = (28 / (monthlyHours * 30)) * 1.5;
+      console.log(`⚠️ HORAS NO ESTÁNDAR: ${employeeWeeklyHours}h - usando cálculo manual, factor: ${factor}`);
+    }
+    
+    // Calcular valor de la hora extra usando el factor oficial
+    const hourlyRate = baseSalary * factor;
+    const overtimeAmount = Math.round(hourlyRate * overtimeHours);
+    
+    console.log('🔍 CÁLCULO HORAS EXTRAS (TABLA OFICIAL):');
+    console.log(`  - Sueldo base: $${baseSalary.toLocaleString()}`);
+    console.log(`  - Horas semanales: ${employeeWeeklyHours}h`);
+    console.log(`  - Factor oficial: ${factor} ${overtimeFactors[employeeWeeklyHours] ? '(tabla oficial)' : '(calculado)'}`);
+    console.log(`  - Horas extras: ${overtimeHours}h`);
+    console.log(`  - Valor hora extra: $${Math.round(hourlyRate).toLocaleString()}`);
+    console.log(`  - Total horas extras: $${overtimeAmount.toLocaleString()}`);
+    
+    return overtimeAmount;
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const { checked } = e.target as HTMLInputElement;
@@ -251,11 +386,70 @@ export default function GenerateLiquidationPage() {
       console.log('  - New value:', newValue);
     }
     
+    // ✅ NUEVO: Calcular automáticamente monto de horas extras
+    if (name === 'overtime_hours_qty' && selectedEmployee) {
+      const baseSalary = selectedEmployee.base_salary || 0;
+      const weeklyHours = selectedEmployee.weekly_hours || 44;
+      const calculatedAmount = calculateOvertimeAmount(newValue as number, baseSalary, weeklyHours);
+      
+      setFormData(prev => ({
+        ...prev,
+        [name]: newValue,
+        overtime_amount: calculatedAmount
+      }));
+      return;
+    }
+    
     setFormData(prev => ({
       ...prev,
       [name]: newValue
     }));
   };
+
+  // ✅ NUEVO: Manejar cambios en datos Previred con cálculo automático de días
+  const handlePreviredDataChange = (newPreviredData: any) => {
+    setPreviredData(newPreviredData);
+    
+    // Si se cambió la fecha de inicio, calcular días trabajados automáticamente
+    if (newPreviredData.start_work_date && newPreviredData.start_work_date !== previredData.start_work_date) {
+      const calculatedDays = calculateWorkedDays(
+        newPreviredData.start_work_date, 
+        formData.period_year, 
+        formData.period_month
+      );
+      
+      console.log('🔍 ACTUALIZANDO DÍAS TRABAJADOS AUTOMÁTICAMENTE:');
+      console.log(`  - Días calculados: ${calculatedDays}`);
+      
+      setFormData(prev => ({
+        ...prev,
+        days_worked: calculatedDays
+      }));
+    }
+  };
+
+  // ✅ NUEVO: Efecto para recalcular días cuando cambie el período
+  useEffect(() => {
+    if (previredData.start_work_date) {
+      const calculatedDays = calculateWorkedDays(
+        previredData.start_work_date,
+        formData.period_year,
+        formData.period_month
+      );
+      
+      // Solo actualizar si es diferente para evitar loops infinitos
+      if (calculatedDays !== formData.days_worked) {
+        console.log('🔍 RECALCULANDO DÍAS POR CAMBIO DE PERÍODO:');
+        console.log(`  - Nuevo período: ${formData.period_month}/${formData.period_year}`);
+        console.log(`  - Días recalculados: ${calculatedDays}`);
+        
+        setFormData(prev => ({
+          ...prev,
+          days_worked: calculatedDays
+        }));
+      }
+    }
+  }, [formData.period_year, formData.period_month, previredData.start_work_date]);
 
   const handleSaveAndGenerate = async () => {
     if (!result || !selectedEmployee) return;
@@ -575,7 +769,8 @@ export default function GenerateLiquidationPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
                     Días Trabajados
                   </label>
                   <input
@@ -587,6 +782,34 @@ export default function GenerateLiquidationPage() {
                     max="31"
                     className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
                   />
+                  {previredData.start_work_date && (
+                    <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Calculator className="w-4 h-4 text-blue-600" />
+                        <span className="font-medium text-blue-800">Cálculo Automático:</span>
+                      </div>
+                      <p className="text-sm text-blue-700 mt-1">
+                        {(() => {
+                          const startComponents = previredData.start_work_date.split('-');
+                          const startYear = parseInt(startComponents[0]);
+                          const startMonth = parseInt(startComponents[1]);
+                          const startDay = startComponents[2];
+                          const isFirstMonth = (formData.period_year === startYear && formData.period_month === startMonth);
+                          
+                          if (isFirstMonth) {
+                            return `Primer mes: inicia día ${startDay}, trabajará ${formData.days_worked} días (${new Date(formData.period_year, formData.period_month, 0).getDate()} - ${startDay} + 1, tope 30)`;
+                          } else {
+                            return `Mes posterior: empleado antiguo, automáticamente ${formData.days_worked} días trabajados`;
+                          }
+                        })()}
+                      </p>
+                    </div>
+                  )}
+                  {!previredData.start_work_date && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      💡 Configura la "Fecha de Inicio Trabajo" abajo para cálculo automático
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -632,9 +855,33 @@ export default function GenerateLiquidationPage() {
                     className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500 transition-all duration-200"
                   />
                 </div>
+                
+                {/* ✅ NUEVO: Campo para cantidad de horas extras */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Horas Extras ($)
+                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-orange-600" />
+                    Horas Extras (cantidad)
+                  </label>
+                  <input
+                    type="number"
+                    name="overtime_hours_qty"
+                    value={formData.overtime_hours_qty}
+                    onChange={handleInputChange}
+                    min="0"
+                    step="0.5"
+                    placeholder="0"
+                    className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-all duration-200"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    💡 Se calcula automáticamente según normativa chilena
+                  </p>
+                </div>
+                
+                {/* Campo de monto calculado automáticamente */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-green-600" />
+                    Horas Extras ($) {formData.overtime_hours_qty > 0 && <span className="text-xs text-blue-600">(Calculado)</span>}
                   </label>
                   <input
                     type="number"
@@ -643,8 +890,28 @@ export default function GenerateLiquidationPage() {
                     onChange={handleInputChange}
                     min="0"
                     placeholder="0"
-                    className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500 transition-all duration-200"
+                    readOnly={formData.overtime_hours_qty > 0}
+                    className={`w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 transition-all duration-200 ${
+                      formData.overtime_hours_qty > 0 
+                        ? 'bg-blue-50/80 border-blue-200 text-blue-800 cursor-not-allowed' 
+                        : 'bg-white/80 focus:ring-green-500/50 focus:border-green-500'
+                    }`}
                   />
+                  {formData.overtime_hours_qty > 0 && selectedEmployee && (
+                    <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center gap-2 text-xs">
+                        <Calculator className="w-3 h-3 text-blue-600" />
+                        <span className="font-medium text-blue-800">Cálculo Automático:</span>
+                      </div>
+                      <p className="text-xs text-blue-700 mt-1">
+                        {selectedEmployee.weekly_hours === 44 || !selectedEmployee.weekly_hours ? (
+                          <>Fórmula 44h: ${selectedEmployee.base_salary?.toLocaleString()} × 0.0079545 × {formData.overtime_hours_qty}h</>
+                        ) : (
+                          <>Fórmula {selectedEmployee.weekly_hours}h: Sueldo ÷ 30 × 28 ÷ {selectedEmployee.weekly_hours * 4} × 1.5 × {formData.overtime_hours_qty}h</>
+                        )}
+                      </p>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -883,7 +1150,7 @@ export default function GenerateLiquidationPage() {
               daysWorked={formData.days_worked}
               baseSalary={selectedEmployee?.base_salary || 0}
               data={previredData}
-              onChange={setPreviredData}
+              onChange={handlePreviredDataChange}
               onApplyConcepts={(concepts) => {
                 // Aplicar conceptos calculados automáticamente al formulario principal
                 concepts.forEach(concept => {

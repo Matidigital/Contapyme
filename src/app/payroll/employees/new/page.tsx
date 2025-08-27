@@ -10,6 +10,7 @@ import RutInputFixed from '@/modules/remuneraciones/components/empleados/RutInpu
 import { usePayrollOptions } from '@/modules/remuneraciones/hooks/useConfiguracion';
 import { useCompanyId } from '@/contexts/CompanyContext';
 import { JobDescriptionAssistant } from '@/components/payroll/JobDescriptionAssistant';
+import { WeeklyScheduleConfigurator } from '@/components/payroll/WeeklyScheduleConfigurator';
 
 interface EmployeeFormData {
   // Información Personal
@@ -50,6 +51,10 @@ interface EmployeeFormData {
   entryTime: string;
   exitTime: string;
   lunchBreakDuration: string;
+  
+  // Horario Semanal Detallado
+  weeklySchedule?: any; // Se definirá más específicamente
+  scheduleText: string; // Para el contrato PDF
   
   healthInsurance: string;
   pensionFund: string;
@@ -119,6 +124,10 @@ export default function NewEmployeePage() {
     entryTime: '09:00',
     exitTime: '18:00',
     lunchBreakDuration: '60',
+    
+    // Horario Semanal
+    weeklySchedule: null,
+    scheduleText: 'lunes a viernes',
     
     healthInsurance: '',
     pensionFund: '',
@@ -343,12 +352,48 @@ export default function NewEmployeePage() {
     }
   };
 
+  // Manejar cambios en el configurador de horarios semanales
+  const handleScheduleChange = (schedule: any, summary: any) => {
+    setFormData(prev => ({
+      ...prev,
+      weeklySchedule: schedule,
+      weeklyHours: summary.totalWeeklyHours.toString(),
+      scheduleText: summary.scheduleText,
+      // Actualizar campos individuales basados en el primer día laborable
+      entryTime: getFirstWorkingDayTime(schedule, 'start') || prev.entryTime,
+      exitTime: getFirstWorkingDayTime(schedule, 'end') || prev.exitTime,
+      lunchBreakDuration: getFirstWorkingDayLunch(schedule)?.toString() || prev.lunchBreakDuration
+    }));
+  };
+
+  // Obtener horario del primer día laborable
+  const getFirstWorkingDayTime = (schedule: any, type: 'start' | 'end') => {
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    for (const day of days) {
+      if (schedule[day]?.isWorkingDay) {
+        return type === 'start' ? schedule[day].startTime : schedule[day].endTime;
+      }
+    }
+    return null;
+  };
+
+  // Obtener duración de colación del primer día laborable
+  const getFirstWorkingDayLunch = (schedule: any) => {
+    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    for (const day of days) {
+      if (schedule[day]?.isWorkingDay && schedule[day].hasLunch) {
+        return schedule[day].lunchDuration;
+      }
+    }
+    return 60; // default
+  };
+
   // Manejar datos extraídos del asistente de descriptor de cargo
   const handleJobDescriptionData = (data: any) => {
     console.log('🔍 Datos recibidos del asistente:', data);
     
-    // 🛑 Desactivar autocompletado temporalmente para evitar creación accidental de empleados
-    setDisableAutoComplete(true);
+    // 🛑 NO cambiar de pestaña automáticamente ni guardar
+    // Solo actualizar los datos del formulario sin efectos secundarios
     
     setFormData(prev => ({
       ...prev,
@@ -369,14 +414,8 @@ export default function NewEmployeePage() {
     }));
     
     // Log para debug
-    console.log('✅ FormData actualizado con cargo:', data.position);
-    console.log('🛑 Autocompletado desactivado temporalmente');
-    
-    // Reactivar autocompletado después de 2 segundos
-    setTimeout(() => {
-      setDisableAutoComplete(false);
-      console.log('✅ Autocompletado reactivado');
-    }, 2000);
+    console.log('✅ Datos del descriptor actualizados en el formulario');
+    console.log('ℹ️ Permaneciendo en la pestaña actual sin guardar automáticamente');
   };
 
 
@@ -1153,79 +1192,11 @@ export default function NewEmployeePage() {
                         </select>
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Horas Semanales *
-                          <span className="text-xs text-gray-500 ml-2">(Máx. 44 horas - Normativa 2024)</span>
-                        </label>
-                        <input
-                          type="number"
-                          name="weeklyHours"
-                          value={formData.weeklyHours}
-                          onChange={handleInputChange}
-                          min="1"
-                          max="44"
-                          placeholder="44"
-                          className="w-full px-4 py-3 bg-white/80 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200"
+                      <div className="md:col-span-2">
+                        {/* Configurador de Horarios Semanales */}
+                        <WeeklyScheduleConfigurator
+                          onScheduleChange={handleScheduleChange}
                         />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Hora de Entrada *
-                        </label>
-                        <input
-                          type="time"
-                          name="entryTime"
-                          value={formData.entryTime}
-                          onChange={handleInputChange}
-                          className={`w-full px-4 py-3 bg-white/80 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200 ${
-                            errors.entryTime ? 'border-red-500' : 'border-gray-200'
-                          }`}
-                        />
-                        {errors.entryTime && (
-                          <p className="mt-1 text-sm text-red-600">{errors.entryTime}</p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Hora de Salida *
-                        </label>
-                        <input
-                          type="time"
-                          name="exitTime"
-                          value={formData.exitTime}
-                          onChange={handleInputChange}
-                          className={`w-full px-4 py-3 bg-white/80 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200 ${
-                            errors.exitTime ? 'border-red-500' : 'border-gray-200'
-                          }`}
-                        />
-                        {errors.exitTime && (
-                          <p className="mt-1 text-sm text-red-600">{errors.exitTime}</p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Duración Colación (minutos) *
-                          <span className="text-xs text-gray-500 ml-2">(Ej: 60 para 1 hora)</span>
-                        </label>
-                        <input
-                          type="number"
-                          name="lunchBreakDuration"
-                          value={formData.lunchBreakDuration}
-                          onChange={handleInputChange}
-                          min="30"
-                          max="120"
-                          placeholder="60"
-                          className={`w-full px-4 py-3 bg-white/80 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all duration-200 ${
-                            errors.lunchBreakDuration ? 'border-red-500' : 'border-gray-200'
-                          }`}
-                        />
-                        {errors.lunchBreakDuration && (
-                          <p className="mt-1 text-sm text-red-600">{errors.lunchBreakDuration}</p>
-                        )}
                       </div>
 
                       <div>

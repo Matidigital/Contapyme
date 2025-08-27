@@ -73,47 +73,111 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1. Obtener datos del empleado con información AFP del contrato
-    const { data: employee, error: employeeError } = await supabase
-      .from('employees')
-      .select(`
-        *,
-        employment_contracts (
-          position,
-          base_salary,
-          contract_type,
-          status,
-          afp_name,
-          health_institution,
-          isapre_plan
-        ),
-        payroll_config (
-          afp_code,
-          health_institution_code,
-          family_allowances,
-          legal_gratification_type
-        )
-      `)
-      .eq('id', employee_id)
-      .eq('company_id', companyId)
-      .single();
+    // ✅ OPTIMIZADO: Obtener contrato vigente usando helper functions (más robusto)
+    console.log('🔍 Obteniendo contrato vigente para período:', { employee_id, period_year, period_month });
+    
+    // Importar funciones helper
+    const { getContractForPeriod, shouldPayUnemploymentInsurance } = await import('@/lib/contractModificationsHelper');
+    
+    const contractForPeriod = await getContractForPeriod(employee_id, period_year, period_month);
 
-    if (employeeError || !employee) {
-      console.error('Employee fetch error:', employeeError);
-      return NextResponse.json(
-        { success: false, error: `Empleado no encontrado: ${employeeError?.message || 'Unknown error'}` },
-        { status: 404 }
-      );
+    if (!contractForPeriod) {
+      console.error('Contract for period error - usando fallback');
+      // FALLBACK: Intentar obtener contrato actual si falla la función especializada
+      const { data: employee, error: employeeError } = await supabase
+        .from('employees')
+        .select(`
+          *,
+          employment_contracts (
+            position,
+            base_salary,
+            contract_type,
+            weekly_hours,
+            status
+          ),
+          payroll_config (
+            afp_code,
+            health_institution_code,
+            family_allowances,
+            legal_gratification_type
+          )
+        `)
+        .eq('id', employee_id)
+        .eq('company_id', companyId)
+        .single();
+
+      if (employeeError || !employee) {
+        console.error('Employee fetch error:', employeeError);
+        return NextResponse.json(
+          { success: false, error: `Empleado no encontrado: ${employeeError?.message || 'Unknown error'}` },
+          { status: 404 }
+        );
+      }
+
+      const activeContract = employee.employment_contracts?.find((contract: any) => contract.status === 'active');
+      if (!activeContract) {
+        return NextResponse.json(
+          { success: false, error: 'Empleado no tiene contrato activo' },
+          { status: 400 }
+        );
+      }
+
+      // Usar contrato actual como fallback
+      var periodContract = {
+        base_salary: activeContract.base_salary,
+        weekly_hours: activeContract.weekly_hours || 44,
+        contract_type: activeContract.contract_type,
+        position: activeContract.position,
+        department: activeContract.department
+      };
+      var employeeInfo = employee;
+      console.log('⚠️ Usando contrato actual como fallback');
+    } else {
+      // ✅ USAR CONTRATO DEL PERÍODO ESPECÍFICO OPTIMIZADO
+      periodContract = contractForPeriod;
+      
+      // Obtener información básica del empleado
+      const { data: employee, error: employeeError } = await supabase
+        .from('employees')
+        .select(`
+          *,
+          payroll_config (
+            afp_code,
+            health_institution_code,
+            family_allowances,
+            legal_gratification_type
+          )
+        `)
+        .eq('id', employee_id)
+        .eq('company_id', companyId)
+        .single();
+
+      if (employeeError || !employee) {
+        return NextResponse.json(
+          { success: false, error: 'Error obteniendo datos del empleado' },
+          { status: 404 }
+        );
+      }
+      employeeInfo = employee;
+      console.log('✅ Usando contrato específico del período:', {
+        salary: periodContract.base_salary,
+        hours: periodContract.weekly_hours,
+        type: periodContract.contract_type,
+        modifications: periodContract.modifications_applied?.length || 0
+      });
     }
 
-    // Verificar que tenga contrato activo
-    const activeContract = employee.employment_contracts?.find((contract: any) => contract.status === 'active');
-    if (!activeContract) {
-      return NextResponse.json(
-        { success: false, error: 'Empleado no tiene contrato activo' },
-        { status: 400 }
-      );
-    }
+    // ✅ VERIFICAR REGLA DE CESANTÍA AUTOMÁTICA OPTIMIZADA
+    const shouldPayUnemployment = contractForPeriod ? 
+      await shouldPayUnemploymentInsurance(employee_id, period_year, period_month) : 
+      false;
+
+    console.log('🔍 Cesantía automática OPTIMIZADA:', {
+      contractType: periodContract.contract_type,
+      shouldPay: shouldPayUnemployment,
+      period: `${period_month}/${period_year}`,
+      modificationsApplied: contractForPeriod ? periodContract.modifications_applied?.length : 0
+    });
 
     // 2. Obtener configuración previsional de la empresa
     const { data: settingsData, error: settingsError } = await supabase
@@ -153,29 +217,32 @@ export async function POST(request: NextRequest) {
       payrollSettings = settingsData.settings;
     }
 
-    // 3. Preparar datos para el calculador
-    const payrollConfig = employee.payroll_config || {};
-
-    // PRIORIDAD: Usar configuración individual payroll_config primero, luego contrato como fallback
-    const contractAfpName = activeContract.afp_name;
-    const contractHealthInstitution = activeContract.health_institution;
+    // 3. Preparar datos para el calculador usando el contrato del período específico
+    const payrollConfig = employeeInfo.payroll_config || {};
     
-    console.log('🔍 RECÁLCULO - AFP desde contrato:', contractAfpName);
-    console.log('🔍 RECÁLCULO - AFP desde payroll_config:', payrollConfig.afp_code);
-    console.log('🔍 RECÁLCULO - Salud desde contrato:', contractHealthInstitution);
-    console.log('🔍 RECÁLCULO - Salud desde payroll_config:', payrollConfig.health_institution_code);
+    console.log('🔍 NUEVO SISTEMA - Contrato del período:', {
+      salario: periodContract.base_salary,
+      horas: periodContract.weekly_hours,
+      tipo: periodContract.contract_type,
+      cesantia: shouldPayUnemployment
+    });
+    console.log('🔍 NUEVO SISTEMA - AFP desde payroll_config:', payrollConfig.afp_code);
+    console.log('🔍 NUEVO SISTEMA - Salud desde payroll_config:', payrollConfig.health_institution_code);
     
     const employeeData = {
-      id: employee.id,
-      rut: employee.rut,
-      first_name: employee.first_name,
-      last_name: employee.last_name,
-      base_salary: activeContract.base_salary,
-      contract_type: activeContract.contract_type,
-      afp_code: payrollConfig.afp_code || contractAfpName || 'MODELO', // PRIORIDAD: configuración individual primero
-      health_institution_code: payrollConfig.health_institution_code || contractHealthInstitution || 'FONASA',
+      id: employeeInfo.id,
+      rut: employeeInfo.rut,
+      first_name: employeeInfo.first_name,
+      last_name: employeeInfo.last_name,
+      base_salary: parseFloat(periodContract.base_salary || 0), // ✅ USAR SALARIO DEL PERÍODO
+      weekly_hours: parseInt(periodContract.weekly_hours || 44), // ✅ USAR HORAS DEL PERÍODO  
+      contract_type: periodContract.contract_type || 'indefinido', // ✅ USAR TIPO DEL PERÍODO
+      afp_code: payrollConfig.afp_code || 'MODELO',
+      health_institution_code: payrollConfig.health_institution_code || 'FONASA',
       family_allowances: payrollConfig.family_allowances || 0,
-      legal_gratification_type: payrollConfig.legal_gratification_type || 'none'
+      legal_gratification_type: payrollConfig.legal_gratification_type || 'none',
+      // ✅ NUEVO: Indicador de cesantía automática
+      should_pay_unemployment: shouldPayUnemployment || false
     };
 
     const periodData = {

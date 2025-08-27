@@ -141,8 +141,36 @@ function generateContractHTML(contractData: any): string {
   const exitTime = contractData.exit_time || schedule_details.exit || '18:00';
   const lunchDuration = contractData.lunch_break_duration || schedule_details.lunch_break_duration || 60;
   
-  const scheduleText = `desde las ${entryTime} a las ${exitTime}`;
+  // Formatear horas sin segundos (quitar :00 del final)
+  const formatTime = (time) => time.replace(':00', '');
+  
+  // Calcular horas diarias y días laborables
+  const parseHour = (timeString) => {
+    const [hours, minutes] = timeString.split(':').map(Number);
+    return hours + (minutes / 60);
+  };
+  
+  const entryHour = parseHour(entryTime);
+  const exitHour = parseHour(exitTime);
+  const lunchHours = lunchDuration / 60; // convertir minutos a horas
+  const dailyHours = exitHour - entryHour - lunchHours;
+  const workingDays = Math.round(weekly_hours / dailyHours);
+  
+  // Formatear días de la semana según días laborables
+  let workDaysText = '';
+  if (workingDays === 5) {
+    workDaysText = 'lunes a viernes';
+  } else if (workingDays === 6) {
+    workDaysText = 'lunes a sábado';
+  } else if (workingDays === 7) {
+    workDaysText = 'lunes a domingo';
+  } else {
+    workDaysText = `${workingDays} días a la semana`;
+  }
+  
+  const scheduleText = `desde las ${formatTime(entryTime)} a las ${formatTime(exitTime)}`;
   const lunchText = `${lunchDuration} minutos`;
+  const hoursCalculation = `(${formatTime(exitTime)} - ${formatTime(entryTime)} - ${Math.round(lunchHours * 60)}min colación = ${dailyHours}h diarias x ${workingDays} días)`;
 
   return `
 <!DOCTYPE html>
@@ -358,8 +386,8 @@ function generateContractHTML(contractData: any): string {
         <div class="clause-title">CUARTO:</div>
         <p>
             La jornada de trabajo ordinaria será distribuida de la siguiente manera, 
-            de lunes a sábado ${scheduleText}, total ${weekly_hours} horas semanales. 
-            ${weekly_hours < 45 ? 'El trabajador será contratado como part-time, ' : ''}
+            de ${workDaysText} ${scheduleText}, total ${weekly_hours} horas semanales ${hoursCalculation}. 
+            ${weekly_hours <= 30 ? 'El trabajador será contratado como part-time, ' : 'El trabajador será contratado como full-time, '}
             El trabajador tendrá derecho a un descanso para colación de ${lunchText}.
         </p>
     </div>

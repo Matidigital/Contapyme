@@ -521,6 +521,7 @@ export function JobDescriptionAssistant({
 
             {/* Botón para usar datos manuales */}
             <Button
+              type="button"
               onClick={() => {
                 const data = {
                   position: manualForm.position,
@@ -615,6 +616,7 @@ export function JobDescriptionAssistant({
             </div>
 
             <Button
+              type="button"
               onClick={handleAIGeneration}
               disabled={loading || !currentPosition.trim()}
               variant="primary"
@@ -762,6 +764,7 @@ export function JobDescriptionAssistant({
               {!showRefinedResult ? (
                 <div className="mt-4 pt-3 border-t border-green-200">
                   <Button
+                    type="button"
                     onClick={handleRefineWithAI}
                     disabled={refining}
                     variant="primary"
@@ -944,6 +947,7 @@ export function JobDescriptionAssistant({
         {!result && activeTab === 'manual' && (
           <div className="mt-6">
             <Button
+              type="button"
               onClick={handleRefineWithAI}
               disabled={refining}
               variant="primary"

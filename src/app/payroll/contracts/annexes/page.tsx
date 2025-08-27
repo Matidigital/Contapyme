@@ -216,6 +216,7 @@ export default function ContractAnnexesPage() {
         ...(selectedType === 'renovation' && {
           renovationType,
           newEndDate: renovationType === 'fixed_term' ? newEndDate : undefined,
+          newSalary: newSalary, // ✅ AGREGAR newSalary para renovación
           effectiveDate: effectiveDate || formData.annexDate
         }),
         

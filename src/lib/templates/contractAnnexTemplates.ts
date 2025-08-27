@@ -338,10 +338,13 @@ export function generateOvertimeAgreementAnnex(data: AnnexData): string {
   const overtimeDuration = data.overtimeDuration || 3;
   const overtimeMaxHours = data.overtimeMaxHours || 10;
   
-  // Calcular fecha de término del pacto
+  // Calcular fecha de término del pacto (meses cerrados)
   const startDate = new Date(data.effectiveDate || data.annexDate);
   const endDate = new Date(startDate);
   endDate.setMonth(endDate.getMonth() + overtimeDuration);
+  // Ajustar al último día del mes
+  endDate.setDate(0); // Esto lo lleva al último día del mes anterior
+  endDate.setMonth(endDate.getMonth() + 1); // Y luego al último día del mes correcto
   
   return `
 <!DOCTYPE html>
@@ -400,64 +403,52 @@ export function generateOvertimeAgreementAnnex(data: AnnexData): string {
 </head>
 <body>
     <div class="header">
-        <h1>PACTO DE HORAS EXTRAORDINARIAS</h1>
-        <p class="legal-ref">Artículo 32 del Código del Trabajo</p>
-    </div>
-    
-    <div class="company-info">
-        <strong>${data.companyName}</strong><br>
-        RUT: ${formatRut(data.companyRut)}<br>
-        ${data.companyAddress ? data.companyAddress + '<br>' : ''}
-        Representada por: ${data.legalRepresentativeName}<br>
-        RUT: ${formatRut(data.legalRepresentativeRut)}
+        <h1>ANEXO CONTRACTUAL</h1>
+        <h2>PACTO DE HORAS EXTRAORDINARIAS</h2>
+        <p class="subtitle">Artículo 32 del Código del Trabajo</p>
     </div>
     
     <div class="content">
-        <p>En ${formatDate(data.annexDate)}, entre <strong>${data.companyName}</strong>, RUT ${formatRut(data.companyRut)}, 
-        representada por <strong>${data.legalRepresentativeName}</strong>, RUT ${formatRut(data.legalRepresentativeRut)}, 
-        en adelante "EL EMPLEADOR", y don(ña) <strong>${data.employeeName}</strong>, 
-        RUT ${formatRut(data.employeeRut)}, en adelante "EL TRABAJADOR", se acuerda el siguiente pacto de horas extraordinarias:</p>
+        <p>En ${data.companyAddress || 'Las Malvas 2775'}, a ${formatDate(data.annexDate)}, entre ${data.companyName}, 
+        RUT ${formatRut(data.companyRut)}, representada por don(ña) <strong>${data.legalRepresentativeName}</strong>, 
+        RUT ${formatRut(data.legalRepresentativeRut)}, en adelante "el empleador", y don(ña) 
+        <strong>${data.employeeName}</strong>, RUT ${formatRut(data.employeeRut)}, en adelante "el trabajador", 
+        han acordado el siguiente anexo de contrato:</p>
         
-        <p><strong>PRIMERO:</strong> El trabajador se desempeña en el cargo de <strong>${data.employeePosition}</strong>${data.employeeDepartment ? ` en el departamento de ${data.employeeDepartment}` : ''}, 
-        con una remuneración base de <span class="highlight">$${formatNumber(data.currentSalary)}</span>.</p>
+        <p><strong>PRIMERO:</strong> Las partes dejan constancia que con fecha ${formatDate(data.originalContractDate)} 
+        suscribieron un contrato de trabajo, en virtud del cual el trabajador presta servicios como <strong>${data.employeePosition}</strong>${data.employeeDepartment ? ` en el departamento de ${data.employeeDepartment}` : ''}.</p>
         
-        <p><strong>SEGUNDO:</strong> Por las necesidades del servicio y la naturaleza de las funciones, las partes 
-        acuerdan que el trabajador podrá realizar <strong>horas extraordinarias</strong> con las siguientes condiciones:</p>
+        <p><strong>SEGUNDO:</strong> Por las necesidades del servicio y la naturaleza de las funciones desempeñadas, 
+        las partes acuerdan establecer un <strong>PACTO DE HORAS EXTRAORDINARIAS</strong> con las siguientes condiciones:</p>
         
-        <p><strong>TERCERO - RECARGO:</strong> Las horas extraordinarias se pagarán con un recargo del 
-        <span class="highlight"><strong>${overtimePercentage}%</strong></span> sobre el valor de la hora ordinaria, 
-        conforme al artículo 32 del Código del Trabajo.</p>
+        <p><strong>TERCERO:</strong> Las horas extraordinarias se pagarán con un recargo del 
+        <strong>${overtimePercentage}%</strong> sobre el valor de la hora ordinaria, conforme a lo establecido 
+        en el artículo 32 del Código del Trabajo.</p>
         
-        <p><strong>CUARTO - LÍMITES:</strong> El trabajador no podrá realizar más de 
-        <span class="highlight"><strong>${overtimeMaxHours} horas extraordinarias por semana</strong></span>, 
-        respetando el límite legal de 2 horas diarias establecido en el artículo 31 del Código del Trabajo.</p>
+        <p><strong>CUARTO:</strong> El trabajador no podrá realizar más de <strong>${overtimeMaxHours} horas extraordinarias 
+        por semana</strong>, respetando el límite legal de 2 horas diarias establecido en el artículo 31 del Código del Trabajo.</p>
         
-        <p><strong>QUINTO - JUSTIFICACIÓN:</strong> ${data.overtimeJustification || 'Este pacto se justifica por las necesidades operacionales de la empresa y el aumento temporal de la demanda.'}</p>
+        <p><strong>QUINTO:</strong> La justificación del presente pacto se fundamenta en: 
+        ${data.overtimeJustification || 'las necesidades operacionales de la empresa y el aumento temporal de la demanda de servicios'}.</p>
         
-        <p><strong>SEXTO - VIGENCIA:</strong> Este pacto tendrá vigencia desde el 
-        <span class="highlight">${formatDate(data.effectiveDate || data.annexDate)}</span> 
-        hasta el <span class="highlight">${formatDate(endDate.toISOString().split('T')[0])}</span>, 
-        es decir, por un período de <strong>${overtimeDuration} meses</strong>.</p>
+        <p><strong>SEXTO:</strong> Este pacto tendrá vigencia desde el ${formatDate(data.effectiveDate || data.annexDate)} 
+        hasta el ${formatDate(endDate.toISOString().split('T')[0])}, es decir, por un período de <strong>${overtimeDuration} meses</strong>.</p>
         
-        <p><strong>SÉPTIMO - AUTORIZACIÓN:</strong> El trabajador autoriza expresamente al empleador para 
-        distribuir las horas extraordinarias según las necesidades del servicio, previo aviso con 
-        24 horas de anticipación cuando sea posible.</p>
+        <p><strong>SÉPTIMO:</strong> El trabajador autoriza expresamente al empleador para distribuir las horas extraordinarias 
+        según las necesidades del servicio, con previo aviso cuando las circunstancias lo permitan.</p>
         
-        <p><strong>OCTAVO - LIQUIDACIÓN:</strong> Las horas extraordinarias trabajadas se liquidarán y pagarán 
-        junto con las remuneraciones del mes respectivo, indicándose claramente en la liquidación de sueldo 
-        la cantidad de horas y el recargo aplicado.</p>
-        
-        <p><strong>NOVENO - TÉRMINO:</strong> Este pacto podrá darse por terminado por cualquiera de las partes 
-        con un aviso previo de 15 días, o automáticamente al vencimiento del plazo indicado.</p>
+        <p><strong>OCTAVO:</strong> Las horas extraordinarias trabajadas se liquidarán mensualmente junto con la remuneración, 
+        indicándose claramente en la liquidación de sueldo la cantidad de horas y el recargo aplicado.</p>
         
         ${data.observations ? `
-        <p><strong>OBSERVACIONES:</strong> ${cleanText(data.observations)}</p>
-        ` : ''}
+        <p><strong>NOVENO:</strong> ${cleanText(data.observations)}</p>
         
-        <p>Para constancia, firman las partes en dos ejemplares de igual tenor, quedando uno en poder de cada una de ellas.</p>
+        <p><strong>DÉCIMO:</strong> En todo lo no modificado por el presente anexo, continúan vigentes las estipulaciones del contrato original.</p>
+        ` : `
+        <p><strong>NOVENO:</strong> En todo lo no modificado por el presente anexo, continúan vigentes las estipulaciones del contrato original.</p>
+        `}
         
-        <p class="legal-ref"><em>Este pacto cumple con las disposiciones del Código del Trabajo, especialmente los artículos 31 y 32, 
-        y con las normas de la Dirección del Trabajo en materia de horas extraordinarias.</em></p>
+        <p>Para constancia, firman las partes en dos ejemplares, quedando uno en poder de cada una de ellas.</p>
     </div>
     
     <div class="signatures">

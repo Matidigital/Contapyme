@@ -14,15 +14,8 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const companyId = searchParams.get('company_id');
 
-    if (!companyId) {
-      return NextResponse.json(
-        { success: false, error: 'company_id es requerido' },
-        { status: 400 }
-      );
-    }
-
-    // Obtener empleado con todas sus relaciones
-    const { data: employee, error } = await supabase
+    // Si no hay company_id, obtener el empleado sin filtrar por compañía
+    const query = supabase
       .from('employees')
       .select(`
         *,
@@ -39,12 +32,17 @@ export async function GET(
           id,
           afp_code,
           health_institution_code,
-          family_allowances
+          family_allowances,
+          legal_gratification_type
         )
       `)
-      .eq('id', params.id)
-      .eq('company_id', companyId)
-      .single();
+      .eq('id', params.id);
+
+    if (companyId) {
+      query.eq('company_id', companyId);
+    }
+
+    const { data: employee, error } = await query.single();
 
     if (error) {
       console.error('Error fetching employee:', error);
@@ -61,9 +59,32 @@ export async function GET(
       );
     }
 
+    // Restructurar la respuesta para el modal
+    const contract = employee.employment_contracts?.find((c: any) => c.status === 'active') || employee.employment_contracts?.[0] || null;
+    const payrollConfig = employee.payroll_config?.[0] || null;
+
     return NextResponse.json({
       success: true,
-      data: employee
+      employee: {
+        id: employee.id,
+        rut: employee.rut,
+        first_name: employee.first_name,
+        last_name: employee.last_name,
+        email: employee.email,
+        bank_name: employee.bank_name,
+        bank_account_type: employee.bank_account_type,
+        bank_account_number: employee.bank_account_number
+      },
+      contract: contract ? {
+        id: contract.id,
+        base_salary: contract.base_salary,
+        contract_type: contract.contract_type
+      } : null,
+      payrollConfig: payrollConfig ? {
+        afp_code: payrollConfig.afp_code,
+        health_institution_code: payrollConfig.health_institution_code,
+        legal_gratification_type: payrollConfig.legal_gratification_type || 'none'
+      } : null
     });
 
   } catch (error) {
@@ -80,48 +101,20 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { searchParams } = new URL(request.url);
-    const companyId = searchParams.get('company_id');
-
-    if (!companyId) {
-      return NextResponse.json(
-        { success: false, error: 'company_id es requerido' },
-        { status: 400 }
-      );
-    }
-
     const body = await request.json();
-    const {
-      first_name,
-      last_name,
-      email,
-      phone,
-      address,
-      birth_date,
-      hire_date,
-      status,
-      contract,
-      payroll_config
-    } = body;
+    const employeeId = params.id;
 
-    // Actualizar empleado
-    const { data: employee, error: employeeError } = await supabase
+    // Actualizar datos del empleado
+    const { error: employeeError } = await supabase
       .from('employees')
       .update({
-        first_name,
-        last_name,
-        email,
-        phone,
-        address,
-        birth_date,
-        hire_date,
-        status,
+        email: body.email,
+        bank_name: body.bank_name,
+        bank_account_type: body.bank_account_type,
+        bank_account_number: body.bank_account_number,
         updated_at: new Date().toISOString()
       })
-      .eq('id', params.id)
-      .eq('company_id', companyId)
-      .select()
-      .single();
+      .eq('id', employeeId);
 
     if (employeeError) {
       console.error('Error updating employee:', employeeError);
@@ -131,47 +124,81 @@ export async function PUT(
       );
     }
 
-    // Actualizar contrato si se proporciona
-    if (contract) {
-      const { error: contractError } = await supabase
+    // Actualizar contrato si se proporcionan datos contractuales
+    if (body.base_salary !== undefined || body.contract_type) {
+      // Primero buscar si existe un contrato activo
+      const { data: existingContract } = await supabase
         .from('employment_contracts')
-        .update({
-          position: contract.position,
-          base_salary: contract.base_salary,
-          contract_type: contract.contract_type,
-          start_date: contract.start_date,
-          end_date: contract.end_date,
-          updated_at: new Date().toISOString()
-        })
-        .eq('employee_id', params.id)
-        .eq('status', 'active');
+        .select('id')
+        .eq('employee_id', employeeId)
+        .eq('status', 'active')
+        .single();
 
-      if (contractError) {
-        console.error('Error updating contract:', contractError);
-        // No retornamos error aquí para no fallar toda la operación
+      if (existingContract) {
+        // Actualizar contrato existente
+        const { error: contractError } = await supabase
+          .from('employment_contracts')
+          .update({
+            base_salary: body.base_salary,
+            contract_type: body.contract_type,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingContract.id);
+
+        if (contractError) {
+          console.error('Error updating contract:', contractError);
+        }
       }
     }
 
-    // Actualizar configuración de nómina si se proporciona
-    if (payroll_config) {
-      const { error: payrollError } = await supabase
+    // Actualizar o crear configuración de nómina
+    if (body.afp_code || body.health_institution_code || body.legal_gratification_type) {
+      // Primero verificar si existe configuración
+      const { data: existingConfig } = await supabase
         .from('payroll_config')
-        .update({
-          afp_code: payroll_config.afp_code,
-          health_institution_code: payroll_config.health_institution_code,
-          family_allowances: payroll_config.family_allowances,
-          updated_at: new Date().toISOString()
-        })
-        .eq('employee_id', params.id);
+        .select('id')
+        .eq('employee_id', employeeId)
+        .single();
 
-      if (payrollError) {
-        console.error('Error updating payroll config:', payrollError);
+      if (existingConfig) {
+        // Actualizar configuración existente
+        const updateData: any = {
+          updated_at: new Date().toISOString()
+        };
+        
+        if (body.afp_code) updateData.afp_code = body.afp_code;
+        if (body.health_institution_code) updateData.health_institution_code = body.health_institution_code;
+        if (body.legal_gratification_type) updateData.legal_gratification_type = body.legal_gratification_type;
+
+        const { error: payrollError } = await supabase
+          .from('payroll_config')
+          .update(updateData)
+          .eq('id', existingConfig.id);
+
+        if (payrollError) {
+          console.error('Error updating payroll config:', payrollError);
+        }
+      } else {
+        // Crear nueva configuración
+        const { error: payrollError } = await supabase
+          .from('payroll_config')
+          .insert({
+            employee_id: employeeId,
+            afp_code: body.afp_code || 'HABITAT',
+            health_institution_code: body.health_institution_code || 'FONASA',
+            legal_gratification_type: body.legal_gratification_type || 'none',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+
+        if (payrollError) {
+          console.error('Error creating payroll config:', payrollError);
+        }
       }
     }
 
     return NextResponse.json({
       success: true,
-      data: employee,
       message: 'Empleado actualizado exitosamente'
     });
 

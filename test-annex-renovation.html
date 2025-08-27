@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Anexo Renovación</title>
+</head>
+<body>
+    <h1>Test Generación Anexo de Renovación</h1>
+    
+    <button onclick="generarAnexoRenovacion()">Generar Anexo Renovación</button>
+    <button onclick="generarAnexoNocturno()">Generar Anexo Trabajo Nocturno</button>
+    <button onclick="generarAnexoFeriado()">Generar Anexo Feriado</button>
+    
+    <script>
+        function generarAnexoRenovacion() {
+            const anexoData = {
+                employeeName: "MIGUEL ANGEL RODRIGUEZ CABRERA",
+                employeeRut: "18.282.415-1",
+                employeePosition: "CAJERO",
+                companyName: "Empresa Demo ContaPyme",
+                companyRut: "12.345.678-9",
+                companyAddress: "Las Malvas 2775, Punta Arenas",
+                legalRepresentativeName: "MIGUEL ANGEL RODRIGUEZ CABRERA",
+                legalRepresentativeRut: "18.282.415-1",
+                originalContractDate: "2025-08-05",
+                currentSalary: 529000,
+                annexDate: "2025-08-26",
+                annexType: "renovation",
+                renovationType: "indefinite", // o "fixed_term"
+                effectiveDate: "2025-09-01",
+                observations: "Renovación por buen desempeño laboral"
+            };
+            
+            fetch('/api/payroll/contracts/generate-annex', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(anexoData)
+            })
+            .then(response => response.text())
+            .then(html => {
+                const newWindow = window.open('', '_blank');
+                newWindow.document.write(html);
+                newWindow.document.close();
+            });
+        }
+        
+        function generarAnexoNocturno() {
+            const anexoData = {
+                employeeName: "MIGUEL ANGEL RODRIGUEZ CABRERA",
+                employeeRut: "18.282.415-1",
+                employeePosition: "CAJERO",
+                companyName: "Empresa Demo ContaPyme",
+                companyRut: "12.345.678-9",
+                companyAddress: "Las Malvas 2775, Punta Arenas",
+                legalRepresentativeName: "MIGUEL ANGEL RODRIGUEZ CABRERA",
+                legalRepresentativeRut: "18.282.415-1",
+                originalContractDate: "2025-08-05",
+                currentSalary: 529000,
+                annexDate: "2025-08-26",
+                annexType: "night_shift",
+                nightShiftPercentage: 25,
+                nightShiftStartTime: "22:00",
+                nightShiftEndTime: "06:00",
+                effectiveDate: "2025-09-01",
+                observations: "Trabajo nocturno por necesidades operacionales"
+            };
+            
+            fetch('/api/payroll/contracts/generate-annex', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(anexoData)
+            })
+            .then(response => response.text())
+            .then(html => {
+                const newWindow = window.open('', '_blank');
+                newWindow.document.write(html);
+                newWindow.document.close();
+            });
+        }
+        
+        function generarAnexoFeriado() {
+            const anexoData = {
+                employeeName: "MIGUEL ANGEL RODRIGUEZ CABRERA",
+                employeeRut: "18.282.415-1",
+                employeePosition: "CAJERO",
+                companyName: "Empresa Demo ContaPyme",
+                companyRut: "12.345.678-9",
+                companyAddress: "Las Malvas 2775, Punta Arenas",
+                legalRepresentativeName: "MIGUEL ANGEL RODRIGUEZ CABRERA",
+                legalRepresentativeRut: "18.282.415-1",
+                originalContractDate: "2025-08-05",
+                currentSalary: 529000,
+                annexDate: "2025-08-26",
+                annexType: "vacation",
+                vacationStartDate: "2025-09-02",
+                vacationEndDate: "2025-09-13",
+                vacationDays: 10,
+                observations: "Feriado legal correspondiente al período 2025"
+            };
+            
+            fetch('/api/payroll/contracts/generate-annex', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(anexoData)
+            })
+            .then(response => response.text())
+            .then(html => {
+                const newWindow = window.open('', '_blank');
+                newWindow.document.write(html);
+                newWindow.document.close();
+            });
+        }
+    </script>
+</body>
+</html>

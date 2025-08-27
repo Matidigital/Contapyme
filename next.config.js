@@ -12,9 +12,21 @@ const nextConfig = {
     // Temporarily ignore ESLint errors on build  
     ignoreDuringBuilds: true,
   },
-  // Disable static generation for problematic pages
+  // Performance optimizations
   experimental: {
     missingSuspenseWithCSRBailout: false,
+    optimizeCss: true,
+    optimizePackageImports: ['lucide-react', '@supabase/supabase-js']
+  },
+  // Compiler optimizations
+  swcMinify: true,
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production'
+  },
+  // Cache optimization
+  onDemandEntries: {
+    maxInactiveAge: 60 * 1000, // 1 minute
+    pagesBufferLength: 5
   }
 }
 

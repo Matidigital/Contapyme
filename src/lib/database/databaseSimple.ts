@@ -34,12 +34,28 @@ if (isServer) {
   }
 }
 
-// ✅ Cliente apropiado según contexto
+// ✅ Cliente optimizado con configuración de performance
+const supabaseOptions = {
+  auth: {
+    persistSession: false, // Evita almacenar sesiones innecesarias
+    detectSessionInUrl: false, // Evita detección de sesiones en URL
+    autoRefreshToken: false, // Desactiva auto-refresh para APIs
+  },
+  realtime: {
+    enabled: false, // Desactiva realtime para mejorar performance
+  },
+  global: {
+    headers: {
+      'Cache-Control': 'public, max-age=60' // Cache de 1 minuto
+    }
+  }
+};
+
 const supabase = isServer && supabaseServiceKey 
-  ? createClient(supabaseUrl, supabaseServiceKey)
+  ? createClient(supabaseUrl, supabaseServiceKey, supabaseOptions)
   : supabaseAnonKey 
-    ? createClient(supabaseUrl, supabaseAnonKey)
-    : createClient(supabaseUrl, 'fallback-key'); // Fallback temporal
+    ? createClient(supabaseUrl, supabaseAnonKey, supabaseOptions)
+    : createClient(supabaseUrl, 'fallback-key', supabaseOptions);
 
 // ✅ Helper para verificar si Supabase está configurado correctamente
 export function isSupabaseConfigured(): boolean {

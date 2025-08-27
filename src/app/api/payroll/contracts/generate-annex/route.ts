@@ -5,6 +5,138 @@ import { generateAnnex, type AnnexData } from '@/lib/templates/contractAnnexTemp
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
+// ✅ FUNCIÓN PARA GUARDAR MODIFICACIONES CONTRACTUALES AUTOMÁTICAMENTE
+async function saveContractModifications(supabase: any, employeeId: string, annexData: AnnexData) {
+  try {
+    const modifications = [];
+    const effectiveDate = annexData.effectiveDate || annexData.annexDate;
+
+    // Obtener company_id una sola vez
+    const { data: employeeData, error: employeeError } = await supabase
+      .from('employees')
+      .select('company_id')
+      .eq('id', employeeId)
+      .single();
+    
+    if (employeeError || !employeeData) {
+      console.error('❌ Error obteniendo company_id:', employeeError);
+      return;
+    }
+
+    const companyId = employeeData.company_id;
+
+    // 1. RENOVACIÓN CON CAMBIO SALARIAL
+    if (annexData.annexType === 'renovation' && annexData.newSalary && annexData.newSalary !== annexData.currentSalary) {
+      modifications.push({
+        employee_id: employeeId,
+        company_id: companyId,
+        modification_type: 'salary_change',
+        effective_date: effectiveDate,
+        created_date: new Date().toISOString().split('T')[0],
+        old_values: { base_salary: annexData.currentSalary },
+        new_values: { base_salary: annexData.newSalary },
+        reason: `Renovación contractual con cambio salarial - Anexo ${annexData.renovationType === 'indefinite' ? 'indefinido' : 'plazo fijo'}`,
+        document_reference: `ANEXO-RENO-${Date.now()}`
+      });
+    }
+
+    // 2. RENOVACIÓN PLAZO FIJO → INDEFINIDO
+    if (annexData.annexType === 'renovation' && annexData.renovationType === 'indefinite') {
+      modifications.push({
+        employee_id: employeeId,
+        company_id: companyId,
+        modification_type: 'contract_type_change',
+        effective_date: effectiveDate,
+        created_date: new Date().toISOString().split('T')[0],
+        old_values: { contract_type: 'plazo_fijo' },
+        new_values: { contract_type: 'indefinido' },
+        reason: 'Renovación contractual - Cambio a contrato indefinido',
+        document_reference: `ANEXO-TIPO-${Date.now()}`
+      });
+    }
+
+    // 3. CAMBIO SALARIAL DIRECTO
+    if (annexData.annexType === 'salary_change' && annexData.newSalary) {
+      modifications.push({
+        employee_id: employeeId,
+        company_id: companyId,
+        modification_type: 'salary_change',
+        effective_date: effectiveDate,
+        created_date: new Date().toISOString().split('T')[0],
+        old_values: { base_salary: annexData.currentSalary },
+        new_values: { base_salary: annexData.newSalary },
+        reason: 'Cambio salarial por anexo contractual',
+        document_reference: `ANEXO-SUEL-${Date.now()}`
+      });
+    }
+
+    // 4. CAMBIO DE CARGO/POSICIÓN
+    if (annexData.annexType === 'position_change' && annexData.newPosition) {
+      modifications.push({
+        employee_id: employeeId,
+        company_id: companyId,
+        modification_type: 'position_change',
+        effective_date: effectiveDate,
+        created_date: new Date().toISOString().split('T')[0],
+        old_values: { position: annexData.employeePosition },
+        new_values: { position: annexData.newPosition },
+        reason: 'Cambio de cargo por anexo contractual',
+        document_reference: `ANEXO-CARGO-${Date.now()}`
+      });
+
+      // Cambio salarial asociado al cambio de cargo
+      if (annexData.newSalary && annexData.newSalary !== annexData.currentSalary) {
+        modifications.push({
+          employee_id: employeeId,
+          company_id: companyId,
+          modification_type: 'salary_change',
+          effective_date: effectiveDate,
+          created_date: new Date().toISOString().split('T')[0],
+          old_values: { base_salary: annexData.currentSalary },
+          new_values: { base_salary: annexData.newSalary },
+          reason: 'Cambio salarial asociado a cambio de cargo',
+          document_reference: `ANEXO-CARGO-SUEL-${Date.now()}`
+        });
+      }
+    }
+
+    // 5. CAMBIO DE HORARIO
+    if (annexData.annexType === 'schedule_change' && annexData.newSchedule) {
+      modifications.push({
+        employee_id: employeeId,
+        company_id: companyId,
+        modification_type: 'schedule_change',
+        effective_date: effectiveDate,
+        created_date: new Date().toISOString().split('T')[0],
+        old_values: { schedule: 'Horario anterior' },
+        new_values: { schedule: annexData.newSchedule },
+        reason: 'Cambio de horario por anexo contractual',
+        document_reference: `ANEXO-HORA-${Date.now()}`
+      });
+    }
+
+    // 6. GUARDAR EN BASE DE DATOS
+    if (modifications.length > 0) {
+      const { data, error } = await supabase
+        .from('contract_modifications')
+        .insert(modifications)
+        .select();
+
+      if (error) {
+        console.error('❌ Error guardando modificaciones contractuales:', error);
+      } else {
+        console.log(`✅ ${modifications.length} modificaciones contractuales guardadas automáticamente`);
+        console.log('📋 Modificaciones:', modifications.map(m => `${m.modification_type} - ${m.reason}`));
+      }
+    } else {
+      console.log('ℹ️  No hay modificaciones contractuales que guardar para este anexo');
+    }
+
+  } catch (error) {
+    console.error('❌ Error en saveContractModifications:', error);
+  }
+}
+
 // GET: Generar anexo basado en datos del empleado
 export async function GET(request: NextRequest) {
   try {
@@ -111,11 +243,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     let annexData = body as AnnexData;
 
+    // Crear cliente Supabase para todo el flujo
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
     // Si se proporciona employee_id, cargar datos del empleado
     if (body.employee_id && !annexData.employeeName) {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-      const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
       const { data: employeeData, error: employeeError } = await supabase
         .from('employees')
@@ -207,6 +339,11 @@ export async function POST(request: NextRequest) {
       annexData.nightShiftPercentage = annexData.nightShiftPercentage || 20;
       annexData.nightShiftStartTime = annexData.nightShiftStartTime || '21:00';
       annexData.nightShiftEndTime = annexData.nightShiftEndTime || '07:00';
+    }
+
+    // ✅ GUARDAR MODIFICACIONES CONTRACTUALES EN LA BASE DE DATOS
+    if (body.employee_id) {
+      await saveContractModifications(supabase, body.employee_id, annexData);
     }
 
     // Generar el HTML del anexo

@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       .select(`
         id, rut, first_name, last_name, middle_name, email, phone, status,
         employment_contracts (
-          id, position, department, base_salary, status, contract_type, start_date, end_date
+          id, position, department, base_salary, weekly_hours, status, contract_type, start_date, end_date
         ),
         payroll_config (
           afp_code, health_institution_code
