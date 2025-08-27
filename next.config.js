@@ -12,21 +12,42 @@ const nextConfig = {
     // Temporarily ignore ESLint errors on build  
     ignoreDuringBuilds: true,
   },
+  // Prevent static generation issues
+  trailingSlash: false,
+  generateEtags: false,
+  
   // Performance optimizations
   experimental: {
     missingSuspenseWithCSRBailout: false,
     optimizeCss: true,
     optimizePackageImports: ['lucide-react', '@supabase/supabase-js']
   },
+  
   // Compiler optimizations
   swcMinify: true,
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production'
   },
+  
   // Cache optimization
   onDemandEntries: {
     maxInactiveAge: 60 * 1000, // 1 minute
     pagesBufferLength: 5
+  },
+  
+  // Build optimization to prevent prerender issues
+  poweredByHeader: false,
+  compress: true,
+  
+  // Webpack configuration to handle potential issues
+  webpack: (config, { dev, isServer }) => {
+    if (!dev && !isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+      };
+    }
+    return config;
   }
 }
 
