@@ -601,21 +601,31 @@ export class SettlementCalculator {
     }
     
     // Total de días de feriado proporcional (base + no hábiles)
-    const proportionalDays = proportionalDaysBase + additionalNonWorkingDays;
+    const proportionalDaysRaw = proportionalDaysBase + additionalNonWorkingDays;
     
-    // Vacaciones pendientes = ganadas - tomadas
+    // IMPORTANTE: Restar días de vacaciones tomados del feriado proporcional
+    // Si el empleado ya tomó vacaciones, esas se descuentan del total a pagar
+    const proportionalDaysAdjusted = Math.max(0, proportionalDaysRaw - daysTaken);
+    
+    // Vacaciones pendientes del año completo = ganadas - tomadas (si las hubiera)
     const pendingDays = Math.max(0, totalEarned - daysTaken);
     
     // Calcular valor diario de vacaciones (base: 30 días del mes)
     const dailyVacationRate = Math.round(monthlySalary / 30);
     const pendingAmount = Math.round(pendingDays * dailyVacationRate);
-    const proportionalAmount = Math.round(proportionalDays * dailyVacationRate);
+    const proportionalAmount = Math.round(proportionalDaysAdjusted * dailyVacationRate);
+    
+    console.log(`🏖️ Cálculo vacaciones detallado:
+      Días proporcionales calculados: ${proportionalDaysRaw.toFixed(2)}
+      Días de vacaciones tomados: ${daysTaken}
+      Días proporcionales a pagar: ${proportionalDaysAdjusted.toFixed(2)}
+      Monto proporcional: $${proportionalAmount.toLocaleString('es-CL')}`);;
     
     return {
       total_earned: totalEarned,
       days_taken: daysTaken,
       pending_days: pendingDays,
-      proportional_days: proportionalDays,
+      proportional_days: proportionalDaysAdjusted,
       daily_rate: dailyVacationRate,
       pending_amount: pendingAmount,
       proportional_amount: proportionalAmount
