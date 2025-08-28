@@ -85,32 +85,32 @@ export async function PUT(
 
     // Construir query de actualización dinámicamente
     const updateFields: string[] = [];
-    const params: any[] = [];
+    const queryParams: any[] = [];
     let paramIndex = 1;
 
     if (body.code !== undefined) {
       updateFields.push(`code = $${paramIndex++}`);
-      params.push(body.code);
+      queryParams.push(body.code);
     }
     if (body.name !== undefined) {
       updateFields.push(`name = $${paramIndex++}`);
-      params.push(body.name);
+      queryParams.push(body.name);
     }
     if (body.level_type !== undefined) {
       updateFields.push(`level_type = $${paramIndex++}`);
-      params.push(body.level_type);
+      queryParams.push(body.level_type);
     }
     if (body.account_type !== undefined) {
       updateFields.push(`account_type = $${paramIndex++}`);
-      params.push(body.account_type);
+      queryParams.push(body.account_type);
     }
     if (body.parent_code !== undefined) {
       updateFields.push(`parent_code = $${paramIndex++}`);
-      params.push(body.parent_code);
+      queryParams.push(body.parent_code);
     }
     if (body.is_active !== undefined) {
       updateFields.push(`is_active = $${paramIndex++}`);
-      params.push(body.is_active);
+      queryParams.push(body.is_active);
     }
 
     if (updateFields.length === 0) {
@@ -120,7 +120,7 @@ export async function PUT(
       }, { status: 400 });
     }
 
-    params.push(id); // ID va al final
+    queryParams.push(id); // ID va al final
     
     const updateQuery = `
       UPDATE chart_of_accounts 
@@ -129,7 +129,7 @@ export async function PUT(
       RETURNING *
     `;
 
-    const { data, error } = await databaseSimple.query(updateQuery, params);
+    const { data, error } = await databaseSimple.query(updateQuery, queryParams);
 
     if (error) {
       console.error('Error updating account:', error);
