@@ -175,14 +175,14 @@ export async function POST(request: NextRequest) {
       employee_name: `${employee.first_name} ${employee.last_name}`,
       position: contract.position,
       
-      contract_start_date: new Date(contract.start_date),
+      contract_start_date: new Date(contract.start_date + 'T12:00:00'),
       contract_type: contract.contract_type as 'indefinido' | 'plazo_fijo' | 'obra_faena',
       monthly_salary: contract.base_salary,
       weekly_hours: contract.weekly_hours || 45,
       
-      termination_date: new Date(termination_date),
+      termination_date: new Date(termination_date + 'T12:00:00'),
       termination_cause_code: termination_cause_code,
-      last_work_date: new Date(last_work_date || termination_date),
+      last_work_date: new Date((last_work_date || termination_date) + 'T12:00:00'),
       
       // Datos adicionales del formulario
       vacation_days_taken: additionalData.vacation_days_taken || 0,

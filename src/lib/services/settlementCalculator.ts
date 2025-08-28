@@ -521,8 +521,8 @@ export class SettlementCalculator {
     const months = totalMonths % 12;
     
     console.log(`📅 Cálculo tiempo servicio:
-      Inicio: ${startDate.toLocaleDateString('es-CL')}
-      Término: ${endDate.toLocaleDateString('es-CL')}
+      Inicio: ${startDate.getFullYear()}-${(startDate.getMonth()+1).toString().padStart(2,'0')}-${startDate.getDate().toString().padStart(2,'0')}
+      Término: ${endDate.getFullYear()}-${(endDate.getMonth()+1).toString().padStart(2,'0')}-${endDate.getDate().toString().padStart(2,'0')}
       Días totales: ${diffDays}
       Meses calculados: ${totalMonths.toFixed(3)}
       Años: ${years}, Meses: ${months.toFixed(3)}`);
