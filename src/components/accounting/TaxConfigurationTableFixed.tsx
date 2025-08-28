@@ -147,12 +147,14 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
   const startEditing = (config: TaxConfiguration) => {
     setEditingRow(config.tax_type);
     setEditingConfig({
-      sales_debit_account_code: config.sales_debit_account_code || '',
-      sales_debit_account_name: config.sales_debit_account_name || '',
+      // Mapear desde los campos que realmente existen en la BD (sales_account_code)
+      // a los campos que usa el frontend (sales_debit_account_code)
+      sales_debit_account_code: (config as any).sales_account_code || config.sales_debit_account_code || '',
+      sales_debit_account_name: (config as any).sales_account_name || config.sales_debit_account_name || '',
       sales_credit_account_code: config.sales_credit_account_code || '',
       sales_credit_account_name: config.sales_credit_account_name || '',
-      purchases_debit_account_code: config.purchases_debit_account_code || '',
-      purchases_debit_account_name: config.purchases_debit_account_name || '',
+      purchases_debit_account_code: (config as any).purchases_account_code || config.purchases_debit_account_code || '',
+      purchases_debit_account_name: (config as any).purchases_account_name || config.purchases_debit_account_name || '',
       purchases_credit_account_code: config.purchases_credit_account_code || '',
       purchases_credit_account_name: config.purchases_credit_account_name || ''
     });
@@ -258,13 +260,19 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
           <div className="flex items-center space-x-2">
             <span className="w-2 h-2 bg-green-500 rounded-full"></span>
             <span className="text-green-700 font-medium">
-              {configurations.filter(c => c.sales_debit_account_code && c.purchases_debit_account_code).length} configuradas
+              {configurations.filter(c => 
+                ((c as any).sales_account_code || c.sales_debit_account_code) && 
+                ((c as any).purchases_account_code || c.purchases_debit_account_code)
+              ).length} configuradas
             </span>
           </div>
           <div className="flex items-center space-x-2">
             <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
             <span className="text-yellow-700 font-medium">
-              {configurations.filter(c => !c.sales_debit_account_code || !c.purchases_debit_account_code).length} pendientes
+              {configurations.filter(c => 
+                !((c as any).sales_account_code || c.sales_debit_account_code) || 
+                !((c as any).purchases_account_code || c.purchases_debit_account_code)
+              ).length} pendientes
             </span>
           </div>
           <div className="flex items-center space-x-2">
@@ -300,7 +308,9 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
               {/* Filas de configuraciones con edición inline */}
               {configurations.map((config) => {
                 const isEditing = editingRow === config.tax_type;
-                const isConfigured = config.sales_debit_account_code && config.purchases_debit_account_code;
+                // Verificar configuración usando los campos que realmente existen
+                const isConfigured = ((config as any).sales_account_code || config.sales_debit_account_code) && 
+                                      ((config as any).purchases_account_code || config.purchases_debit_account_code);
                 
                 return (
                   <tr key={config.id} className={`border-b border-gray-100 hover:bg-gray-50 ${isEditing ? 'bg-blue-50/50' : ''}`}>
@@ -336,10 +346,10 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
                       ) : (
                         <div className="text-sm">
                           <div className={`font-medium ${isConfigured ? 'text-gray-900' : 'text-gray-400'}`}>
-                            {config.sales_debit_account_code || 'Sin configurar'}
+                            {(config as any).sales_account_code || config.sales_debit_account_code || 'Sin configurar'}
                           </div>
                           <div className="text-gray-600 text-xs">
-                            {config.sales_debit_account_name || ''}
+                            {(config as any).sales_account_name || config.sales_debit_account_name || ''}
                           </div>
                         </div>
                       )}
@@ -361,10 +371,10 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
                       ) : (
                         <div className="text-sm">
                           <div className={`font-medium ${isConfigured ? 'text-gray-900' : 'text-gray-400'}`}>
-                            {config.purchases_debit_account_code || 'Sin configurar'}
+                            {(config as any).purchases_account_code || config.purchases_debit_account_code || 'Sin configurar'}
                           </div>
                           <div className="text-gray-600 text-xs">
-                            {config.purchases_debit_account_name || ''}
+                            {(config as any).purchases_account_name || config.purchases_debit_account_name || ''}
                           </div>
                         </div>
                       )}

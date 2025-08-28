@@ -99,16 +99,19 @@ export async function PUT(
       is_active
     } = body;
 
-    // Actualizar solo campos básicos primero para evitar errores de columnas faltantes
+    // Usar los nombres de campo que realmente existen en la tabla actual
+    // Basado en la respuesta del API que mostró: sales_account_code, purchases_account_code
     const { data: updatedConfig, error } = await supabase
       .from('tax_account_configurations')
       .update({
         tax_name,
         tax_rate: tax_rate ? parseFloat(tax_rate) : null,
         is_active: is_active !== undefined ? is_active : true,
-        // Solo actualizar campos que sabemos que existen en la tabla actual
-        ...(sales_debit_account_code && { sales_debit_account_code }),
-        ...(purchases_debit_account_code && { purchases_debit_account_code })
+        // Usar los nombres que actualmente existen en la BD
+        ...(sales_debit_account_code && { sales_account_code: sales_debit_account_code }),
+        ...(sales_debit_account_name && { sales_account_name: sales_debit_account_name }),
+        ...(purchases_debit_account_code && { purchases_account_code: purchases_debit_account_code }),
+        ...(purchases_debit_account_name && { purchases_account_name: purchases_debit_account_name })
       })
       .eq('id', id)
       .select()
