@@ -168,55 +168,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. Obtener información de la causal de término
-    const { data: terminationCause } = await supabase
-      .from('termination_causes')
-      .select('*')
-      .eq('article_code', termination_cause_code)
-      .single();
-
-    // 4. Cálculos básicos (simplificados temporalmente)
-    const basicCalculation = {
-      termination_cause: {
-        article_name: terminationCause?.article_name || 'Causa de término',
-        requires_notice: terminationCause?.requires_notice || false,
-        notice_days: terminationCause?.notice_days || 0
-      },
-      // Valores básicos por defecto
-      days_worked_last_month: 30,
-      pending_salary_days: 0,
-      pending_salary_amount: 0,
-      total_vacation_days_earned: 15,
-      vacation_days_taken: 0,
-      pending_vacation_days: 15,
-      vacation_daily_rate: Math.round(contract.base_salary / 30),
-      pending_vacation_amount: Math.round(contract.base_salary / 30 * 15),
-      proportional_vacation_days: 0,
-      proportional_vacation_amount: 0,
-      years_of_service: 1,
-      severance_amount: terminationCause?.requires_severance ? contract.base_salary : 0,
-      notice_indemnification_amount: terminationCause?.requires_notice ? contract.base_salary : 0,
-      christmas_bonus_amount: 0,
-      pending_overtime_amount: 0,
-      other_bonuses_amount: 0,
-      total_compensations: 0,
-      total_deductions: 0,
-      final_net_amount: 0,
-      employee: {
-        monthly_salary: contract.base_salary
-      }
+    // 3. Preparar datos para el calculador de finiquitos
+    const terminationData: EmployeeTerminationData = {
+      employee_id: employee.id,
+      employee_rut: employee.rut,
+      employee_name: `${employee.first_name} ${employee.last_name}`,
+      position: contract.position,
+      
+      contract_start_date: new Date(contract.start_date),
+      contract_type: contract.contract_type as 'indefinido' | 'plazo_fijo' | 'obra_faena',
+      monthly_salary: contract.base_salary,
+      weekly_hours: contract.weekly_hours || 45,
+      
+      termination_date: new Date(termination_date),
+      termination_cause_code: termination_cause_code,
+      last_work_date: new Date(last_work_date || termination_date),
+      
+      // Datos adicionales del formulario
+      vacation_days_taken: additionalData.vacation_days_taken || 0,
+      pending_overtime_amount: additionalData.pending_overtime_amount || 0,
+      christmas_bonus_pending: additionalData.christmas_bonus_pending || false,
+      other_bonuses: additionalData.other_bonuses || 0
     };
 
-    // Calcular totales
-    basicCalculation.total_compensations = 
-      basicCalculation.pending_salary_amount +
-      basicCalculation.pending_vacation_amount +
-      basicCalculation.severance_amount +
-      basicCalculation.notice_indemnification_amount;
-    
-    basicCalculation.final_net_amount = basicCalculation.total_compensations - basicCalculation.total_deductions;
+    console.log('📋 Datos para calculador de finiquito:', {
+      employee_name: terminationData.employee_name,
+      contract_start_date: terminationData.contract_start_date,
+      termination_date: terminationData.termination_date,
+      monthly_salary: terminationData.monthly_salary,
+      termination_cause_code: terminationData.termination_cause_code
+    });
 
-    // 4. Guardar en base de datos
+    // 4. Usar el calculador real de finiquitos
+    const calculator = new SettlementCalculator();
+    const calculation = calculator.calculateSettlement(terminationData);
+
+    // 5. Guardar en base de datos con cálculos reales
     const { data: savedTermination, error: saveError } = await supabase
       .from('employee_terminations')
       .insert({
@@ -224,36 +211,36 @@ export async function POST(request: NextRequest) {
         employee_id: employee_id,
         termination_date: termination_date,
         termination_cause_code: termination_cause_code,
-        termination_cause_description: basicCalculation.termination_cause.article_name,
-        notice_given: basicCalculation.termination_cause.requires_notice,
-        notice_days: basicCalculation.termination_cause.notice_days,
+        termination_cause_description: calculation.termination_cause.article_name,
+        notice_given: calculation.termination_cause.requires_notice,
+        notice_days: calculation.termination_cause.notice_days || 0,
         
-        // Resultados del cálculo básico
-        worked_days_last_month: basicCalculation.days_worked_last_month,
-        pending_salary_days: basicCalculation.pending_salary_days,
-        pending_salary_amount: basicCalculation.pending_salary_amount,
+        // Resultados del calculador real
+        worked_days_last_month: calculation.days_worked_last_month,
+        pending_salary_days: calculation.pending_salary_days,
+        pending_salary_amount: calculation.pending_salary_amount,
         
-        total_vacation_days_earned: basicCalculation.total_vacation_days_earned,
-        vacation_days_taken: basicCalculation.vacation_days_taken,
-        pending_vacation_days: basicCalculation.pending_vacation_days,
-        vacation_daily_rate: basicCalculation.vacation_daily_rate,
-        pending_vacation_amount: basicCalculation.pending_vacation_amount,
+        total_vacation_days_earned: calculation.total_vacation_days_earned,
+        vacation_days_taken: calculation.vacation_days_taken,
+        pending_vacation_days: calculation.pending_vacation_days,
+        vacation_daily_rate: calculation.vacation_daily_rate,
+        pending_vacation_amount: calculation.pending_vacation_amount,
         
-        proportional_vacation_days: basicCalculation.proportional_vacation_days,
-        proportional_vacation_amount: basicCalculation.proportional_vacation_amount,
+        proportional_vacation_days: calculation.proportional_vacation_days,
+        proportional_vacation_amount: calculation.proportional_vacation_amount,
         
-        severance_years_service: basicCalculation.years_of_service,
-        severance_monthly_salary: basicCalculation.employee.monthly_salary,
-        severance_amount: basicCalculation.severance_amount,
-        notice_indemnification_amount: basicCalculation.notice_indemnification_amount,
+        severance_years_service: calculation.years_of_service,
+        severance_monthly_salary: calculation.employee.monthly_salary,
+        severance_amount: calculation.severance_amount,
+        notice_indemnification_amount: calculation.notice_indemnification_amount,
         
-        christmas_bonus_amount: basicCalculation.christmas_bonus_amount,
-        pending_overtime_amount: basicCalculation.pending_overtime_amount,
-        other_bonuses_amount: basicCalculation.other_bonuses_amount,
+        christmas_bonus_amount: calculation.christmas_bonus_amount,
+        pending_overtime_amount: calculation.pending_overtime_amount,
+        other_bonuses_amount: calculation.other_bonuses_amount,
         
-        total_to_pay: basicCalculation.total_compensations,
-        total_deductions: basicCalculation.total_deductions,
-        final_net_amount: basicCalculation.final_net_amount,
+        total_to_pay: calculation.total_compensations,
+        total_deductions: calculation.total_deductions,
+        final_net_amount: calculation.final_net_amount,
         
         status: 'calculated',
         termination_reason_details: additionalData.termination_reason_details || null
@@ -275,11 +262,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('✅ Finiquito calculado exitosamente:', {
+      employee_name: terminationData.employee_name,
+      total_compensations: calculation.total_compensations,
+      final_net_amount: calculation.final_net_amount
+    });
+
     return NextResponse.json({
       success: true,
       data: {
         termination: savedTermination,
-        calculation: basicCalculation
+        calculation: calculation
       }
     });
 
