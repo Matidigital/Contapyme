@@ -23,10 +23,10 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       );
     }
 
-    // Verificar que el finiquito existe antes de eliminarlo
+    // Verificar que el finiquito existe antes de eliminarlo (sin JOIN para evitar errores de relación)
     const { data: existingTermination, error: fetchError } = await supabase
       .from('employee_terminations')
-      .select('id, status, employees(first_name, last_name)')
+      .select('id, status, employee_id')
       .eq('id', id)
       .single();
 
@@ -63,6 +63,17 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       );
     }
 
+    // Obtener el nombre del empleado antes de eliminar
+    const { data: employeeData, error: employeeError } = await supabase
+      .from('employees')
+      .select('first_name, last_name')
+      .eq('id', existingTermination.employee_id)
+      .single();
+
+    const employeeName = employeeData 
+      ? `${employeeData.first_name} ${employeeData.last_name}`
+      : 'Empleado desconocido';
+
     // Eliminar el finiquito
     const { error: deleteError } = await supabase
       .from('employee_terminations')
@@ -77,12 +88,14 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       );
     }
 
+    console.log('✅ Termination deleted successfully:', id, 'Employee:', employeeName);
+
     return NextResponse.json({
       success: true,
       message: `Finiquito eliminado exitosamente`,
       data: {
         id,
-        employee_name: `${existingTermination.employees?.first_name} ${existingTermination.employees?.last_name}`
+        employee_name: employeeName
       }
     });
 
@@ -106,25 +119,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       );
     }
 
-    // Obtener el finiquito específico con datos completos
+    // Obtener el finiquito específico (sin JOINs para evitar problemas de relación)
     const { data: termination, error: fetchError } = await supabase
       .from('employee_terminations')
-      .select(`
-        *,
-        employees (
-          id,
-          rut,
-          first_name,
-          last_name,
-          employment_contracts (
-            position,
-            base_salary,
-            start_date,
-            contract_type,
-            weekly_hours
-          )
-        )
-      `)
+      .select('*')
       .eq('id', id)
       .single();
 
