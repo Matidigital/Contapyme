@@ -76,6 +76,8 @@ export default function TerminationsPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<Termination | null>(null);
   
   // Formulario de finiquito
   const [formData, setFormData] = useState({
@@ -194,6 +196,33 @@ export default function TerminationsPage() {
     } catch (error) {
       console.error('Error generating document:', error);
       alert('Error al generar documento');
+    }
+  };
+
+  const handleDeleteTermination = async (terminationId: string) => {
+    try {
+      setDeleting(terminationId);
+      
+      const response = await fetch(`/api/payroll/terminations/${terminationId}`, {
+        method: 'DELETE'
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Actualizar lista de finiquitos
+        await fetchTerminations();
+        setShowDeleteConfirm(null);
+        alert(`Finiquito eliminado exitosamente: ${result.data.employee_name}`);
+      } else {
+        console.error('Error al eliminar finiquito:', result.error);
+        alert(result.error || 'Error al eliminar el finiquito');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error al eliminar el finiquito');
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -560,6 +589,16 @@ export default function TerminationsPage() {
                       >
                         💰 Finiquito
                       </Button>
+                      {termination.status !== 'paid' && (
+                        <Button
+                          onClick={() => setShowDeleteConfirm(termination)}
+                          variant="outline"
+                          size="sm"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          🗑️ Eliminar
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -568,6 +607,60 @@ export default function TerminationsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Modal de confirmación de eliminación */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <Card className="bg-white max-w-md w-full mx-4">
+            <CardHeader>
+              <CardTitle className="text-xl font-semibold text-red-600">
+                ⚠️ Confirmar Eliminación
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <p className="text-gray-700">
+                  ¿Estás seguro de que deseas eliminar el finiquito de:
+                </p>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <p className="font-semibold">
+                    {showDeleteConfirm.employees.first_name} {showDeleteConfirm.employees.last_name}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    RUT: {showDeleteConfirm.employees.rut}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Fecha término: {new Date(showDeleteConfirm.termination_date).toLocaleDateString('es-CL')}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    Estado: {getStatusText(showDeleteConfirm.status)}
+                  </p>
+                </div>
+                <p className="text-sm text-red-600 font-medium">
+                  Esta acción no se puede deshacer.
+                </p>
+                <div className="flex space-x-3 pt-4">
+                  <Button
+                    onClick={() => handleDeleteTermination(showDeleteConfirm.id)}
+                    disabled={deleting === showDeleteConfirm.id}
+                    className="bg-red-600 hover:bg-red-700 text-white flex-1"
+                  >
+                    {deleting === showDeleteConfirm.id ? 'Eliminando...' : '🗑️ Eliminar Finiquito'}
+                  </Button>
+                  <Button
+                    onClick={() => setShowDeleteConfirm(null)}
+                    variant="outline"
+                    disabled={deleting === showDeleteConfirm.id}
+                    className="flex-1"
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
