@@ -546,7 +546,7 @@ export class SettlementCalculator {
   
   private calculatePendingSalary(monthlySalary: number, daysWorked: number, terminationDate: Date) {
     const daysInMonth = new Date(terminationDate.getFullYear(), terminationDate.getMonth() + 1, 0).getDate();
-    const dailyRate = monthlySalary / daysInMonth;
+    const dailyRate = Math.round(monthlySalary / daysInMonth);
     const pendingAmount = Math.round(dailyRate * daysWorked);
     
     return {
@@ -607,7 +607,7 @@ export class SettlementCalculator {
     const pendingDays = Math.max(0, totalEarned - daysTaken);
     
     // Calcular valor diario de vacaciones (base: 30 días del mes)
-    const dailyVacationRate = monthlySalary / 30;
+    const dailyVacationRate = Math.round(monthlySalary / 30);
     const pendingAmount = Math.round(pendingDays * dailyVacationRate);
     const proportionalAmount = Math.round(proportionalDays * dailyVacationRate);
     
