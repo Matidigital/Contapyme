@@ -478,8 +478,29 @@ export class SettlementCalculator {
   private calculateServiceTime(startDate: Date, endDate: Date) {
     const diffTime = endDate.getTime() - startDate.getTime();
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    const years = Math.floor(diffDays / 365);
-    const months = Math.floor((diffDays % 365) / 30);
+    
+    // Cálculo exacto de años y meses
+    let years = endDate.getFullYear() - startDate.getFullYear();
+    let months = endDate.getMonth() - startDate.getMonth();
+    
+    // Ajustar si el día final es menor al día inicial
+    if (endDate.getDate() < startDate.getDate()) {
+      months--;
+    }
+    
+    // Ajustar años si los meses son negativos
+    if (months < 0) {
+      years--;
+      months += 12;
+    }
+    
+    // Para períodos muy cortos (menos de un mes), calcular fracción de mes
+    if (years === 0 && months === 0) {
+      // Calcular días en el mes de inicio
+      const daysInStartMonth = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0).getDate();
+      const daysWorked = diffDays + 1; // +1 para incluir el día de inicio
+      months = daysWorked / daysInStartMonth;
+    }
     
     return { years, months, total_days: diffDays };
   }
