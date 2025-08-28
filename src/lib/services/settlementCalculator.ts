@@ -477,30 +477,55 @@ export class SettlementCalculator {
   
   private calculateServiceTime(startDate: Date, endDate: Date) {
     const diffTime = endDate.getTime() - startDate.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 para incluir el día de inicio
     
-    // Cálculo exacto de años y meses
-    let years = endDate.getFullYear() - startDate.getFullYear();
-    let months = endDate.getMonth() - startDate.getMonth();
+    // Cálculo preciso mes por mes
+    let totalMonths = 0;
+    const currentDate = new Date(startDate);
     
-    // Ajustar si el día final es menor al día inicial
-    if (endDate.getDate() < startDate.getDate()) {
-      months--;
+    while (currentDate < endDate) {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      
+      // Determinar cuántos días del mes actual se trabajaron
+      let daysWorkedInMonth = 0;
+      
+      if (currentDate.getFullYear() === startDate.getFullYear() && 
+          currentDate.getMonth() === startDate.getMonth()) {
+        // Primer mes parcial
+        daysWorkedInMonth = daysInMonth - startDate.getDate() + 1;
+      } else if (currentDate.getFullYear() === endDate.getFullYear() && 
+                 currentDate.getMonth() === endDate.getMonth()) {
+        // Último mes parcial
+        daysWorkedInMonth = endDate.getDate();
+      } else {
+        // Mes completo
+        daysWorkedInMonth = daysInMonth;
+      }
+      
+      // Si estamos en el último mes, solo contar hasta la fecha de término
+      if (currentDate.getFullYear() === endDate.getFullYear() && 
+          currentDate.getMonth() === endDate.getMonth()) {
+        daysWorkedInMonth = Math.min(daysWorkedInMonth, endDate.getDate());
+      }
+      
+      // Agregar la fracción de mes trabajada
+      totalMonths += daysWorkedInMonth / daysInMonth;
+      
+      // Avanzar al siguiente mes
+      currentDate.setMonth(currentDate.getMonth() + 1, 1);
     }
     
-    // Ajustar años si los meses son negativos
-    if (months < 0) {
-      years--;
-      months += 12;
-    }
+    const years = Math.floor(totalMonths / 12);
+    const months = totalMonths % 12;
     
-    // Para períodos muy cortos (menos de un mes), calcular fracción de mes
-    if (years === 0 && months === 0) {
-      // Calcular días en el mes de inicio
-      const daysInStartMonth = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0).getDate();
-      const daysWorked = diffDays + 1; // +1 para incluir el día de inicio
-      months = daysWorked / daysInStartMonth;
-    }
+    console.log(`📅 Cálculo tiempo servicio:
+      Inicio: ${startDate.toLocaleDateString('es-CL')}
+      Término: ${endDate.toLocaleDateString('es-CL')}
+      Días totales: ${diffDays}
+      Meses calculados: ${totalMonths.toFixed(3)}
+      Años: ${years}, Meses: ${months.toFixed(3)}`);
     
     return { years, months, total_days: diffDays };
   }
