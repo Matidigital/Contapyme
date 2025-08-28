@@ -10,10 +10,14 @@ interface TaxConfiguration {
   tax_type: string;
   tax_name: string;
   tax_rate?: number;
-  sales_account_code?: string;
-  sales_account_name?: string;
-  purchases_account_code?: string;
-  purchases_account_name?: string;
+  sales_debit_account_code?: string;
+  sales_debit_account_name?: string;
+  sales_credit_account_code?: string;
+  sales_credit_account_name?: string;
+  purchases_debit_account_code?: string;
+  purchases_debit_account_name?: string;
+  purchases_credit_account_code?: string;
+  purchases_credit_account_name?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -76,10 +80,14 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
             tax_type: fixedConfig.tax_type,
             tax_name: fixedConfig.tax_name,
             tax_rate: fixedConfig.tax_rate,
-            sales_account_code: '',
-            sales_account_name: '',
-            purchases_account_code: '',
-            purchases_account_name: '',
+            sales_debit_account_code: '',
+            sales_debit_account_name: '',
+            sales_credit_account_code: '',
+            sales_credit_account_name: '',
+            purchases_debit_account_code: '',
+            purchases_debit_account_name: '',
+            purchases_credit_account_code: '',
+            purchases_credit_account_name: '',
             is_active: true,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
@@ -98,10 +106,14 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
         tax_type: fixedConfig.tax_type,
         tax_name: fixedConfig.tax_name,
         tax_rate: fixedConfig.tax_rate,
-        sales_account_code: '',
-        sales_account_name: '',
-        purchases_account_code: '',
-        purchases_account_name: '',
+        sales_debit_account_code: '',
+        sales_debit_account_name: '',
+        sales_credit_account_code: '',
+        sales_credit_account_name: '',
+        purchases_debit_account_code: '',
+        purchases_debit_account_name: '',
+        purchases_credit_account_code: '',
+        purchases_credit_account_name: '',
         is_active: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -135,10 +147,14 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
   const startEditing = (config: TaxConfiguration) => {
     setEditingRow(config.tax_type);
     setEditingConfig({
-      sales_account_code: config.sales_account_code || '',
-      sales_account_name: config.sales_account_name || '',
-      purchases_account_code: config.purchases_account_code || '',
-      purchases_account_name: config.purchases_account_name || ''
+      sales_debit_account_code: config.sales_debit_account_code || '',
+      sales_debit_account_name: config.sales_debit_account_name || '',
+      sales_credit_account_code: config.sales_credit_account_code || '',
+      sales_credit_account_name: config.sales_credit_account_name || '',
+      purchases_debit_account_code: config.purchases_debit_account_code || '',
+      purchases_debit_account_name: config.purchases_debit_account_name || '',
+      purchases_credit_account_code: config.purchases_credit_account_code || '',
+      purchases_credit_account_name: config.purchases_credit_account_name || ''
     });
   };
 
@@ -163,10 +179,14 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
         ...(isTemporary && { tax_name: config.tax_name }),
         ...(isTemporary && { tax_rate: config.tax_rate }),
         ...(!isTemporary && { id: config.id }),
-        sales_account_code: editingConfig.sales_account_code,
-        sales_account_name: editingConfig.sales_account_name,
-        purchases_account_code: editingConfig.purchases_account_code,
-        purchases_account_name: editingConfig.purchases_account_name,
+        sales_debit_account_code: editingConfig.sales_debit_account_code,
+        sales_debit_account_name: editingConfig.sales_debit_account_name,
+        sales_credit_account_code: editingConfig.sales_credit_account_code,
+        sales_credit_account_name: editingConfig.sales_credit_account_name,
+        purchases_debit_account_code: editingConfig.purchases_debit_account_code,
+        purchases_debit_account_name: editingConfig.purchases_debit_account_name,
+        purchases_credit_account_code: editingConfig.purchases_credit_account_code,
+        purchases_credit_account_name: editingConfig.purchases_credit_account_name,
         is_active: true
       };
 
@@ -238,13 +258,13 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
           <div className="flex items-center space-x-2">
             <span className="w-2 h-2 bg-green-500 rounded-full"></span>
             <span className="text-green-700 font-medium">
-              {configurations.filter(c => c.sales_account_code && c.purchases_account_code).length} configuradas
+              {configurations.filter(c => c.sales_debit_account_code && c.purchases_debit_account_code).length} configuradas
             </span>
           </div>
           <div className="flex items-center space-x-2">
             <span className="w-2 h-2 bg-yellow-500 rounded-full"></span>
             <span className="text-yellow-700 font-medium">
-              {configurations.filter(c => !c.sales_account_code || !c.purchases_account_code).length} pendientes
+              {configurations.filter(c => !c.sales_debit_account_code || !c.purchases_debit_account_code).length} pendientes
             </span>
           </div>
           <div className="flex items-center space-x-2">
@@ -280,7 +300,7 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
               {/* Filas de configuraciones con edición inline */}
               {configurations.map((config) => {
                 const isEditing = editingRow === config.tax_type;
-                const isConfigured = config.sales_account_code && config.purchases_account_code;
+                const isConfigured = config.sales_debit_account_code && config.purchases_debit_account_code;
                 
                 return (
                   <tr key={config.id} className={`border-b border-gray-100 hover:bg-gray-50 ${isEditing ? 'bg-blue-50/50' : ''}`}>
@@ -302,8 +322,8 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
                     <td className="py-3 px-4">
                       {isEditing ? (
                         <select
-                          value={editingConfig.sales_account_code}
-                          onChange={(e) => handleAccountSelect('sales_account_code', e.target.value)}
+                          value={editingConfig.sales_debit_account_code}
+                          onChange={(e) => handleAccountSelect('sales_debit_account_code', e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-300"
                         >
                           <option value="">Seleccionar cuenta...</option>
@@ -316,10 +336,10 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
                       ) : (
                         <div className="text-sm">
                           <div className={`font-medium ${isConfigured ? 'text-gray-900' : 'text-gray-400'}`}>
-                            {config.sales_account_code || 'Sin configurar'}
+                            {config.sales_debit_account_code || 'Sin configurar'}
                           </div>
                           <div className="text-gray-600 text-xs">
-                            {config.sales_account_name || ''}
+                            {config.sales_debit_account_name || ''}
                           </div>
                         </div>
                       )}
@@ -327,8 +347,8 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
                     <td className="py-3 px-4">
                       {isEditing ? (
                         <select
-                          value={editingConfig.purchases_account_code}
-                          onChange={(e) => handleAccountSelect('purchases_account_code', e.target.value)}
+                          value={editingConfig.purchases_debit_account_code}
+                          onChange={(e) => handleAccountSelect('purchases_debit_account_code', e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-300"
                         >
                           <option value="">Seleccionar cuenta...</option>
@@ -341,10 +361,10 @@ export default function TaxConfigurationTable({ companyId, accounts }: TaxConfig
                       ) : (
                         <div className="text-sm">
                           <div className={`font-medium ${isConfigured ? 'text-gray-900' : 'text-gray-400'}`}>
-                            {config.purchases_account_code || 'Sin configurar'}
+                            {config.purchases_debit_account_code || 'Sin configurar'}
                           </div>
                           <div className="text-gray-600 text-xs">
-                            {config.purchases_account_name || ''}
+                            {config.purchases_debit_account_name || ''}
                           </div>
                         </div>
                       )}
