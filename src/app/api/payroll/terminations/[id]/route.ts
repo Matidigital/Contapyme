@@ -14,6 +14,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { id } = params;
+    console.log('🗑️ DELETE termination - ID:', id);
 
     if (!id) {
       return NextResponse.json(
@@ -29,9 +30,24 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       .eq('id', id)
       .single();
 
+    console.log('🔍 Termination lookup result:', { 
+      existingTermination, 
+      fetchError: fetchError?.message,
+      fetchErrorCode: fetchError?.code 
+    });
+
     if (fetchError || !existingTermination) {
+      console.log('❌ Termination not found - ID:', id, 'Error:', fetchError?.message);
       return NextResponse.json(
-        { success: false, error: 'Finiquito no encontrado' },
+        { 
+          success: false, 
+          error: `Finiquito no encontrado (ID: ${id})`,
+          debug: {
+            id,
+            fetchError: fetchError?.message,
+            fetchErrorCode: fetchError?.code
+          }
+        },
         { status: 404 }
       );
     }

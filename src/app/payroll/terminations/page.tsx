@@ -202,12 +202,14 @@ export default function TerminationsPage() {
   const handleDeleteTermination = async (terminationId: string) => {
     try {
       setDeleting(terminationId);
+      console.log('🗑️ Frontend: Intentando eliminar finiquito ID:', terminationId);
       
       const response = await fetch(`/api/payroll/terminations/${terminationId}`, {
         method: 'DELETE'
       });
 
       const result = await response.json();
+      console.log('📋 Frontend: Respuesta del servidor:', result);
 
       if (result.success) {
         // Actualizar lista de finiquitos
@@ -215,12 +217,25 @@ export default function TerminationsPage() {
         setShowDeleteConfirm(null);
         alert(`Finiquito eliminado exitosamente: ${result.data.employee_name}`);
       } else {
-        console.error('Error al eliminar finiquito:', result.error);
-        alert(result.error || 'Error al eliminar el finiquito');
+        console.error('❌ Frontend: Error al eliminar finiquito:', result.error);
+        
+        // Mensaje más informativo según el tipo de error
+        let errorMessage = result.error || 'Error al eliminar el finiquito';
+        if (result.debug) {
+          errorMessage += `\n\nDetalles técnicos:\nID: ${result.debug.id}\nError: ${result.debug.fetchError}`;
+        }
+        
+        alert(errorMessage);
+        
+        // Si el finiquito no se encontró, actualizar la lista por si fue eliminado por otro usuario
+        if (response.status === 404) {
+          await fetchTerminations();
+          setShowDeleteConfirm(null);
+        }
       }
     } catch (error) {
-      console.error('Error:', error);
-      alert('Error al eliminar el finiquito');
+      console.error('💥 Frontend: Error en catch:', error);
+      alert(`Error de conexión al eliminar el finiquito: ${error.message}`);
     } finally {
       setDeleting(null);
     }
@@ -345,13 +360,24 @@ export default function TerminationsPage() {
         </div>
 
         {/* Acciones principales */}
-        <div className="mb-8">
+        <div className="mb-8 flex flex-wrap gap-3">
           <Button 
             onClick={() => setShowCreateForm(true)}
             className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
             size="lg"
           >
             ➕ Nuevo Finiquito
+          </Button>
+          <Button 
+            onClick={() => {
+              fetchTerminations();
+              fetchEmployees();
+            }}
+            variant="outline"
+            size="lg"
+            className="border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+          >
+            🔄 Actualizar Lista
           </Button>
         </div>
 
