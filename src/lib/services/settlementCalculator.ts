@@ -522,10 +522,40 @@ export class SettlementCalculator {
     const yearsOfService = this.calculateServiceTime(startDate, endDate).years;
     const totalEarned = yearsOfService * annualVacationDays;
     
-    // Calcular vacaciones proporcionales del último año
-    const lastYearStart = new Date(endDate.getFullYear() - 1, endDate.getMonth(), endDate.getDate());
-    const monthsInLastYear = this.calculateServiceTime(lastYearStart, endDate).months;
-    const proportionalDays = Math.round((monthsInLastYear * annualVacationDays) / 12);
+    // NUEVO CÁLCULO DE FERIADO PROPORCIONAL SEGÚN NORMATIVA CHILENA
+    // 1.66 días hábiles por mes trabajado (se redondea a 1.25 para 15 días anuales)
+    const DIAS_POR_MES = 1.66; // Según normativa laboral chilena
+    const serviceTime = this.calculateServiceTime(startDate, endDate);
+    const totalMonthsWorked = (serviceTime.years * 12) + serviceTime.months;
+    
+    // Calcular días base de feriado proporcional
+    const proportionalDaysBase = totalMonthsWorked * DIAS_POR_MES;
+    
+    // Calcular días adicionales por sábados, domingos y feriados
+    // Estos se cuentan desde el día siguiente al término
+    const nextDay = new Date(endDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    
+    // Contar días no hábiles dentro del período de feriado proporcional
+    let additionalNonWorkingDays = 0;
+    const daysToCheck = Math.floor(proportionalDaysBase);
+    const currentCheckDate = new Date(nextDay);
+    
+    for (let i = 0; i < daysToCheck; i++) {
+      const dayOfWeek = currentCheckDate.getDay();
+      // Si es sábado (6) o domingo (0), se suma como día adicional
+      if (dayOfWeek === 0 || dayOfWeek === 6) {
+        additionalNonWorkingDays++;
+      }
+      // También verificar si es feriado chileno
+      if (isChileanHoliday(currentCheckDate)) {
+        additionalNonWorkingDays++;
+      }
+      currentCheckDate.setDate(currentCheckDate.getDate() + 1);
+    }
+    
+    // Total de días de feriado proporcional (base + no hábiles)
+    const proportionalDays = proportionalDaysBase + additionalNonWorkingDays;
     
     // Vacaciones pendientes = ganadas - tomadas
     const pendingDays = Math.max(0, totalEarned - daysTaken);
@@ -875,4 +905,32 @@ export function calculateBusinessDays(startDate: Date, endDate: Date): number {
   }
   
   return count;
+}
+
+// Lista de feriados chilenos (se debe actualizar anualmente)
+export function isChileanHoliday(date: Date): boolean {
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1; // 0-indexed to 1-indexed
+  const day = date.getDate();
+  
+  // Feriados fijos de Chile
+  const holidays = [
+    { month: 1, day: 1 },   // Año Nuevo
+    { month: 5, day: 1 },   // Día del Trabajo
+    { month: 5, day: 21 },  // Glorias Navales
+    { month: 6, day: 20 },  // Día de los Pueblos Indígenas
+    { month: 6, day: 29 },  // San Pedro y San Pablo
+    { month: 7, day: 16 },  // Virgen del Carmen
+    { month: 8, day: 15 },  // Asunción de la Virgen
+    { month: 9, day: 18 },  // Primera Junta Nacional
+    { month: 9, day: 19 },  // Glorias del Ejército
+    { month: 10, day: 12 }, // Encuentro de Dos Mundos
+    { month: 10, day: 31 }, // Día de las Iglesias Evangélicas
+    { month: 11, day: 1 },  // Día de Todos los Santos
+    { month: 12, day: 8 },  // Inmaculada Concepción
+    { month: 12, day: 25 }  // Navidad
+  ];
+  
+  // Verificar si la fecha coincide con algún feriado
+  return holidays.some(h => h.month === month && h.day === day);
 }
