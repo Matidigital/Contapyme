@@ -22,6 +22,31 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Error getting tax configurations:', error);
+      
+      // Si la tabla o función no existe, devolver configuraciones por defecto
+      if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist') || error.message?.includes('function')) {
+        return NextResponse.json({ 
+          success: true, 
+          data: [
+            {
+              id: 'default-iva-19',
+              company_id: companyId,
+              tax_type: 'iva_19',
+              tax_name: 'IVA 19%',
+              tax_rate: 19.0,
+              is_active: true,
+              message: 'Configuración por defecto (tabla no creada aún)'
+            }
+          ],
+          stats: {
+            total_configurations: 1,
+            active_configurations: 1,
+            message: 'Datos por defecto - crear tabla para configuraciones reales'
+          },
+          count: 1
+        });
+      }
+      
       return NextResponse.json({ 
         success: false, 
         error: 'Error al obtener configuraciones: ' + error.message 
