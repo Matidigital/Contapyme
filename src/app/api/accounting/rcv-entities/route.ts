@@ -3,303 +3,262 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Interfaz para entidad RCV
-export interface RCVEntity {
-  id?: string;
-  company_id: string;
-  entity_name: string;
-  entity_rut: string;
-  entity_business_name?: string;
-  entity_type: 'supplier' | 'customer' | 'both';
-  account_code: string;
-  account_name: string;
-  account_type?: string;
-  default_tax_rate?: number;
-  is_tax_exempt?: boolean;
-  is_active?: boolean;
-  notes?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-// GET - Obtener todas las entidades RCV de una empresa
+/**
+ * GET /api/accounting/rcv-entities
+ * Obtiene entidades RCV configuradas con cuentas contables específicas
+ */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const companyId = searchParams.get('company_id');
-    const entityType = searchParams.get('entity_type'); // supplier, customer, both
-    const isActive = searchParams.get('is_active');
-    const search = searchParams.get('search'); // Búsqueda por nombre o RUT
+    const entityType = searchParams.get('entity_type'); // 'supplier', 'customer', 'both'
+    const search = searchParams.get('search');
+    const hasAccounts = searchParams.get('has_accounts') === 'true';
 
     if (!companyId) {
-      return NextResponse.json({
-        success: false,
-        error: 'company_id es requerido'
-      }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: 'company_id es requerido' },
+        { status: 400 }
+      );
     }
+
+    console.log(`🏢 Fetching RCV entities for company: ${companyId}`);
 
     let query = supabase
       .from('rcv_entities')
       .select('*')
-      .eq('company_id', companyId);
+      .eq('company_id', companyId)
+      .eq('is_active', true)
+      .order('entity_name');
 
-    // Filtros opcionales
+    // Filtrar por tipo de entidad
     if (entityType && entityType !== 'all') {
-      query = query.eq('entity_type', entityType);
+      if (entityType === 'supplier' || entityType === 'customer') {
+        query = query.in('entity_type', [entityType, 'both']);
+      } else {
+        query = query.eq('entity_type', entityType);
+      }
     }
 
-    if (isActive !== null) {
-      query = query.eq('is_active', isActive === 'true');
+    // Filtrar solo entidades con cuentas configuradas
+    if (hasAccounts) {
+      query = query.not('account_code', 'is', null);
     }
 
-    // Búsqueda por nombre o RUT
+    // Búsqueda por texto
     if (search && search.trim()) {
-      const searchTerm = search.trim();
-      query = query.or(`entity_name.ilike.%${searchTerm}%,entity_rut.ilike.%${searchTerm}%,entity_business_name.ilike.%${searchTerm}%`);
+      query = query.or(`entity_name.ilike.%${search.trim()}%,entity_rut.ilike.%${search.trim()}%`);
     }
-
-    // Ordenar por nombre
-    query = query.order('entity_name', { ascending: true });
 
     const { data: entities, error } = await query;
 
     if (error) {
-      console.error('Error fetching RCV entities:', error);
-      return NextResponse.json({
-        success: false,
-        error: 'Error al obtener entidades RCV'
-      }, { status: 500 });
+      console.error('❌ Error fetching RCV entities:', error);
+      return NextResponse.json(
+        { success: false, error: 'Error obteniendo entidades RCV' },
+        { status: 500 }
+      );
     }
+
+    // Obtener estadísticas
+    const stats = {
+      total: entities?.length || 0,
+      suppliers: entities?.filter(e => e.entity_type === 'supplier' || e.entity_type === 'both').length || 0,
+      customers: entities?.filter(e => e.entity_type === 'customer' || e.entity_type === 'both').length || 0,
+      withAccounts: entities?.filter(e => e.account_code && e.account_name).length || 0
+    };
+
+    console.log(`✅ Found ${stats.total} RCV entities, ${stats.withAccounts} with accounts`);
 
     return NextResponse.json({
       success: true,
       data: entities || [],
-      message: `${entities?.length || 0} entidades encontradas`
+      stats
     });
 
   } catch (error) {
-    console.error('Error in GET /api/accounting/rcv-entities:', error);
-    return NextResponse.json({
-      success: false,
-      error: 'Error interno del servidor'
-    }, { status: 500 });
+    console.error('❌ Error in RCV entities GET:', error);
+    return NextResponse.json(
+      { success: false, error: 'Error interno del servidor' },
+      { status: 500 }
+    );
   }
 }
 
-// POST - Crear nueva entidad RCV
+/**
+ * POST /api/accounting/rcv-entities
+ * Crea nueva entidad RCV con cuenta contable específica
+ */
 export async function POST(request: NextRequest) {
   try {
-    const body: RCVEntity = await request.json();
-    
-    console.log('📧 POST /api/accounting/rcv-entities - Body received:', body);
-    
-    // Validaciones básicas
-    const { 
-      company_id, 
-      entity_name, 
-      entity_rut, 
+    const body = await request.json();
+    const {
+      company_id,
+      entity_name,
+      entity_rut,
       entity_type,
       account_code,
-      account_name
+      account_name,
+      default_tax_rate = 19.0,
+      is_tax_exempt = false,
+      contact_email,
+      contact_phone,
+      address,
+      notes
     } = body;
 
-    if (!company_id || !entity_name || !entity_rut || !entity_type || !account_code || !account_name) {
-      return NextResponse.json({
-        success: false,
-        error: 'Campos requeridos: company_id, entity_name, entity_rut, entity_type, account_code, account_name',
-        debug: {
-          received: {
-            company_id: !!company_id,
-            entity_name: !!entity_name,
-            entity_rut: !!entity_rut,
-            entity_type: !!entity_type,
-            account_code: !!account_code,
-            account_name: !!account_name
-          }
-        }
-      }, { status: 400 });
+    if (!company_id || !entity_name || !entity_rut || !entity_type) {
+      return NextResponse.json(
+        { success: false, error: 'Faltan campos requeridos: company_id, entity_name, entity_rut, entity_type' },
+        { status: 400 }
+      );
     }
 
-    // Verificar que la tabla companies existe
-    const { data: companyCheck, error: companyError } = await supabase
-      .from('companies')
-      .select('id')
-      .eq('id', company_id)
-      .single();
-
-    if (companyError) {
-      console.error('❌ Company check error:', companyError);
-      return NextResponse.json({
-        success: false,
-        error: '⚠️ Tabla "companies" no configurada en Supabase. Ver CONFIGURAR_SUPABASE.md',
-        details: 'La base de datos necesita ser configurada antes de usar esta funcionalidad.',
-        setup_guide: 'Ejecutar: CREATE TABLE companies ... (ver archivo CONFIGURAR_SUPABASE.md)'
-      }, { status: 500 });
+    if (!['supplier', 'customer', 'both'].includes(entity_type)) {
+      return NextResponse.json(
+        { success: false, error: 'entity_type debe ser: supplier, customer, o both' },
+        { status: 400 }
+      );
     }
 
-    if (!companyCheck) {
-      return NextResponse.json({
-        success: false,
-        error: `Company con ID ${company_id} no existe. Crear primero en tabla companies.`,
-        suggestion: 'Ejecutar: INSERT INTO companies (id, company_name) VALUES (...) en Supabase'
-      }, { status: 404 });
-    }
+    console.log(`🏢 Creating RCV entity: ${entity_name} (${entity_rut})`);
 
-    // Validar formato RUT básico
-    const rutPattern = /^[0-9]{1,2}\.[0-9]{3}\.[0-9]{3}-[0-9K]$/;
-    if (!rutPattern.test(entity_rut)) {
-      return NextResponse.json({
-        success: false,
-        error: 'Formato de RUT inválido. Debe ser XX.XXX.XXX-X'
-      }, { status: 400 });
-    }
-
-    // Verificar si ya existe el RUT en la empresa
-    const { data: existingEntity } = await supabase
+    // Verificar que no existe ya una entidad con el mismo RUT para esta empresa
+    const { data: existing } = await supabase
       .from('rcv_entities')
       .select('id, entity_name')
       .eq('company_id', company_id)
       .eq('entity_rut', entity_rut)
       .single();
 
-    if (existingEntity) {
-      return NextResponse.json({
-        success: false,
-        error: `Ya existe una entidad con RUT ${entity_rut}: ${existingEntity.entity_name}`
-      }, { status: 409 });
+    if (existing) {
+      return NextResponse.json(
+        { success: false, error: `Ya existe una entidad con RUT ${entity_rut}: ${existing.entity_name}` },
+        { status: 409 }
+      );
     }
 
-    // Preparar datos para inserción
-    const entityData = {
-      company_id,
-      entity_name,
-      entity_rut,
-      entity_business_name: body.entity_business_name || null,
-      entity_type,
-      account_code,
-      account_name,
-      account_type: body.account_type || null,
-      default_tax_rate: body.default_tax_rate || 19.0,
-      is_tax_exempt: body.is_tax_exempt || false,
-      is_active: body.is_active !== undefined ? body.is_active : true,
-      notes: body.notes || null
-    };
-
+    // Crear la nueva entidad
     const { data: newEntity, error } = await supabase
       .from('rcv_entities')
-      .insert(entityData)
+      .insert({
+        company_id,
+        entity_name,
+        entity_rut,
+        entity_type,
+        account_code,
+        account_name,
+        default_tax_rate,
+        is_tax_exempt,
+        contact_email,
+        contact_phone,
+        address,
+        notes,
+        is_active: true
+      })
       .select()
       .single();
 
     if (error) {
       console.error('❌ Error creating RCV entity:', error);
-      
-      // Mensajes de error más específicos
-      if (error.code === '42P01') {
-        return NextResponse.json({
-          success: false,
-          error: '⚠️ Tabla "rcv_entities" no existe en Supabase',
-          details: 'Necesitas ejecutar la migración 20250810140000_rcv_entities.sql',
-          setup_guide: 'Ver archivo CONFIGURAR_SUPABASE.md para instrucciones completas'
-        }, { status: 500 });
-      }
-      
-      if (error.code === '23505') {
-        return NextResponse.json({
-          success: false,
-          error: `Ya existe una entidad con RUT ${entity_rut} en esta empresa`
-        }, { status: 409 });
-      }
-      
-      return NextResponse.json({
-        success: false,
-        error: 'Error al crear entidad RCV',
-        details: error.message,
-        code: error.code
-      }, { status: 500 });
+      return NextResponse.json(
+        { success: false, error: 'Error creando entidad RCV' },
+        { status: 500 }
+      );
     }
+
+    console.log(`✅ Created RCV entity: ${newEntity.entity_name} with account ${newEntity.account_code}`);
 
     return NextResponse.json({
       success: true,
       data: newEntity,
-      message: `Entidad ${entity_name} creada exitosamente`
-    }, { status: 201 });
+      message: 'Entidad RCV creada exitosamente'
+    });
 
   } catch (error) {
-    console.error('Error in POST /api/accounting/rcv-entities:', error);
-    return NextResponse.json({
-      success: false,
-      error: 'Error interno del servidor'
-    }, { status: 500 });
+    console.error('❌ Error in RCV entities POST:', error);
+    return NextResponse.json(
+      { success: false, error: 'Error interno del servidor' },
+      { status: 500 }
+    );
   }
 }
 
-// PUT - Actualizar entidad RCV existente
+/**
+ * PUT /api/accounting/rcv-entities
+ * Actualiza entidad RCV existente
+ */
 export async function PUT(request: NextRequest) {
   try {
-    const body: RCVEntity = await request.json();
-    
-    if (!body.id) {
-      return NextResponse.json({
-        success: false,
-        error: 'ID de entidad es requerido'
-      }, { status: 400 });
+    const body = await request.json();
+    const {
+      id,
+      entity_name,
+      entity_rut,
+      entity_type,
+      account_code,
+      account_name,
+      default_tax_rate,
+      is_tax_exempt,
+      contact_email,
+      contact_phone,
+      address,
+      notes
+    } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: 'ID de entidad es requerido' },
+        { status: 400 }
+      );
     }
 
-    // Validar formato RUT si se está actualizando
-    if (body.entity_rut) {
-      const rutPattern = /^[0-9]{1,2}\.[0-9]{3}\.[0-9]{3}-[0-9K]$/;
-      if (!rutPattern.test(body.entity_rut)) {
-        return NextResponse.json({
-          success: false,
-          error: 'Formato de RUT inválido. Debe ser XX.XXX.XXX-X'
-        }, { status: 400 });
-      }
-    }
-
-    // Preparar datos para actualización (solo campos que vienen en el body)
-    const updateData: any = {};
-    
-    if (body.entity_name !== undefined) updateData.entity_name = body.entity_name;
-    if (body.entity_rut !== undefined) updateData.entity_rut = body.entity_rut;
-    if (body.entity_business_name !== undefined) updateData.entity_business_name = body.entity_business_name;
-    if (body.entity_type !== undefined) updateData.entity_type = body.entity_type;
-    if (body.account_code !== undefined) updateData.account_code = body.account_code;
-    if (body.account_name !== undefined) updateData.account_name = body.account_name;
-    if (body.account_type !== undefined) updateData.account_type = body.account_type;
-    if (body.default_tax_rate !== undefined) updateData.default_tax_rate = body.default_tax_rate;
-    if (body.is_tax_exempt !== undefined) updateData.is_tax_exempt = body.is_tax_exempt;
-    if (body.is_active !== undefined) updateData.is_active = body.is_active;
-    if (body.notes !== undefined) updateData.notes = body.notes;
+    console.log(`🏢 Updating RCV entity: ${id}`);
 
     const { data: updatedEntity, error } = await supabase
       .from('rcv_entities')
-      .update(updateData)
-      .eq('id', body.id)
+      .update({
+        entity_name,
+        entity_rut,
+        entity_type,
+        account_code,
+        account_name,
+        default_tax_rate,
+        is_tax_exempt,
+        contact_email,
+        contact_phone,
+        address,
+        notes,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
       .select()
       .single();
 
     if (error) {
-      console.error('Error updating RCV entity:', error);
-      return NextResponse.json({
-        success: false,
-        error: 'Error al actualizar entidad RCV'
-      }, { status: 500 });
+      console.error('❌ Error updating RCV entity:', error);
+      return NextResponse.json(
+        { success: false, error: 'Error actualizando entidad RCV' },
+        { status: 500 }
+      );
     }
+
+    console.log(`✅ Updated RCV entity: ${updatedEntity.entity_name}`);
 
     return NextResponse.json({
       success: true,
       data: updatedEntity,
-      message: 'Entidad actualizada exitosamente'
+      message: 'Entidad RCV actualizada exitosamente'
     });
 
   } catch (error) {
-    console.error('Error in PUT /api/accounting/rcv-entities:', error);
-    return NextResponse.json({
-      success: false,
-      error: 'Error interno del servidor'
-    }, { status: 500 });
+    console.error('❌ Error in RCV entities PUT:', error);
+    return NextResponse.json(
+      { success: false, error: 'Error interno del servidor' },
+      { status: 500 }
+    );
   }
 }

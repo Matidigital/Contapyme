@@ -387,7 +387,8 @@ async function createAutomaticJournalEntry(companyId: string, transaction: any) 
     }
 
     // Crear el asiento contable usando la API de journal
-    const response = await fetch(process.env.NEXT_PUBLIC_SITE_URL + '/api/accounting/journal', {
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3005';
+    const response = await fetch(siteUrl + '/api/accounting/journal', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -399,24 +400,37 @@ async function createAutomaticJournalEntry(companyId: string, transaction: any) 
 
     if (result.success) {
       // Marcar la transacción como procesada en integration_log
-      const referenceType = transaction.type === 'rcv' 
-        ? (transaction.subtype === 'purchase' ? 'PURCHASE' : 'SALES')
-        : 'ACTIVO_FIJO';
+      try {
+        const referenceType = transaction.type === 'rcv' 
+          ? (transaction.subtype === 'purchase' ? 'PURCHASE' : 'SALES')
+          : 'ACTIVO_FIJO';
 
-      await supabase.rpc('mark_transaction_processed', {
-        p_company_id: companyId,
-        p_source_module: transaction.type,
-        p_source_type: transaction.subtype || 'asset_acquisition',
-        p_source_id: transaction.id,
-        p_journal_entry_id: result.data.entry.id,
-        p_processing_type: 'manual',
-        p_details: {
-          processed_at: new Date().toISOString(),
-          integration_type: 'automatic_centralized',
-          transaction_data: transaction.data,
-          account_config_used: true
-        }
-      });
+        // Insertar directamente en integration_log como fallback
+        await supabase
+          .from('integration_log')
+          .insert({
+            company_id: companyId,
+            source_module: transaction.type,
+            source_type: transaction.subtype || 'asset_acquisition',
+            source_id: transaction.id,
+            journal_entry_id: result.data.entry.id,
+            status: 'processed',
+            processing_type: 'manual',
+            details: {
+              processed_at: new Date().toISOString(),
+              integration_type: 'automatic_centralized',
+              transaction_data: transaction.data,
+              account_config_used: true
+            },
+            processed_at: new Date().toISOString()
+          })
+          .single();
+
+        console.log('✅ Transaction marked as processed successfully');
+      } catch (logError) {
+        console.warn('⚠️ Could not log transaction processing:', logError);
+        // No fallar por error de logging
+      }
 
       return result.data.entry;
     } else {
@@ -430,13 +444,18 @@ async function createAutomaticJournalEntry(companyId: string, transaction: any) 
 }
 
 /**
- * Crea asiento contable para RCV (Compras o Ventas) usando configuración centralizada
+ * Crea asiento contable para RCV (Compras o Ventas) con cuentas específicas por entidad
  */
 async function createRCVJournalEntry(transaction: any, companyId: string) {
   const { subtype, data } = transaction;
   const isRCVSales = subtype === 'sales';
   
-  // Obtener configuración centralizada
+  console.log(`🏢 Creating RCV journal entry for ${subtype} with entity-specific accounts`);
+  
+  // Obtener RUTs de las entidades en el RCV para usar cuentas específicas
+  const entityAccounts = await getEntitySpecificAccounts(companyId, data, subtype);
+  
+  // Obtener configuración centralizada como fallback
   const accountConfig = await getCentralizedAccountConfig(companyId, 'rcv', subtype);
   
   if (!accountConfig) {
@@ -446,18 +465,22 @@ async function createRCVJournalEntry(transaction: any, companyId: string) {
   const totalAmount = data.total_amount || 0;
   const netAmount = Math.round(totalAmount / 1.19); // Monto neto sin IVA
   const ivaAmount = totalAmount - netAmount; // IVA
-
   const lines = [];
 
   if (isRCVSales) {
     // RCV Ventas: Cliente al debe, Ventas e IVA al haber
+    const clientAccount = entityAccounts.mainAccount || {
+      code: accountConfig.asset_account_code,
+      name: accountConfig.asset_account_name
+    };
+    
     lines.push({
-      account_code: accountConfig.asset_account_code,
-      account_name: accountConfig.asset_account_name,
+      account_code: clientAccount.code,
+      account_name: clientAccount.name,
       line_number: 1,
       debit_amount: totalAmount,
       credit_amount: 0,
-      line_description: `${accountConfig.asset_account_name} por ventas RCV ${data.period}`
+      line_description: `${clientAccount.name} por ventas RCV ${data.period}${entityAccounts.entityCount > 0 ? ` (${entityAccounts.entityCount} entidades específicas)` : ''}`
     });
 
     lines.push({
@@ -479,6 +502,11 @@ async function createRCVJournalEntry(transaction: any, companyId: string) {
     });
   } else {
     // RCV Compras: Gastos e IVA al debe, Proveedores al haber
+    const supplierAccount = entityAccounts.mainAccount || {
+      code: accountConfig.asset_account_code,
+      name: accountConfig.asset_account_name
+    };
+    
     lines.push({
       account_code: accountConfig.revenue_account_code,
       account_name: accountConfig.revenue_account_name,
@@ -498,20 +526,20 @@ async function createRCVJournalEntry(transaction: any, companyId: string) {
     });
 
     lines.push({
-      account_code: accountConfig.asset_account_code,
-      account_name: accountConfig.asset_account_name,
+      account_code: supplierAccount.code,
+      account_name: supplierAccount.name,
       line_number: 3,
       debit_amount: 0,
       credit_amount: totalAmount,
-      line_description: `${accountConfig.asset_account_name} por compras RCV ${data.period}`
+      line_description: `${supplierAccount.name} por compras RCV ${data.period}${entityAccounts.entityCount > 0 ? ` (${entityAccounts.entityCount} entidades específicas)` : ''}`
     });
   }
 
   return {
     entry_date: new Date().toISOString().split('T')[0],
-    description: `RCV ${isRCVSales ? 'Ventas' : 'Compras'} ${data.period} - ${data.file_name || ''}`,
+    description: `RCV ${isRCVSales ? 'Ventas' : 'Compras'} ${data.period} - ${data.file_name || ''}${entityAccounts.entityCount > 0 ? ` (${entityAccounts.entityCount} entidades con cuentas específicas)` : ''}`,
     reference: data.file_name || `RCV-${subtype}-${data.period}`,
-    entry_type: subtype.toLowerCase(),
+    entry_type: 'rcv',
     lines
   };
 }
@@ -564,19 +592,9 @@ async function createFixedAssetJournalEntry(transaction: any, companyId: string)
  */
 async function getCentralizedAccountConfig(companyId: string, moduleType: string, transactionType: string) {
   try {
-    // Intentar obtener configuración centralizada
-    const { data } = await supabase
-      .rpc('get_centralized_account_config', {
-        p_company_id: companyId,
-        p_module_name: moduleType,
-        p_transaction_type: transactionType
-      });
-
-    if (data && data.length > 0) {
-      return data[0];
-    }
-
-    // Si no hay configuración centralizada, usar valores por defecto
+    // Por ahora usar configuración por defecto directamente
+    // En el futuro se puede implementar configuración centralizada desde la base de datos
+    console.log(`🔧 Using default account config for ${moduleType}/${transactionType}`);
     return getDefaultAccountConfig(moduleType, transactionType);
 
   } catch (error) {
@@ -599,7 +617,7 @@ async function getDefaultAccountConfig(moduleType: string, transactionType: stri
         asset_account_code: '1105001',
         asset_account_name: 'Clientes'
       },
-      purchases: {
+      purchase: {
         tax_account_code: '1104001',
         tax_account_name: 'IVA Crédito Fiscal',
         revenue_account_code: '5101001',
@@ -621,4 +639,91 @@ async function getDefaultAccountConfig(moduleType: string, transactionType: stri
   };
 
   return defaultConfigs[moduleType]?.[transactionType] || null;
+}
+
+/**
+ * Obtiene cuentas específicas para entidades RCV basadas en los RUTs de las transacciones
+ */
+async function getEntitySpecificAccounts(companyId: string, rcvData: any, transactionType: string) {
+  try {
+    console.log(`🔍 Looking for entity-specific accounts for ${transactionType} RCV processing`);
+    
+    // Determinar el tipo de entidad que buscamos
+    const entityType = transactionType === 'sales' ? 'customer' : 'supplier';
+    
+    // Intentar obtener RUTs de las transacciones RCV (esto dependería de la estructura de los datos)
+    let entityRuts: string[] = [];
+    
+    if (rcvData.transactions && Array.isArray(rcvData.transactions)) {
+      entityRuts = rcvData.transactions
+        .map((t: any) => t.rut || t.entity_rut || t.supplier_rut || t.customer_rut)
+        .filter((rut: string) => rut && rut.length > 0);
+    }
+    
+    // Si no tenemos RUTs específicos, buscar entidades por tipo
+    if (entityRuts.length === 0) {
+      console.log(`📋 No specific RUTs found, searching for ${entityType} entities with accounts`);
+      
+      const { data: entities } = await supabase
+        .from('rcv_entities')
+        .select('account_code, account_name, entity_name')
+        .eq('company_id', companyId)
+        .in('entity_type', [entityType, 'both'])
+        .not('account_code', 'is', null)
+        .not('account_name', 'is', null)
+        .limit(1);
+      
+      if (entities && entities.length > 0) {
+        console.log(`✅ Found ${entities.length} ${entityType} entities with specific accounts`);
+        return {
+          mainAccount: {
+            code: entities[0].account_code,
+            name: entities[0].account_name
+          },
+          entityCount: entities.length,
+          entities: entities
+        };
+      }
+    } else {
+      // Buscar cuentas específicas por RUT
+      console.log(`🎯 Looking for specific accounts for ${entityRuts.length} RUTs`);
+      
+      const { data: entities } = await supabase
+        .from('rcv_entities')
+        .select('account_code, account_name, entity_name, entity_rut')
+        .eq('company_id', companyId)
+        .in('entity_rut', entityRuts)
+        .not('account_code', 'is', null)
+        .not('account_name', 'is', null);
+      
+      if (entities && entities.length > 0) {
+        console.log(`✅ Found ${entities.length} entities with specific accounts for RUTs: ${entityRuts.join(', ')}`);
+        
+        // Si múltiples entidades, usar la primera como cuenta principal
+        return {
+          mainAccount: {
+            code: entities[0].account_code,
+            name: entities[0].account_name
+          },
+          entityCount: entities.length,
+          entities: entities
+        };
+      }
+    }
+    
+    console.log(`ℹ️ No entity-specific accounts found, will use default accounts`);
+    return {
+      mainAccount: null,
+      entityCount: 0,
+      entities: []
+    };
+    
+  } catch (error) {
+    console.error('❌ Error getting entity-specific accounts:', error);
+    return {
+      mainAccount: null,
+      entityCount: 0,
+      entities: []
+    };
+  }
 }
